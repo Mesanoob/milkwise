@@ -1,0 +1,43 @@
+/**
+ * ProductPicture — image-only tile for the "Photos" view.
+ *
+ * Designed to be used in-store: nothing but the tin photo + price.
+ * Useful when the parent is comparing a shelf to the app on their phone.
+ */
+
+import { View, Text, Pressable, Image } from 'react-native';
+import { Link } from 'expo-router';
+import type { Product } from '../../types/product';
+import { getProductImage } from '../../data/imageMap';
+import { formatCurrency } from '../../utils/format';
+
+export interface ProductPictureProps {
+  product: Product;
+}
+
+export const ProductPicture = ({ product }: ProductPictureProps) => {
+  const defaultVariant = product.variants[0];
+
+  return (
+    <Link href={`/product/${product.id}`} asChild>
+      <Pressable
+        accessibilityLabel={`Open details for ${product.name}`}
+        className="bg-surface rounded-lg border border-border overflow-hidden flex-1 min-w-[120px] max-w-[200px]"
+      >
+        <View className="w-full aspect-square bg-surface2 items-center justify-center">
+          <Image
+            source={getProductImage(defaultVariant?.img ?? product.img)}
+            resizeMode="contain"
+            style={{ width: '100%', height: '100%' }}
+            accessibilityLabel={product.name}
+          />
+        </View>
+        <View className="px-2 py-1.5 items-center">
+          <Text className="text-xs font-bold text-text">
+            {formatCurrency(defaultVariant?.price ?? product.price)}
+          </Text>
+        </View>
+      </Pressable>
+    </Link>
+  );
+};
