@@ -3,7 +3,7 @@ module.exports = {
   // Tell Tailwind to scan these files for class names
   content: [
     "./app/**/*.{js,jsx,ts,tsx}",
-    "./components/**/*.{js,jsx,ts,tsx}",
+    "./src/**/*.{js,jsx,ts,tsx}",
   ],
   presets: [require("nativewind/preset")],
   theme: {
