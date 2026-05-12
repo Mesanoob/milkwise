@@ -8,22 +8,14 @@
  *
  * To regenerate after adding/removing images in `assets/products/`:
  *   npm run generate:images
- * (See `scripts/generate-image-map.mjs`.)
  *
  * DO NOT EDIT BY HAND.
  */
 
-// `ImageSourcePropType` is what <Image source={…}> expects.
 import type { ImageSourcePropType } from 'react-native';
 
-// Single placeholder used whenever a product's image is missing — keeps the
-// grid layout stable instead of collapsing to a zero-height tile.
-// (For now we re-use the app icon; replace with a branded placeholder later.)
 const PLACEHOLDER: ImageSourcePropType = require('../../assets/icon.png');
 
-// The full lookup table. Keys mirror the `img` field on each product in the
-// dataset (e.g. "images/Abbott_Grow-Baby_900g_Stage1.jpg"). We accept both
-// the legacy "images/" prefix and the bare filename — see `getProductImage`.
 const imageMap: Record<string, ImageSourcePropType> = {
   'Abbott_Grow-Baby_900g_Stage1.jpg': require('../../assets/products/Abbott_Grow-Baby_900g_Stage1.jpg'),
   'Abbott_Grow-Toddler_900g_Stage3.jpg': require('../../assets/products/Abbott_Grow-Toddler_900g_Stage3.jpg'),
@@ -37,18 +29,18 @@ const imageMap: Record<string, ImageSourcePropType> = {
   'Bellamys_Organic-Toddler-Milk-Drink_800g_Stage3.jpg': require('../../assets/products/Bellamys_Organic-Toddler-Milk-Drink_800g_Stage3.jpg'),
   'Dumex_Dulac_800g_Stage1.jpg': require('../../assets/products/Dumex_Dulac_800g_Stage1.jpg'),
   'Dumex_Dulac_800g_Stage2.jpg': require('../../assets/products/Dumex_Dulac_800g_Stage2.jpg'),
-  'Enfagrow_A+-PRO_1.65kg_Stage3.jpg': require('../../assets/products/Enfagrow_A+-PRO_1.65kg_Stage3.jpg'),
-  'Enfagrow_A+-PRO_1.65kg_Stage3_b.jpg': require('../../assets/products/Enfagrow_A+-PRO_1.65kg_Stage3_b.jpg'),
-  'Enfagrow_Pro-A+_800g_Stage3.jpg': require('../../assets/products/Enfagrow_Pro-A+_800g_Stage3.jpg'),
+  'Enfagrow_A--PRO_1.65kg_Stage3.jpg': require('../../assets/products/Enfagrow_A--PRO_1.65kg_Stage3.jpg'),
+  'Enfagrow_A--PRO_1.65kg_Stage3_b.jpg': require('../../assets/products/Enfagrow_A--PRO_1.65kg_Stage3_b.jpg'),
+  'Enfagrow_Pro-A-_800g_Stage3.jpg': require('../../assets/products/Enfagrow_Pro-A-_800g_Stage3.jpg'),
   'Enfamil_Nutramigen-LGG-HA_400g_Stage1.jpg': require('../../assets/products/Enfamil_Nutramigen-LGG-HA_400g_Stage1.jpg'),
-  'Enfamil_Pro-A+-C-Biome_800g_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A+-C-Biome_800g_Stage1.jpg'),
-  'Enfamil_Pro-A+-Gentlease_800g_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A+-Gentlease_800g_Stage1.jpg'),
-  'Enfamil_Pro-A+-LactoFree_380g_Newborn.jpg': require('../../assets/products/Enfamil_Pro-A+-LactoFree_380g_Newborn.jpg'),
-  'Enfamil_Pro-A+_1.65kg_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A+_1.65kg_Stage1.jpg'),
-  'Enfamil_Pro-A+_1.65kg_Stage2.jpg': require('../../assets/products/Enfamil_Pro-A+_1.65kg_Stage2.jpg'),
-  'Enfamil_Pro-A+_400g_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A+_400g_Stage1.jpg'),
-  'Enfamil_Pro-A+_800g_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A+_800g_Stage1.jpg'),
-  'Enfamil_Pro-A+_800g_Stage2.jpg': require('../../assets/products/Enfamil_Pro-A+_800g_Stage2.jpg'),
+  'Enfamil_Pro-A--C-Biome_800g_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A--C-Biome_800g_Stage1.jpg'),
+  'Enfamil_Pro-A--Gentlease_800g_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A--Gentlease_800g_Stage1.jpg'),
+  'Enfamil_Pro-A--LactoFree_380g_Newborn.jpg': require('../../assets/products/Enfamil_Pro-A--LactoFree_380g_Newborn.jpg'),
+  'Enfamil_Pro-A-_1.65kg_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A-_1.65kg_Stage1.jpg'),
+  'Enfamil_Pro-A-_1.65kg_Stage2.jpg': require('../../assets/products/Enfamil_Pro-A-_1.65kg_Stage2.jpg'),
+  'Enfamil_Pro-A-_400g_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A-_400g_Stage1.jpg'),
+  'Enfamil_Pro-A-_800g_Stage1.jpg': require('../../assets/products/Enfamil_Pro-A-_800g_Stage1.jpg'),
+  'Enfamil_Pro-A-_800g_Stage2.jpg': require('../../assets/products/Enfamil_Pro-A-_800g_Stage2.jpg'),
   'FairPrice_Gold-Newborn_900g_Stage1.jpg': require('../../assets/products/FairPrice_Gold-Newborn_900g_Stage1.jpg'),
   'FairPrice_Gold_900g_Stage2.jpg': require('../../assets/products/FairPrice_Gold_900g_Stage2.jpg'),
   'FairPrice_Gold_900g_Stage3.jpg': require('../../assets/products/FairPrice_Gold_900g_Stage3.jpg'),
@@ -99,15 +91,6 @@ const imageMap: Record<string, ImageSourcePropType> = {
   'Wyeth_S-26-Gold-PRO_900g_Stage1.jpg': require('../../assets/products/Wyeth_S-26-Gold-PRO_900g_Stage1.jpg'),
 };
 
-/**
- * Resolve a product image source from any of the path variants we encounter:
- *   • "images/Foo.jpg"           (legacy path stored in data.json)
- *   • "assets/products/Foo.jpg"  (new path)
- *   • "Foo.jpg"                  (bare filename)
- *
- * If the lookup fails we return the placeholder rather than throwing — a
- * broken image should not crash the comparison grid.
- */
 export const getProductImage = (path: string | null | undefined): ImageSourcePropType => {
   if (!path) return PLACEHOLDER;
   const filename = path.split('/').pop() ?? path;
