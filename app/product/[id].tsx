@@ -1,31 +1,40 @@
 /**
  * app/product/[id].tsx — product detail screen.
  *
- * Reached by tapping any ProductCard / ProductListRow / ProductPicture.
- * The `[id]` segment in the filename is a *dynamic route* — Expo Router
- * passes the URL parameter to `useLocalSearchParams()`.
+ * Layout (matches design handoff `product.html`):
  *
- * Three things happen on mount:
- *   1. Read the id from the URL.
- *   2. Resolve it against the repository (handles "id not found").
- *   3. Lazily fetch the verbose detail record (ingredients, full nutrition).
+ *   1. Breadcrumb        "← All Products / Stage X / Name"
+ *   2. Hero card         left: image + variant cards
+ *                        right: badges, name, desc, "best for", pricing grid,
+ *                               scoop info, feature pills
+ *   3. Price comparison  same-stage products ranked by $/g with bar fills
+ *   4. Specs table       2-col grid of attribute key→value rows
+ *   5. All-sizes table   pricing breakdown across every variant (this product)
+ *   6. Features & claims grid of green-light feature cards
+ *   7. Nutrition summary 5 stat cards (energy/protein/fat/carbs/DHA)
+ *   8. Ingredients       allergen warning + ingredient text
+ *   9. Full nutrition    categorised table (macros / vitamins / minerals / bioactives)
+ *  10. Similar products  4 same-stage / same-specialty cards
+ *  11. Disclaimer
  *
- * If either fetch fails we render a friendly "not found" state with a link
- * back to the list — never a blank screen and never a thrown error.
+ * The screen reads filter state via the ProductsContext so navigating back
+ * via "← All Products" preserves the user's filter intent (bug fix from
+ * Session 2).
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, Image, Pressable, ScrollView } from 'react-native';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
-import { Tag } from '../../src/components/Tag';
 import { EmptyState } from '../../src/components/EmptyState';
-import type { Product, ProductDetail } from '../../src/types/product';
+import type { Product, ProductDetail, NutrientRow } from '../../src/types/product';
 import { getProductRepository } from '../../src/services/productRepository';
 import { getProductImage } from '../../src/data/imageMap';
-import { formatCurrency, formatNutrient, formatWeight, formatUnitPrice, MISSING_VALUE }
-  from '../../src/utils/format';
+import { getAllProducts } from '../../src/data/products';
+import { formatWeight } from '../../src/utils/format';
 import { labelForSpecialty } from '../../src/utils/strings';
+import { getOriginFlag, getMilkTypeIcon } from '../../src/utils/icons';
+import { specialtyColors, type SpecialtyKey } from '../../src/config/theme';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,49 +45,63 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
 
-  // Variant selector — most products have a single variant, but some come
-  // in multiple pack sizes (e.g. 400g / 800g / 1.65kg). Default to index 0.
+  // Variant selector — clicking a variant card swaps the displayed metrics.
   const [variantIndex, setVariantIndex] = useState(0);
 
-  // Load product + detail in parallel. Cancellation flag protects against
-  // the user navigating away mid-fetch.
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-
     (async () => {
       try {
         const repo = await getProductRepository();
-        const [productResult, detailResult] = await Promise.all([
+        const [p, d] = await Promise.all([
           repo.getProductById(id),
           repo.getProductDetail(id),
         ]);
         if (cancelled) return;
-
-        if (!productResult) {
+        if (!p) {
           setError(`No product found with id "${id}".`);
         } else {
-          setProduct(productResult);
-          setDetail(detailResult ?? null);
+          setProduct(p);
+          setDetail(d ?? null);
         }
       } catch (caught) {
-        if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : 'Unknown error');
-        }
+        if (!cancelled) setError(caught instanceof Error ? caught.message : 'Unknown error');
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-
     return () => { cancelled = true; };
   }, [id]);
 
-  // ── Loading / error / not-found states ─────────────────────────────────
+  // Same-stage list for the price comparison block — sorted ascending by
+  // $/g so the cheapest is at the top. We compute this once per product
+  // change rather than on every render.
+  const stageProducts = useMemo(() => {
+    if (!product) return [] as Product[];
+    return getAllProducts()
+      .filter((q) => q.stage === product.stage)
+      .sort((a, b) => (a.pricePerGram ?? Infinity) - (b.pricePerGram ?? Infinity));
+  }, [product]);
+
+  // Similar products — same stage OR same specialty OR same non-cow milk
+  // type. Excludes the current product and caps at 4.
+  const similarProducts = useMemo(() => {
+    if (!product) return [] as Product[];
+    return getAllProducts()
+      .filter((q) => q.id !== product.id && (
+        q.stage === product.stage ||
+        (q.specialty && q.specialty === product.specialty) ||
+        (q.milkType === product.milkType && q.milkType !== 'cow')
+      ))
+      .slice(0, 4);
+  }, [product]);
+
   if (loading) {
     return (
       <Screen>
         <View className="px-4 py-12 items-center">
-          <Text className="text-muted text-sm">Loading product…</Text>
+          <Text className="text-muted text-sm font-sans">Loading product…</Text>
         </View>
       </Screen>
     );
@@ -89,7 +112,7 @@ export default function ProductDetailScreen() {
       <Screen>
         <EmptyState
           title="Product not found"
-          description={error ?? 'We couldn\'t find that product. It may have been removed.'}
+          description={error ?? "We couldn't find that product."}
           actionLabel="Back to compare"
           onAction={() => router.replace('/')}
         />
@@ -97,201 +120,1075 @@ export default function ProductDetailScreen() {
     );
   }
 
-  // Variant guard — defensive in case the dataset ever has zero variants.
   const variant = product.variants[variantIndex] ?? product.variants[0];
+  const maxPpg = stageProducts.length
+    ? (stageProducts[stageProducts.length - 1].pricePerGram ?? 1)
+    : 1;
+  const rankInStage = stageProducts.findIndex((q) => q.id === product.id) + 1;
+
+  const features: Array<{ key: string; label: string; icon: string }> = [
+    product.halal       && { key: 'halal',       label: 'Halal Certified',         icon: '✅' },
+    product.organic     && { key: 'organic',     label: 'Certified Organic',       icon: '🌿' },
+    product.palmFree    && { key: 'palmFree',    label: 'Palm Oil-Free',           icon: '🌴' },
+    product.lactoseFree && { key: 'lactoseFree', label: 'Lactose-Free',            icon: '🚫' },
+    product.ar          && { key: 'ar',          label: 'Anti-Reflux Formula',     icon: '🛡️' },
+    product.ha          && { key: 'ha',          label: 'Hydrolysed Protein (HA)', icon: '🧬' },
+    product.soyBased    && { key: 'soyBased',    label: 'Soy-Based (No Cow Milk)', icon: '🌱' },
+    product.partialHydro && { key: 'phf',        label: 'Partially Hydrolysed',    icon: '⚗️' },
+  ].filter(Boolean) as Array<{ key: string; label: string; icon: string }>;
 
   return (
     <Screen>
-      {/* ── Breadcrumb / back link ───────────────────────────────────── */}
-      <View className="px-4 pt-3">
-        <Link href="/" asChild>
-          <Pressable accessibilityLabel="Back to compare">
-            <Text className="text-xs text-green font-semibold">← Back to compare</Text>
-          </Pressable>
-        </Link>
-      </View>
-
-      {/* ── Hero: image + headline ───────────────────────────────────── */}
-      <View className="px-4 pt-3 flex-row gap-4 flex-wrap">
-        <View className="w-full md:w-1/2 bg-surface rounded-lg border border-border items-center justify-center p-4 aspect-square max-w-[400px]">
-          <Image
-            source={getProductImage(variant?.img ?? product.img)}
-            resizeMode="contain"
-            style={{ width: '100%', height: '100%' }}
-            accessibilityLabel={product.fullName}
-          />
-        </View>
-
-        <View className="flex-1 min-w-[260px] gap-2">
-          <Text className="text-[11px] uppercase tracking-wider text-muted font-semibold">
-            {product.brand} · {product.stage}
-          </Text>
-          <Text className="text-2xl font-serif text-text">{product.name}</Text>
-          <Text className="text-sm text-muted">{product.fullName}</Text>
-
-          <View className="flex-row items-baseline gap-2 mt-1">
-            <Text className="text-3xl font-bold text-text">
-              {formatCurrency(variant?.price)}
-            </Text>
-            {variant?.weightG && (
-              <Text className="text-sm text-muted">{formatWeight(variant.weightG)}</Text>
-            )}
+      <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
+        <View
+          className="w-full"
+          style={{ maxWidth: 1100, marginHorizontal: 'auto', paddingHorizontal: 16, paddingTop: 28 }}
+        >
+          {/* ── Breadcrumb ─────────────────────────────────────────────── */}
+          <View className="flex-row items-center flex-wrap gap-1.5 mb-5">
+            <Link href="/" asChild>
+              <Pressable accessibilityRole="link">
+                <Text className="text-[12.5px] text-green font-sans-bold">
+                  ← All Products
+                </Text>
+              </Pressable>
+            </Link>
+            <Text className="text-[12.5px] text-muted font-sans">/</Text>
+            <Text className="text-[12.5px] text-muted font-sans">{product.stage}</Text>
+            <Text className="text-[12.5px] text-muted font-sans">/</Text>
+            <Text className="text-[12.5px] text-text font-sans-medium">{product.name}</Text>
           </View>
 
-          {/* Pack-size selector — only shown when there's more than one */}
-          {product.variants.length > 1 && (
-            <View className="flex-row flex-wrap gap-1.5 mt-1">
-              {product.variants.map((v, idx) => {
-                const isActive = idx === variantIndex;
+          {/* ── Hero card ──────────────────────────────────────────────── */}
+          <Card>
+            <View className="flex-row flex-wrap gap-8">
+              {/* LEFT: image + variant cards */}
+              <View
+                className="gap-4"
+                style={{ flexBasis: 320, flexGrow: 0, flexShrink: 1, minWidth: 280 }}
+              >
+                <View
+                  className="bg-surface rounded-2xl border border-border items-center justify-center overflow-hidden"
+                  style={{ aspectRatio: 1, padding: 16 }}
+                >
+                  <Image
+                    source={getProductImage(variant?.img ?? product.img)}
+                    resizeMode="contain"
+                    style={{ width: '100%', height: '100%' }}
+                    accessibilityLabel={product.fullName}
+                  />
+                </View>
+
+                {product.variants.length > 1 && (
+                  <View>
+                    <Text className="text-[11px] font-sans-bold text-muted uppercase tracking-wider mb-2.5">
+                      Available Sizes
+                    </Text>
+                    <View className="flex-row flex-wrap gap-2">
+                      {product.variants.map((vt, i) => {
+                        const isActive = i === variantIndex;
+                        return (
+                          <Pressable
+                            key={i}
+                            onPress={() => setVariantIndex(i)}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: isActive }}
+                            accessibilityLabel={`Select ${formatWeight(vt.weightG)} variant`}
+                            style={{
+                              flex: 1,
+                              flexBasis: 80,
+                              minWidth: 80,
+                              alignItems: 'center',
+                              borderRadius: 12,
+                              borderWidth: 2,
+                              borderColor: isActive ? '#1B5E3B' : '#E0D9CC',
+                              backgroundColor: isActive ? '#EBF5EE' : '#FFFFFF',
+                              padding: 14,
+                            }}
+                          >
+                            <View
+                              style={{
+                                width: 48, height: 48,
+                                backgroundColor: isActive ? '#FFFFFF' : '#F9F7F2',
+                                borderRadius: 8,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                marginBottom: 6,
+                              }}
+                            >
+                              <Image
+                                source={getProductImage(vt.img)}
+                                resizeMode="contain"
+                                style={{ width: 42, height: 42 }}
+                                accessibilityLabel=""
+                                accessibilityElementsHidden
+                              />
+                            </View>
+                            <Text
+                              className="font-sans-bold text-[12px]"
+                              style={{ color: isActive ? '#1B5E3B' : '#1A1A1A' }}
+                            >
+                              {formatWeight(vt.weightG)}
+                            </Text>
+                            <Text
+                              className="font-sans-semibold text-[11px] mt-0.5"
+                              style={{ color: isActive ? '#2D7A52' : '#6B7280' }}
+                            >
+                              ${vt.price.toFixed(2)}
+                            </Text>
+                            <Text
+                              className="font-sans text-[10px] mt-0.5"
+                              style={{ color: isActive ? '#2D7A52' : '#6B7280' }}
+                            >
+                              ${(vt.pricePerGram ?? 0).toFixed(4)}/g
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </View>
+
+              {/* RIGHT: identity + price + scoop info + features */}
+              <View className="flex-1 gap-5" style={{ minWidth: 280 }}>
+                {/* Badges row */}
+                <View className="flex-row flex-wrap items-center gap-2">
+                  <Badge bg="#1B5E3B" fg="#FFFFFF" label={product.stage} />
+                  {product.specialty && (
+                    <SpecialtyBadge specialty={product.specialty as SpecialtyKey} />
+                  )}
+                  {product.halal && (
+                    <Badge bg="#D1FAE5" fg="#065F46" label="Halal" />
+                  )}
+                  {product.organic && (
+                    <Badge bg="#DCFCE7" fg="#166534" label="🌿 Organic" />
+                  )}
+                </View>
+
+                {/* Brand kicker + name */}
+                <View>
+                  <Text className="text-[12px] font-sans-bold text-muted uppercase tracking-wider mb-1.5">
+                    {product.brand}
+                  </Text>
+                  <Text
+                    className="font-serif text-text leading-tight"
+                    style={{ fontSize: 28 }}
+                  >
+                    {product.fullName}
+                  </Text>
+                </View>
+
+                {/* Description */}
+                <Text className="text-[14.5px] text-muted font-sans" style={{ lineHeight: 24 }}>
+                  {product.desc}
+                </Text>
+
+                {/* Best-for */}
+                {product.bestFor && (
+                  <View
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      backgroundColor: '#EBF5EE',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#B7E4C7',
+                    }}
+                  >
+                    <Text className="text-[13px] font-sans">
+                      <Text className="font-sans-bold" style={{ color: '#1B5E3B' }}>✓ Best for: </Text>
+                      <Text style={{ color: '#2D7A52' }}>{product.bestFor}</Text>
+                    </Text>
+                  </View>
+                )}
+
+                {/* Pricing grid */}
+                <View>
+                  <Text className="text-[11px] font-sans-bold text-muted uppercase tracking-wider mb-2.5">
+                    Pricing — {formatWeight(variant?.weightG ?? 0)} tin
+                  </Text>
+                  <View className="flex-row flex-wrap gap-2.5">
+                    <StatBox label="Tin Price"    value={`$${(variant?.price ?? 0).toFixed(2)}`} />
+                    <StatBox label="$ / gram"    value={`$${(variant?.pricePerGram ?? 0).toFixed(4)}`} highlight />
+                    <StatBox label="$ / scoop"   value={`$${(variant?.pricePerScoop ?? 0).toFixed(3)}`} />
+                    <StatBox label="$ / mL prep" value={`$${(variant?.pricePerMl ?? 0).toFixed(4)}`} />
+                  </View>
+                </View>
+
+                {/* Scoop info strip */}
+                <View
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    backgroundColor: '#F9F7F2',
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: '#E0D9CC',
+                  }}
+                >
+                  <View className="flex-row flex-wrap gap-6">
+                    <ScoopFact label="Scoop size"      value={`${variant?.scoopG ?? 0}g`} />
+                    <ScoopFact label="Water per scoop" value={`${variant?.waterMl ?? 0}mL`} />
+                    <ScoopFact label="Scoops per tin"  value={`${(variant?.scoopsPerTin ?? 0).toFixed(0)}`} />
+                    <ScoopFact label="Tin weight"      value={formatWeight(variant?.weightG ?? 0)} />
+                  </View>
+                </View>
+
+                {/* Feature pills */}
+                {features.length > 0 && (
+                  <View className="flex-row flex-wrap gap-1.5">
+                    {features.map((f) => (
+                      <InfoPill key={f.key} icon={f.icon} label={f.label} />
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          </Card>
+
+          {/* ── Price comparison in stage ──────────────────────────────── */}
+          <Card style={{ marginTop: 24 }}>
+            <SectionHead icon="💰" title={`Price comparison — ${product.stage} ($ per gram, low to high)`} />
+            <Text className="text-[12px] text-muted font-sans mb-4">
+              Ranked #{rankInStage} of {stageProducts.length} products by $/gram · Default size shown
+            </Text>
+            <View className="gap-2">
+              {stageProducts.slice(0, 10).map((q, i) => {
+                const isThis = q.id === product.id;
+                const ppg = q.pricePerGram ?? 0;
+                const pct = Math.min(100, Math.round((ppg / maxPpg) * 100));
                 return (
                   <Pressable
-                    key={idx}
-                    onPress={() => setVariantIndex(idx)}
-                    accessibilityLabel={`Select ${formatWeight(v.weightG)} variant`}
-                    accessibilityState={{ selected: isActive }}
-                    className={
-                      'px-2 py-1 rounded-md border ' +
-                      (isActive
-                        ? 'bg-green border-green'
-                        : 'bg-surface2 border-border')
-                    }
+                    key={q.id}
+                    onPress={() => router.push(`/product/${q.id}`)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`View ${q.name}`}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 10,
+                      backgroundColor: isThis ? '#EBF5EE' : '#F9F7F2',
+                      borderWidth: 1.5,
+                      borderColor: isThis ? '#1B5E3B' : '#E0D9CC',
+                    }}
                   >
-                    <Text className={'text-[11px] font-bold ' + (isActive ? 'text-white' : 'text-muted')}>
-                      {formatWeight(v.weightG)}
+                    <View
+                      style={{
+                        width: 22, height: 22, borderRadius: 11,
+                        backgroundColor: isThis ? '#1B5E3B' : '#E0D9CC',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      <Text
+                        className="font-sans-bold text-[10px]"
+                        style={{ color: isThis ? '#FFFFFF' : '#6B7280' }}
+                      >
+                        {i + 1}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        width: 32, height: 32,
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 6,
+                        borderWidth: 1,
+                        borderColor: '#E0D9CC',
+                        alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Image
+                        source={getProductImage(q.variants[0]?.img ?? q.img)}
+                        resizeMode="contain"
+                        style={{ width: 28, height: 28 }}
+                        accessibilityLabel=""
+                        accessibilityElementsHidden
+                      />
+                    </View>
+                    <View className="flex-1 min-w-0 gap-1">
+                      <Text
+                        className="font-sans text-[12.5px]"
+                        numberOfLines={1}
+                        style={{
+                          fontWeight: isThis ? '700' : '500',
+                          color: isThis ? '#1B5E3B' : '#1A1A1A',
+                        }}
+                      >
+                        {q.name}
+                      </Text>
+                      <View
+                        style={{
+                          width: `${pct}%`,
+                          height: 6,
+                          backgroundColor: isThis ? '#1B5E3B' : '#CBD5E1',
+                          borderRadius: 3,
+                        }}
+                      />
+                    </View>
+                    <Text
+                      className="font-sans-bold text-[13px]"
+                      style={{ color: isThis ? '#1B5E3B' : '#1A1A1A' }}
+                    >
+                      ${ppg.toFixed(4)}/g
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
-          )}
+          </Card>
 
-          {/* Attribute tags */}
-          <View className="flex-row flex-wrap gap-1 mt-2">
-            {product.organic     && <Tag label="Organic"      variant="green" />}
-            {product.halal       && <Tag label="Halal"        variant="muted" />}
-            {product.lactoseFree && <Tag label="Lactose-Free" variant="muted" />}
-            {product.soyBased    && <Tag label="Soy-Based"    variant="muted" />}
-            {product.palmFree    && <Tag label="Palm-Free"    variant="muted" />}
-            {product.ha          && <Tag label="HA"           variant="muted" />}
-            {product.ar          && <Tag label="AR"           variant="muted" />}
-            {product.specialty   && (
-              <Tag label={labelForSpecialty(product.specialty)} variant="amber" />
-            )}
-          </View>
-        </View>
-      </View>
+          {/* ── Specs table ────────────────────────────────────────────── */}
+          <Card style={{ marginTop: 24 }}>
+            <SectionHead icon="📋" title="Product Specifications" />
+            <View>
+              {(() => {
+                const specs: Array<{ l: string; v: string }> = [
+                  { l: 'Stage',             v: product.stage },
+                  { l: 'Brand',             v: product.brand },
+                  { l: 'Country of Mfg.',   v: `${getOriginFlag(product.origin)} ${product.origin}` },
+                  { l: 'Milk Origin',       v: product.milkOrigin || '—' },
+                  { l: 'Milk Type',         v: `${getMilkTypeIcon(product.milkType)} ${product.milkType.charAt(0).toUpperCase()}${product.milkType.slice(1)}` },
+                  { l: 'Main Sugar Source', v: product.mainSugar || '—' },
+                  { l: 'Probiotic',         v: product.probiotic || 'None' },
+                  { l: 'HMO / Prebiotics',  v: product.hmo || 'None' },
+                ];
+                if (product.specialty) {
+                  specs.push({ l: 'Specialty', v: labelForSpecialty(product.specialty) });
+                }
+                // Render in pairs (2 columns) — wrap automatically on narrow screens.
+                return (
+                  <View className="flex-row flex-wrap">
+                    {specs.map((s, i) => (
+                      <View
+                        key={s.l}
+                        style={{
+                          flexBasis: '50%',
+                          flexGrow: 1,
+                          flexShrink: 0,
+                          minWidth: 240,
+                          paddingVertical: 10,
+                          paddingRight: i % 2 === 0 ? 24 : 0,
+                          paddingLeft:  i % 2 === 1 ? 24 : 0,
+                          borderRightWidth: i % 2 === 0 ? 1 : 0,
+                          borderRightColor: '#E0D9CC',
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#E0D9CC',
+                          flexDirection: 'row',
+                          gap: 10,
+                          alignItems: 'flex-start',
+                        }}
+                      >
+                        <Text
+                          className="font-sans-semibold text-[12px] text-muted uppercase tracking-wider"
+                          style={{ minWidth: 130 }}
+                        >
+                          {s.l}
+                        </Text>
+                        <Text className="font-sans-medium text-[13.5px] text-text flex-1">
+                          {s.v}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })()}
+            </View>
+          </Card>
 
-      {/* ── Description ─────────────────────────────────────────────── */}
-      <View className="px-4 py-5">
-        <Text className="text-sm text-text leading-relaxed">{product.desc}</Text>
-        {product.bestFor && (
-          <View className="mt-3 bg-green-light rounded-lg px-3 py-2">
-            <Text className="text-[11px] uppercase tracking-wider text-green font-bold">Best for</Text>
-            <Text className="text-sm text-text mt-0.5">{product.bestFor}</Text>
-          </View>
-        )}
-      </View>
-
-      {/* ── Quick stats grid ────────────────────────────────────────── */}
-      <View className="px-4">
-        <Text className="text-xs uppercase tracking-wider text-muted font-bold mb-2">
-          At a glance
-        </Text>
-        <View className="flex-row flex-wrap gap-2">
-          <Stat label="Origin"        value={product.origin || MISSING_VALUE} />
-          <Stat label="Milk origin"   value={product.milkOrigin || MISSING_VALUE} />
-          <Stat label="Milk type"     value={product.milkType} />
-          <Stat label="Main sugar"    value={product.mainSugar} />
-          <Stat label="Probiotic"     value={product.probiotic} />
-          <Stat label="HMO"           value={product.hmo} />
-          <Stat label="Price / 100g"  value={formatUnitPrice(variant?.pricePerGram)} />
-          <Stat label="Price / scoop" value={formatUnitPrice(variant?.pricePerScoop)} />
-        </View>
-      </View>
-
-      {/* ── Nutrition summary ───────────────────────────────────────── */}
-      <View className="px-4 mt-5">
-        <Text className="text-xs uppercase tracking-wider text-muted font-bold mb-2">
-          Nutrition (per 100g powder)
-        </Text>
-        <View className="bg-surface rounded-lg border border-border overflow-hidden">
-          <NutritionRow label="Energy"  value={formatNutrient(product.nutrition.energy,  'kcal')} />
-          <NutritionRow label="Protein" value={formatNutrient(product.nutrition.protein, 'g')} />
-          <NutritionRow label="Fat"     value={formatNutrient(product.nutrition.fat,     'g')} />
-          <NutritionRow label="Carbs"   value={formatNutrient(product.nutrition.carbs,   'g')} />
-          <NutritionRow label="DHA"     value={formatNutrient(product.nutrition.dha,     'mg')} last />
-        </View>
-      </View>
-
-      {/* ── Full nutrition table (only if we have detail data) ───────── */}
-      {detail && detail.fullNutrition.length > 0 && (
-        <View className="px-4 mt-5">
-          <Text className="text-xs uppercase tracking-wider text-muted font-bold mb-2">
-            Full nutrition panel
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View className="bg-surface rounded-lg border border-border min-w-full">
-              {/* Header row */}
-              <View className="flex-row bg-surface2 px-3 py-2">
-                <Text className="flex-1 text-[10px] uppercase tracking-wider text-muted font-bold">Nutrient</Text>
-                <Text className="w-24 text-[10px] uppercase tracking-wider text-muted font-bold text-right">per 100g</Text>
-                <Text className="w-24 text-[10px] uppercase tracking-wider text-muted font-bold text-right">per 100ml</Text>
-              </View>
-              {detail.fullNutrition.map((row, idx) => (
-                <View
-                  key={`${row.nutrient}-${idx}`}
-                  className={
-                    'flex-row px-3 py-2 ' +
-                    (idx < detail.fullNutrition.length - 1 ? 'border-b border-border' : '')
-                  }
-                >
-                  <Text className="flex-1 text-xs text-text">{row.nutrient}</Text>
-                  <Text className="w-24 text-xs text-text text-right">{formatNutrient(row.per100g, row.unit)}</Text>
-                  <Text className="w-24 text-xs text-muted text-right">{formatNutrient(row.per100ml, row.unit)}</Text>
+          {/* ── All-sizes table ────────────────────────────────────────── */}
+          {product.variants.length > 1 && (
+            <Card style={{ marginTop: 24 }}>
+              <SectionHead icon="📦" title="All Available Sizes" />
+              <ScrollView horizontal showsHorizontalScrollIndicator>
+                <View>
+                  {/* Header row */}
+                  <View
+                    className="flex-row"
+                    style={{ backgroundColor: '#F9F7F2', borderBottomWidth: 1, borderBottomColor: '#E0D9CC' }}
+                  >
+                    {['Size', 'Tin Price', '$ / gram', '$ / scoop', '$ / mL', 'Scoops', 'Scoop', 'Water'].map((h) => (
+                      <View key={h} style={{ width: 96, paddingHorizontal: 14, paddingVertical: 10 }}>
+                        <Text className="font-sans-bold text-[10.5px] uppercase tracking-wider text-muted">{h}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {(() => {
+                    const minPpg = Math.min(...product.variants.map((x) => x.pricePerGram ?? Infinity));
+                    return product.variants.map((vt, i) => {
+                      const isSelected = i === variantIndex;
+                      const isBest = (vt.pricePerGram ?? 0) === minPpg;
+                      const ppg = vt.pricePerGram ?? 0;
+                      const pps = vt.pricePerScoop ?? 0;
+                      const ppm = vt.pricePerMl ?? 0;
+                      return (
+                        <Pressable
+                          key={i}
+                          onPress={() => setVariantIndex(i)}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: isSelected }}
+                          accessibilityLabel={`Select ${formatWeight(vt.weightG)} variant`}
+                          className="flex-row"
+                          style={{
+                            backgroundColor: isSelected ? '#EBF5EE' : 'transparent',
+                          }}
+                        >
+                          <Cell width={96} bold color={isSelected ? '#1B5E3B' : '#1A1A1A'}>
+                            {formatWeight(vt.weightG)}
+                            {isSelected && (
+                              <Text className="font-sans-bold text-[10px] text-white" style={{ backgroundColor: '#1B5E3B', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 6 }}>
+                                {' selected'}
+                              </Text>
+                            )}
+                          </Cell>
+                          <Cell width={96} bold size={15} color={isSelected ? '#1B5E3B' : '#1A1A1A'}>
+                            ${vt.price.toFixed(2)}
+                          </Cell>
+                          <Cell width={96} bold color={isBest ? '#1B5E3B' : '#1A1A1A'}>
+                            ${ppg.toFixed(4)}
+                            {isBest && (
+                              <Text className="font-sans-bold text-[10px]" style={{ color: '#065F46', backgroundColor: '#D1FAE5', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 5 }}>
+                                {' ✓ best'}
+                              </Text>
+                            )}
+                          </Cell>
+                          <Cell width={96}>${pps.toFixed(3)}</Cell>
+                          <Cell width={96}>${ppm.toFixed(4)}</Cell>
+                          <Cell width={96}>{(vt.scoopsPerTin ?? 0).toFixed(0)}</Cell>
+                          <Cell width={96}>{vt.scoopG}g</Cell>
+                          <Cell width={96}>{vt.waterMl}mL</Cell>
+                        </Pressable>
+                      );
+                    });
+                  })()}
                 </View>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-      )}
-
-      {/* ── Ingredients & allergens ─────────────────────────────────── */}
-      {detail?.ingredients && (
-        <View className="px-4 mt-5 mb-8">
-          <Text className="text-xs uppercase tracking-wider text-muted font-bold mb-2">Ingredients</Text>
-          <Text className="text-xs text-text leading-relaxed">{detail.ingredients}</Text>
-          {detail.allergen && (
-            <View className="mt-3 bg-amber-light rounded-lg px-3 py-2">
-              <Text className="text-[11px] uppercase tracking-wider text-amber font-bold">Allergens</Text>
-              <Text className="text-xs text-text mt-0.5">{detail.allergen}</Text>
-            </View>
+              </ScrollView>
+              <Text className="text-[12px] text-muted font-sans mt-3">
+                💡 Tap a row to view that size. "Best" = lowest price per gram across all sizes of this product.
+              </Text>
+            </Card>
           )}
+
+          {/* ── Features & claims ──────────────────────────────────────── */}
+          {features.length > 0 && (
+            <Card style={{ marginTop: 24 }}>
+              <SectionHead icon="⭐" title="Features & Claims" />
+              <View className="flex-row flex-wrap gap-2.5">
+                {features.map((f) => (
+                  <View
+                    key={f.key}
+                    style={{
+                      flex: 1,
+                      flexBasis: 200,
+                      minWidth: 200,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      backgroundColor: '#EBF5EE',
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: '#B7E4C7',
+                    }}
+                  >
+                    <Text style={{ fontSize: 22 }}>{f.icon}</Text>
+                    <Text className="font-sans-semibold text-[13px]" style={{ color: '#1B5E3B' }}>
+                      {f.label}
+                    </Text>
+                  </View>
+                ))}
+                {product.probiotic && product.probiotic !== 'None' && (
+                  <FeatureBlock
+                    bg="#FEF9C3" border="#FCD34D"
+                    labelColor="#713F12" valueColor="#451A03"
+                    icon="🦠" label="Probiotic Strain" value={product.probiotic}
+                  />
+                )}
+                {product.hmo && product.hmo !== 'None' && (
+                  <FeatureBlock
+                    bg="#EDE9FE" border="#C4B5FD"
+                    labelColor="#4C1D95" valueColor="#2E1065"
+                    icon="🧫" label="HMO / Prebiotic Blend" value={product.hmo}
+                  />
+                )}
+              </View>
+            </Card>
+          )}
+
+          {/* ── Nutrition summary (top-level stats) ────────────────────── */}
+          {(product.nutrition.energy || product.nutrition.protein) && (
+            <Card style={{ marginTop: 24 }}>
+              <SectionHead icon="🧪" title="Nutrition (per 100g powder)" />
+              <View className="flex-row flex-wrap gap-3">
+                {product.nutrition.energy != null && (
+                  <NutBlock value={`${product.nutrition.energy} kcal`} label="Energy"  bg="#FEF9C3" fg="#713F12" />
+                )}
+                {product.nutrition.protein != null && (
+                  <NutBlock value={`${product.nutrition.protein}g`}    label="Protein" bg="#D1FAE5" fg="#065F46" />
+                )}
+                {product.nutrition.fat != null && (
+                  <NutBlock value={`${product.nutrition.fat}g`}        label="Fat"     bg="#FEF3C7" fg="#92400E" />
+                )}
+                {product.nutrition.carbs != null && (
+                  <NutBlock value={`${product.nutrition.carbs}g`}      label="Carbs"   bg="#EDE9FE" fg="#6D28D9" />
+                )}
+                {product.nutrition.dha != null && (
+                  <NutBlock value={`${product.nutrition.dha} µg`}      label="DHA"     bg="#E0F2FE" fg="#0369A1" />
+                )}
+              </View>
+            </Card>
+          )}
+
+          {/* ── Ingredients + allergens ────────────────────────────────── */}
+          {detail?.ingredients && (
+            <Card style={{ marginTop: 24 }}>
+              <SectionHead icon="🧪" title="Full Ingredients List" />
+              {detail.allergen && (
+                <View
+                  style={{
+                    marginBottom: 14,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                    backgroundColor: '#FEF3C7',
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#FCD34D',
+                  }}
+                >
+                  <Text className="font-sans-semibold text-[12.5px]" style={{ color: '#92400E' }}>
+                    ⚠️ {detail.allergen}
+                  </Text>
+                </View>
+              )}
+              <View
+                style={{
+                  backgroundColor: '#F9F7F2',
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: '#E0D9CC',
+                  paddingHorizontal: 18,
+                  paddingVertical: 16,
+                }}
+              >
+                <Text className="text-[13.5px] text-text font-sans" style={{ lineHeight: 25 }}>
+                  {detail.ingredients.split(',').map((item, i, arr) => (
+                    <Text key={i}>
+                      <Text
+                        style={{
+                          color: '#1A1A1A',
+                          fontWeight: i === 0 ? '700' : '400',
+                        }}
+                      >
+                        {item.trim()}
+                      </Text>
+                      {i < arr.length - 1 && (
+                        <Text style={{ color: '#6B7280' }}>, </Text>
+                      )}
+                    </Text>
+                  ))}
+                </Text>
+              </View>
+              <Text className="text-[11.5px] text-muted font-sans mt-2.5">
+                Ingredients listed in descending order by weight as declared on product label.
+              </Text>
+            </Card>
+          )}
+
+          {/* ── Full nutrition table (categorised) ─────────────────────── */}
+          {detail?.fullNutrition && detail.fullNutrition.length > 0 && (
+            <Card style={{ marginTop: 24 }}>
+              <SectionHead icon="📊" title="Nutritional Information (per 100g powder)" />
+              <NutritionTable rows={detail.fullNutrition} />
+              <Text className="text-[11.5px] text-muted font-sans mt-2.5">
+                💡 Values per 100g of powder unless stated. Source: product label.
+              </Text>
+            </Card>
+          )}
+
+          {/* ── Similar products ───────────────────────────────────────── */}
+          {similarProducts.length > 0 && (
+            <Card style={{ marginTop: 24 }}>
+              <SectionHead icon="🔗" title="You may also consider" />
+              <View className="flex-row flex-wrap gap-3">
+                {similarProducts.map((q) => (
+                  <Pressable
+                    key={q.id}
+                    onPress={() => router.push(`/product/${q.id}`)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`View ${q.name}`}
+                    style={{
+                      flex: 1,
+                      flexBasis: 200,
+                      minWidth: 200,
+                      flexDirection: 'row',
+                      gap: 12,
+                      padding: 12,
+                      backgroundColor: '#F9F7F2',
+                      borderRadius: 12,
+                      borderWidth: 1.5,
+                      borderColor: '#E0D9CC',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 52, height: 52,
+                        backgroundColor: '#FFFFFF',
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: '#E0D9CC',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <Image
+                        source={getProductImage(q.variants[0]?.img ?? q.img)}
+                        resizeMode="contain"
+                        style={{ width: 44, height: 44 }}
+                        accessibilityLabel=""
+                        accessibilityElementsHidden
+                      />
+                    </View>
+                    <View className="flex-1 min-w-0">
+                      <Text className="text-[10px] font-sans-bold text-muted uppercase tracking-wider">
+                        {q.brand}
+                      </Text>
+                      <Text className="text-[12.5px] font-sans-bold text-text mt-0.5" numberOfLines={2}>
+                        {q.name}
+                      </Text>
+                      <Text className="text-[11.5px] font-sans-bold text-green mt-1">
+                        ${(q.pricePerGram ?? 0).toFixed(4)}/g
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            </Card>
+          )}
+
+          {/* ── Disclaimer ─────────────────────────────────────────────── */}
+          <View
+            className="rounded-xl mt-6"
+            style={{
+              backgroundColor: '#FFFFFF',
+              paddingHorizontal: 18,
+              paddingVertical: 16,
+            }}
+          >
+            <Text className="text-[11.5px] text-muted font-sans" style={{ lineHeight: 18 }}>
+              <Text className="font-sans-bold text-text">Disclaimer: </Text>
+              All product data, prices, and nutritional information are sourced
+              from Singapore retail channels and product labels. Always check
+              the actual product label and consult your paediatrician before
+              making feeding decisions. Prices are indicative and may vary by
+              retailer and promotion.
+            </Text>
+          </View>
         </View>
-      )}
+      </ScrollView>
     </Screen>
   );
 }
 
-// ── Local presentational helpers ────────────────────────────────────────────
+/* -------------------------------------------------------------------------- */
+/* Local presentational helpers                                                */
+/* -------------------------------------------------------------------------- */
 
-/**
- * `Stat` — small fixed-width tile used inside "At a glance".
- * Kept private to this screen because it's not used anywhere else.
- */
-const Stat = ({ label, value }: { label: string; value: string }) => (
-  <View className="bg-surface rounded-lg border border-border px-3 py-2 min-w-[140px] flex-1 max-w-[220px]">
-    <Text className="text-[10px] uppercase tracking-wider text-muted font-bold">{label}</Text>
-    <Text className="text-xs text-text font-medium mt-0.5" numberOfLines={2}>{value}</Text>
+/** White card with brand-spec radius + shadow + 24px padding. */
+const Card = ({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: object;
+}) => (
+  <View
+    style={{
+      backgroundColor: '#FFFFFF',
+      borderRadius: 14,
+      padding: 24,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.07,
+      shadowRadius: 12,
+      elevation: 1,
+      ...style,
+    }}
+  >
+    {children}
   </View>
 );
 
-/**
- * `NutritionRow` — single row in the at-a-glance nutrition card.
- * `last` removes the bottom border on the final row for a clean edge.
- */
-const NutritionRow = ({ label, value, last }: { label: string; value: string; last?: boolean }) => (
-  <View className={'flex-row justify-between px-3 py-2 ' + (last ? '' : 'border-b border-border')}>
-    <Text className="text-xs text-muted">{label}</Text>
-    <Text className="text-xs text-text font-medium">{value}</Text>
+const SectionHead = ({ icon, title }: { icon: string; title: string }) => (
+  <View className="flex-row items-center gap-2.5 mb-4">
+    <Text style={{ fontSize: 20 }}>{icon}</Text>
+    <Text className="font-serif text-text" style={{ fontSize: 20 }}>{title}</Text>
+  </View>
+);
+
+/** Simple coloured pill — used for stage badge, halal, organic. */
+const Badge = ({ bg, fg, label }: { bg: string; fg: string; label: string }) => (
+  <View
+    style={{
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 6,
+      backgroundColor: bg,
+    }}
+  >
+    <Text
+      className="font-sans-bold text-[12px] uppercase tracking-wider"
+      style={{ color: fg }}
+    >
+      {label}
+    </Text>
+  </View>
+);
+
+/** Specialty-themed badge — reads its colour pair from the theme. */
+const SpecialtyBadge = ({ specialty }: { specialty: SpecialtyKey }) => {
+  const { bg, fg } = specialtyColors[specialty];
+  return (
+    <View
+      style={{
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+        backgroundColor: bg,
+      }}
+    >
+      <Text
+        className="font-sans-bold text-[12px] uppercase tracking-wider"
+        style={{ color: fg }}
+      >
+        {labelForSpecialty(specialty)}
+      </Text>
+    </View>
+  );
+};
+
+/** Pricing stat tile — `highlight` paints the brand-green variant. */
+const StatBox = ({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) => (
+  <View
+    style={{
+      flex: 1,
+      flexBasis: 120,
+      minWidth: 110,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      backgroundColor: highlight ? '#EBF5EE' : '#F9F7F2',
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: highlight ? '#B7E4C7' : '#E0D9CC',
+      alignItems: 'center',
+    }}
+  >
+    <Text
+      className="font-serif"
+      style={{ fontSize: 20, color: highlight ? '#1B5E3B' : '#1A1A1A', lineHeight: 22 }}
+    >
+      {value}
+    </Text>
+    <Text className="font-sans-medium text-[11px] text-muted mt-1.5">{label}</Text>
+  </View>
+);
+
+/** Scoop info fact — small label/value pair used in the scoop strip. */
+const ScoopFact = ({ label, value }: { label: string; value: string }) => (
+  <View className="items-center">
+    <Text className="font-sans-bold text-[10px] uppercase tracking-wider text-muted mb-0.5">
+      {label}
+    </Text>
+    <Text className="font-sans-bold text-text" style={{ fontSize: 16 }}>
+      {value}
+    </Text>
+  </View>
+);
+
+/** Green-light feature pill — icon + label. */
+const InfoPill = ({ icon, label }: { icon: string; label: string }) => (
+  <View
+    style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingHorizontal: 11,
+      paddingVertical: 5,
+      borderRadius: 8,
+      backgroundColor: '#EBF5EE',
+      borderWidth: 1,
+      borderColor: '#B7E4C7',
+    }}
+  >
+    <Text className="text-[14px]">{icon}</Text>
+    <Text className="font-sans-semibold text-[12px]" style={{ color: '#1B5E3B' }}>
+      {label}
+    </Text>
+  </View>
+);
+
+/** Highlighted feature block — used for Probiotic and HMO callouts. */
+const FeatureBlock = ({
+  bg, border, labelColor, valueColor, icon, label, value,
+}: {
+  bg: string; border: string; labelColor: string; valueColor: string;
+  icon: string; label: string; value: string;
+}) => (
+  <View
+    style={{
+      flexBasis: '100%',
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      backgroundColor: bg,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: border,
+    }}
+  >
+    <Text style={{ fontSize: 22 }}>{icon}</Text>
+    <View className="flex-1">
+      <Text
+        className="font-sans-bold text-[12px] uppercase tracking-wider"
+        style={{ color: labelColor }}
+      >
+        {label}
+      </Text>
+      <Text
+        className="font-sans-semibold text-[13.5px] mt-1"
+        style={{ color: valueColor }}
+      >
+        {value}
+      </Text>
+    </View>
+  </View>
+);
+
+/** Nutrition macro tile — bg-tinted card with stat-style value + label. */
+const NutBlock = ({
+  value, label, bg, fg,
+}: {
+  value: string; label: string; bg: string; fg: string;
+}) => (
+  <View
+    style={{
+      flex: 1,
+      flexBasis: 120,
+      minWidth: 110,
+      padding: 14,
+      borderRadius: 12,
+      backgroundColor: bg,
+      alignItems: 'center',
+    }}
+  >
+    <Text className="font-sans-bold" style={{ fontSize: 20, color: fg }}>
+      {value}
+    </Text>
+    <Text
+      className="font-sans-bold text-[11px] uppercase tracking-wider mt-1"
+      style={{ color: fg }}
+    >
+      {label}
+    </Text>
+  </View>
+);
+
+/** Plain text-cell helper for the all-sizes table. */
+const Cell = ({
+  children,
+  width,
+  bold,
+  size,
+  color,
+}: {
+  children: React.ReactNode;
+  width: number;
+  bold?: boolean;
+  size?: number;
+  color?: string;
+}) => (
+  <View
+    style={{
+      width,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: '#E0D9CC',
+    }}
+  >
+    <Text
+      className="font-sans"
+      style={{
+        fontSize: size ?? 13.5,
+        fontWeight: bold ? '700' : '400',
+        color: color ?? '#1A1A1A',
+      }}
+    >
+      {children}
+    </Text>
+  </View>
+);
+
+/* -------------------------------------------------------------------------- */
+/* NutritionTable — categorises rows into Macros / Vitamins / Minerals / etc. */
+/* -------------------------------------------------------------------------- */
+
+const NUT_CATEGORIES: Readonly<Record<string, readonly string[]>> = {
+  Macronutrients: [
+    'Energy', 'Protein', 'Fat', 'Carbohydrate', 'Linoleic Acid', 'Alpha-Linolenic',
+    'ARA', 'DHA', 'FOS',
+  ],
+  Vitamins: [
+    'Vitamin A', 'Vitamin D3', 'Vitamin D', 'Vitamin E', 'Vitamin K1', 'Vitamin K',
+    'Vitamin C', 'Thiamin', 'Riboflavin', 'Niacin', 'Folic', 'Vitamin B12',
+    'Biotin', 'Pantothenic',
+  ],
+  Minerals: [
+    'Calcium', 'Phosphorus', 'Magnesium', 'Sodium', 'Potassium', 'Chloride',
+    'Iron', 'Zinc', 'Copper', 'Manganese', 'Iodine', 'Selenium', 'Minerals',
+  ],
+  Bioactives: [
+    'Choline', 'Taurine', 'Inositol', 'Carnitine', 'L-Carnitine',
+  ],
+};
+
+const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
+  // Bucket rows by category — first match wins. Anything unmatched goes
+  // into "Other" at the end so we never silently drop data.
+  const buckets = useMemo(() => {
+    const result: Record<string, NutrientRow[]> = {};
+    const used = new Set<string>();
+    for (const [cat, keys] of Object.entries(NUT_CATEGORIES)) {
+      const matched = rows.filter((r) =>
+        keys.some((k) => r.nutrient.toLowerCase().includes(k.toLowerCase())),
+      );
+      if (matched.length) {
+        result[cat] = matched;
+        matched.forEach((r) => used.add(r.nutrient));
+      }
+    }
+    const other = rows.filter((r) => !used.has(r.nutrient));
+    if (other.length) result.Other = other;
+    return result;
+  }, [rows]);
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator>
+      <View style={{ minWidth: 540 }}>
+        {/* Header row */}
+        <View
+          className="flex-row"
+          style={{ backgroundColor: '#1B5E3B' }}
+        >
+          <TableHeader text="Nutrient" width={240} />
+          <TableHeader text="Unit"     width={80} />
+          <TableHeader text="Per 100g" width={110} align="right" />
+          <TableHeader text="Per 100mL" width={110} align="right" />
+        </View>
+
+        {Object.entries(buckets).map(([cat, catRows]) => (
+          <View key={cat}>
+            {/* Category divider */}
+            <View
+              className="flex-row"
+              style={{ backgroundColor: '#EBF5EE' }}
+            >
+              <View style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
+                <Text
+                  className="font-sans-bold text-[11px] uppercase tracking-wider"
+                  style={{ color: '#1B5E3B' }}
+                >
+                  {cat}
+                </Text>
+              </View>
+            </View>
+
+            {catRows.map((r, i) => (
+              <View
+                key={`${cat}-${r.nutrient}-${i}`}
+                className="flex-row"
+                style={{
+                  backgroundColor: i % 2 === 1 ? '#F9F7F2' : 'transparent',
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#E0D9CC',
+                }}
+              >
+                <TableCell text={r.nutrient}                               width={240} />
+                <TableCell text={r.unit}                                   width={80} muted size={12} />
+                <TableCell text={r.per100g != null ? String(r.per100g) : '—'}   width={110} align="right" bold />
+                <TableCell text={r.per100ml != null ? String(r.per100ml) : '—'} width={110} align="right" bold color="#1B5E3B" />
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
+};
+
+const TableHeader = ({
+  text,
+  width,
+  align,
+}: {
+  text: string;
+  width: number;
+  align?: 'right';
+}) => (
+  <View style={{ width, paddingHorizontal: 14, paddingVertical: 9 }}>
+    <Text
+      className="font-sans-bold text-[11px] uppercase tracking-wider text-white"
+      style={{ textAlign: align ?? 'left' }}
+    >
+      {text}
+    </Text>
+  </View>
+);
+
+const TableCell = ({
+  text,
+  width,
+  muted,
+  bold,
+  size,
+  color,
+  align,
+}: {
+  text: string;
+  width: number;
+  muted?: boolean;
+  bold?: boolean;
+  size?: number;
+  color?: string;
+  align?: 'right';
+}) => (
+  <View style={{ width, paddingHorizontal: 14, paddingVertical: 9 }}>
+    <Text
+      className="font-sans"
+      style={{
+        fontSize: size ?? 13,
+        fontWeight: bold ? '600' : '500',
+        color: color ?? (muted ? '#6B7280' : '#1A1A1A'),
+        textAlign: align ?? 'left',
+      }}
+    >
+      {text}
+    </Text>
   </View>
 );
