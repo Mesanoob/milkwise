@@ -4,8 +4,9 @@ Side-by-side comparison of baby formula on sale in Singapore. One codebase
 ships to **web (PWA), iOS (App Store), and Android (Google Play)** via
 Expo Router.
 
-> **Status:** Session 1 production refactor. Compare + Product Detail
-> screens fully built. Calculator and Most-Sold screens are placeholders.
+> **Status:** Compare + Product Detail screens fully built. Phase C
+> Calculator is implemented and web-bundles successfully. Most-Sold is still
+> a placeholder pending the missing design source.
 > Supabase backend lands in Session 3 — see [Roadmap](#roadmap).
 
 ---
@@ -46,7 +47,7 @@ only knows about the one directly below it.
 │  app/                screens (Expo Router routes)        │
 │    index.tsx           Compare                           │
 │    product/[id].tsx    Product detail                    │
-│    calculator.tsx      [placeholder]                     │
+│    calculator.tsx      feeding calculator                │
 │    most-sold.tsx       [placeholder]                     │
 │    about.tsx                                             │
 │    +not-found.tsx      404                               │

@@ -29,7 +29,8 @@
     },
     "scheme": "milkwise",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-font"
     ]
   }
 }

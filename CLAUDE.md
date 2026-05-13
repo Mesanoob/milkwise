@@ -1,5 +1,69 @@
 # CLAUDE.md
 
+## Current Handoff — 2026-05-14
+
+This section is the authoritative resume point. Older session notes below are preserved for history but are stale.
+
+**Repository / branch rules**
+- Actual app repository: `/Users/dave/Documents/Claude/Projects/milkwise-claude-design/milkwise`
+- Active branch: `testingprod`, tracking `origin/testingprod` (`github.com:Mesanoob/milkwise`)
+- Do not push to `main`. Do not push any branch unless the user explicitly asks.
+- Local design handoff: `/private/tmp/milkwise-design/milk-comparison-website/project/design_handoff_milkwise_sg/` (also `/tmp/milkwise-design/design.tar.gz`)
+- External design reference: `https://claude.ai/design/p/0f544be5-c9d7-43d6-b2bc-a34ea47d9182?file=index.html`
+
+**Operating mode — Shipping Mode is active**
+- User explicitly requested Senior Tech Lead + Cybersecurity Expert posture. See parent `../CLAUDE.md` and memory file `feedback_shipping_mode.md`.
+- Ship production code directly with comments explaining the *why*. Do NOT use the older Beginner Mentor / "You Try First" protocol unless the user says exactly `switch to mentor mode`.
+
+**What's done as of this handoff** (committed on `testingprod`, 5 feature commits beyond Session 1):
+
+| Area | Status |
+| --- | --- |
+| Fonts (DM Sans 300-700 + DM Serif Display) | Complete — loaded via `@expo-google-fonts/*` + splash-screen hold |
+| Spec-exact design tokens (11 specialty + 4 stage palettes, 14px radius, etc.) | Complete |
+| `getOriginFlag(origin)` icon helper | Complete |
+| Multi-select filters (stages/brands/specialties/origins/milkTypes/halal/pHF/eHF) | Complete |
+| `ProductsContext` at `_layout.tsx` so filter state survives Compare ↔ Detail nav | Complete — fixes the "filters reset on back" bug |
+| ProductCard / ProductListRow rewrite (design-aligned, mobile-responsive, variant-pill bug fixed) | Complete |
+| `ProductGrid` CSS Grid on web — fixes last-row stretching | Complete |
+| Compare drawer + modal (web-only via `position: fixed`) | Complete |
+| Tag component supports specialty palette + size | Complete |
+| StageTabs / BrandPills / SpecialtyChips multi-select | Complete |
+| `AdvancedFilterChips` split into Trigger + Drawer (filter overflow chip) | Complete |
+| Compare screen unified toolbar (sort | dir | hint | Filters | spacer | count | view) | Complete |
+| Header redesign (green bottle tile + serif wordmark + in-nav search) | Complete |
+| About — full redesign matching `about.html` (hero, pillars, methodology, FAQ, footer) | Complete |
+| Most Sold — built from `most-sold.html` (podium, rank rows, share chart) | Complete |
+| Product Detail — rebuilt from `product.html` (variant cards, all-sizes table, categorised nutrition) | Complete |
+| Calculator — built from `calculator.html` (DOB, HPB/KKH benchmark, intake, cost charts) | Complete — variant-size dropdown rows added |
+| Font-weight cleanup — `font-bold/semibold/medium` → `font-sans-*` so RN binds real weights | Complete |
+
+**What's NOT done — pick up here**
+
+1. **Phase D — Accessibility audit** (the explicit next priority):
+   - Keyboard navigation across every interactive element (Tab order, Enter to activate)
+   - Focus trap inside `CompareModal` (web `position: fixed`); Esc to dismiss; restore focus on close
+   - Tap-target audit — every Pressable ≥44×44 px (iOS HIG / WCAG 2.5.5 minimum)
+   - Visible focus states beyond the global `:focus-visible` ring (e.g. for chips, variant pills)
+   - Screen-reader pass: `accessibilityLabel` + `accessibilityRole` + `accessibilityState` audit on cards, list rows, drawer, modal
+   - WCAG AA contrast spot-check on specialty palette text-on-bg pairs
+   - Live-region announcements for filter changes ("Showing 8 of 61 products")
+   - Run a Lighthouse a11y audit on web and a `react-native-axe` pass if added
+2. **Compare modal native path** — currently `position: fixed` + sticky CSS; needs `<Modal>` wrapper for iOS / Android
+3. **URL state for filters** — context-only today; refresh wipes it. Promote to URL params so filter sets are shareable
+4. **`npm audit`** — 4 moderate vulnerabilities still flagged. Triage but do not `audit fix --force`
+5. **Chrome MCP for localhost** — extension keeps returning `permission_required: localhost`. Puppeteer MCP works as a substitute for visual QA
+
+**Quick checks at session start**
+```bash
+cd /Users/dave/Documents/Claude/Projects/milkwise-claude-design/milkwise
+npm run typecheck       # should be 0 errors
+npm run web             # dev server on 8081
+git log --oneline -7    # recent commits land on testingprod
+```
+
+If port 8081 is in use: `lsof -ti:8081 | xargs kill`
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ---
