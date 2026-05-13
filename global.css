@@ -1,3 +1,45 @@
+/* NativeWind / Tailwind layers. These three directives must come first so
+   any rule below can rely on Tailwind's reset and utility cascade. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ────────────────────────────────────────────────────────────────────────
+   Web-only baseline. Native (iOS/Android) ignores this file entirely —
+   React Native uses its own style engine. These rules only affect the
+   browser build (Expo Web → react-native-web).
+   ────────────────────────────────────────────────────────────────────── */
+
+/* Fallback system font stack used during the brief window between page
+   load and `useFonts` resolving DM Sans. Using `-apple-system` etc keeps
+   text close to the eventual DM Sans metrics, which minimises layout shift
+   (CLS) when the real font swaps in.
+
+   The brand background colour matches `theme.colors.bg` so the splash-to-
+   shell transition does not flash white. */
+html,
+body {
+  background-color: #F5F2EB;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Hide the default focus outline only when the user is clicking with a
+   mouse — keyboard users keep the ring. `:focus-visible` is the modern way
+   to express this and is supported in every browser we ship to. */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+*:focus-visible {
+  outline: 2px solid #1B5E3B;
+  outline-offset: 2px;
+}

@@ -22,15 +22,17 @@ export const normaliseForSearch = (input: string): string =>
  * crashing the UI.
  */
 const SPECIALTY_LABELS: Record<string, string> = {
-  budget:      'Budget',
-  organic:     'Organic',
-  gentle:      'Gentle / Digestive',
-  soy:         'Soy-Based',
-  lactosefree: 'Lactose-Free',
-  ha:          'Hypoallergenic',
-  ar:          'Anti-Regurgitation',
-  csection:    'C-Section',
-  premature:   'Premature',
+  budget:         'Budget',
+  organic:        'Organic',
+  gentle:         'Gentle Digestion',
+  goat:           'Goat Milk',
+  soy:            'Soy-Based',
+  lactosefree:    'Lactose-Free',
+  ha:             'HA (Hypoallergenic-Lite)',
+  hypoallergenic: 'Hypoallergenic',
+  ar:             'Anti-Reflux',
+  csection:       'C-Section Recovery',
+  premature:      'Premature',
 };
 
 export const labelForSpecialty = (key: string | null | undefined): string => {

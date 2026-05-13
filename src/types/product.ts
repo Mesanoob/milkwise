@@ -25,13 +25,20 @@ export type Stage = 'Stage 1' | 'Stage 2' | 'Stage 3' | 'Newborn';
 
 export type MilkType = 'cow' | 'goat' | 'soy';
 
+// Keep this union in sync with:
+//   • `specialtyColors` in `src/config/theme.ts` (visual palette)
+//   • `SPECIALTY_LABELS` in `src/utils/strings.ts` (human-readable copy)
+//   • The literal strings stored in `products.json`
+// All four are mirrors of the same vocabulary; drift = silent UI bugs.
 export type Specialty =
   | 'budget'
   | 'organic'
   | 'gentle'
+  | 'goat'
   | 'soy'
   | 'lactosefree'
   | 'ha'
+  | 'hypoallergenic'
   | 'ar'
   | 'csection'
   | 'premature'
@@ -85,6 +92,7 @@ export interface Product {
   organic:      boolean;
   palmFree:     boolean;
   partialHydro: boolean;
+  extHydro?:     boolean;
 
   probiotic:    string;
   hmo:          string;

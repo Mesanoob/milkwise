@@ -32,12 +32,63 @@ export const colors = {
   warning:       '#F59E0B',
 } as const;
 
+// ── Specialty colours ───────────────────────────────────────────────────────
+// One colour pair per specialty tag. Each entry has a `bg` (light tint used
+// as pill background) and a `fg` (dark variant used for text + border + icon).
+//
+// These hex values are LIFTED VERBATIM from the design handoff
+// (`SPECIALTY_COLOR` map in the prototype `index.html`). Do not "fix" the
+// contrast or tune the hues — the design team picked these to read as a
+// coherent system across all 11 specialties. Every pair is WCAG AA at the
+// 10–12px tag sizes we ship.
+//
+// Keys MUST match the raw specialty strings in `products.json` — see
+// `ALL_SPECIALTIES` in `src/data/products.ts`.
+export const specialtyColors = {
+  ar:             { bg: '#FEF3C7', fg: '#92400E' }, // anti-reflux — warm amber
+  budget:         { bg: '#DBEAFE', fg: '#1E40AF' }, // value/budget — blue
+  csection:       { bg: '#F3E8FF', fg: '#6B21A8' }, // c-section recovery — purple
+  gentle:         { bg: '#FCE7F3', fg: '#9D174D' }, // gentle digestion — pink
+  goat:           { bg: '#FEF9C3', fg: '#713F12' }, // goat milk — mustard
+  ha:             { bg: '#EDE9FE', fg: '#6D28D9' }, // hypoallergenic-lite (HA) — violet
+  hypoallergenic: { bg: '#FFE4E6', fg: '#9F1239' }, // full hypoallergenic — rose
+  lactosefree:    { bg: '#E0F2FE', fg: '#0369A1' }, // lactose-free — sky blue
+  organic:        { bg: '#DCFCE7', fg: '#166534' }, // organic — fresh green
+  premature:      { bg: '#FFF7ED', fg: '#9A3412' }, // premature/low-birthweight — orange
+  soy:            { bg: '#D1FAE5', fg: '#065F46' }, // soy-based — emerald
+} as const;
+
+// ── Stage badge palette ─────────────────────────────────────────────────────
+// Subtle pastel pills used to flag what life stage a formula targets.
+// Also lifted from the design handoff. Each stage has its own colour so the
+// eye can spot "Stage 1 vs Stage 2" without reading the text.
+export const stageColors = {
+  'Stage 1': { bg: '#DBEAFE', fg: '#1E40AF' },
+  'Stage 2': { bg: '#FCE7F3', fg: '#9D174D' },
+  'Stage 3': { bg: '#D1FAE5', fg: '#065F46' },
+  'Newborn': { bg: '#FFE4E6', fg: '#9F1239' },
+} as const;
+
+export type StageKey = keyof typeof stageColors;
+
+export type SpecialtyKey = keyof typeof specialtyColors;
+
 // ── Typography ──────────────────────────────────────────────────────────────
-// Two-family system. Serif for marketing headlines, sans for everything else.
-// Numeric size scale follows a perceptual ratio (~1.2) for visual rhythm.
+// Font family names must match the keys passed to `useFonts` in
+// `app/_layout.tsx`. The `@expo-google-fonts/*` packages use the literal
+// "<Family>_<Weight><Style>" naming convention — keep it intact.
+//
+// On native, React Native does NOT synthesise weights for custom fonts —
+// `fontWeight: '700'` on `DMSans_400Regular` will render at 400. To get
+// bold, you must explicitly set `fontFamily: 'DMSans_700Bold'`. The helpers
+// below give component code a single source of truth.
 export const fonts = {
-  serif: 'DMSerifDisplay',
-  sans:  'DMSans',
+  serif:        'DMSerifDisplay_400Regular',
+  sansLight:    'DMSans_300Light',
+  sans:         'DMSans_400Regular',
+  sansMedium:   'DMSans_500Medium',
+  sansSemibold: 'DMSans_600SemiBold',
+  sansBold:     'DMSans_700Bold',
 } as const;
 
 export const fontSizes = {
@@ -94,5 +145,14 @@ export const shadow = {
 } as const;
 
 // Aggregate export for ergonomic consumption: `import { theme } from ...`
-export const theme = { colors, fonts, fontSizes, spacing, radius, shadow } as const;
+export const theme = {
+  colors,
+  specialtyColors,
+  stageColors,
+  fonts,
+  fontSizes,
+  spacing,
+  radius,
+  shadow,
+} as const;
 export type Theme = typeof theme;

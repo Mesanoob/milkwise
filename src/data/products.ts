@@ -17,7 +17,7 @@
  */
 
 import productsJson from './products.json';
-import type { Product, Stage } from '../types/product';
+import type { MilkType, Product, Stage } from '../types/product';
 
 // `as` cast lets TypeScript treat the JSON as our domain type. We accept
 // this risk because (a) the data is hand-curated, (b) we read it with the
@@ -46,6 +46,14 @@ export const getProductById = (id: string): Product | undefined =>
  */
 export const ALL_BRANDS: readonly string[] = Array.from(
   new Set(products.map((p) => p.brand)),
+).sort((a, b) => a.localeCompare(b));
+
+export const ALL_ORIGINS: readonly string[] = Array.from(
+  new Set(products.map((p) => p.origin).filter(Boolean)),
+).sort((a, b) => a.localeCompare(b));
+
+export const ALL_MILK_TYPES: readonly MilkType[] = Array.from(
+  new Set(products.map((p) => p.milkType)),
 ).sort((a, b) => a.localeCompare(b));
 
 /**
