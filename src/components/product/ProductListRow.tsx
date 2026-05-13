@@ -1,66 +1,432 @@
 /**
  * ProductListRow — dense row layout for the "List" view.
  *
- * Shows the same product but optimised for vertical scanning: small image
- * on the left, multi-column meta on the right. Falls back to a 2-line
- * stack on narrow screens (the `lg:` Tailwind prefix handles that).
+ * Same navigation contract as `ProductCard`: NO outer `<Link>` wrapper.
+ * Click-target Pressables (image, identity, details CTA) navigate via
+ * `router.push()`. Variant pills and the select dot live OUTSIDE those
+ * click targets in the JSX tree — they own their own touches and never
+ * propagate. See the long comment block atop `ProductCard.tsx` for the
+ * full rationale behind this pattern.
+ *
+ * ── Responsive behaviour ───────────────────────────────────────────────
+ * Below 768px we collapse the row to a two-tier stack:
+ *
+ *   ┌─[●] [img] STAGE  · BRAND ────────[Details →]┐
+ *   │            Product name                     │
+ *   │            ✓ Best for...                    │
+ *   ├─────────────────────────────────────────────┤
+ *   │  [400g][800g]  ← variant pills              │
+ *   │  [$/gram][Tin]   ← only the two headline    │
+ *   └─────────────────────────────────────────────┘
+ *
+ * Secondary metrics ($/scoop, $/mL, Size, Origin) and feature chips are
+ * hidden because the row otherwise wraps into an unusable column of pills
+ * on phone widths (the bug the user flagged).
  */
 
-import { View, Text, Pressable, Image } from 'react-native';
-import { Link } from 'expo-router';
-import type { Product } from '../../types/product';
+import { useState } from 'react';
+import { View, Text, Pressable, Image, useWindowDimensions } from 'react-native';
+import { useRouter } from 'expo-router';
+import type { Product, ProductVariant } from '../../types/product';
 import { getProductImage } from '../../data/imageMap';
-import { formatCurrency, formatUnitPrice, formatWeight } from '../../utils/format';
+import { formatWeight } from '../../utils/format';
+import { labelForSpecialty } from '../../utils/strings';
+import { getOriginFlag, getMilkTypeIcon } from '../../utils/icons';
+import { Tag } from '../Tag';
+
+// Matches the design handoff's `@media(max-width:768px)` rule.
+const MOBILE_BREAKPOINT = 768;
 
 export interface ProductListRowProps {
-  product: Product;
+  product:        Product;
+  selected:       boolean;
+  canSelect:      boolean;
+  onToggleSelect: (id: string) => void;
 }
 
-export const ProductListRow = ({ product }: ProductListRowProps) => {
-  const defaultVariant = product.variants[0];
+export const ProductListRow = ({
+  product,
+  selected,
+  canSelect,
+  onToggleSelect,
+}: ProductListRowProps) => {
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+  // `useWindowDimensions` re-renders the component when the window
+  // resizes or the device rotates — the layout reflows live across the
+  // breakpoint without a manual listener.
+  const isMobile = width < MOBILE_BREAKPOINT;
+
+  const [variantIndex, setVariantIndex] = useState(0);
+  const variant: ProductVariant = product.variants[variantIndex] ?? product.variants[0];
+
+  const pricePerGram  = variant?.pricePerGram  ?? 0;
+  const pricePerScoop = variant?.pricePerScoop ?? 0;
+  const pricePerMl    = variant?.pricePerMl    ?? 0;
+  const price         = variant?.price         ?? 0;
+
+  const goToDetail = () => router.push(`/product/${product.id}`);
 
   return (
-    <Link href={`/product/${product.id}`} asChild>
-      <Pressable
-        accessibilityLabel={`Open details for ${product.name}`}
-        className="bg-surface rounded-lg border border-border p-3 flex-row gap-3 items-center"
+    <View
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: 14,
+        // Mobile: stack the header strip and the metrics column.
+        // Desktop: dense single row across.
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'flex-start',
+        gap: isMobile ? 10 : 16,
+        padding: isMobile ? 12 : 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.07,
+        shadowRadius: 12,
+        elevation: 1,
+        outlineStyle: 'solid' as never,
+        outlineWidth: selected ? 2 : 0,
+        outlineColor: '#1B5E3B',
+        outlineOffset: 2,
+      }}
+    >
+      {/* ── Header strip: dot + image + identity + (mobile only) Details ──
+          On mobile this is one horizontal row. On desktop it's three
+          separate flex children of the outer row container — so we render
+          them as siblings in both cases, just wrapped in a Fragment so
+          the layout primitive is the outer View. The mobile/desktop
+          decision is purely a style switch on the outer container. */}
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: isMobile ? 10 : 16,
+          alignItems: 'flex-start',
+          // On mobile we want the strip to take the full row width so
+          // the Details CTA can sit on the right edge. On desktop we
+          // let it size to content (children take their own widths).
+          width: isMobile ? '100%' : undefined,
+        }}
       >
-        {/* Thumbnail — fixed size keeps row heights consistent */}
-        <View className="w-16 h-16 bg-surface2 rounded-md items-center justify-center overflow-hidden">
-          <Image
-            source={getProductImage(defaultVariant?.img ?? product.img)}
-            resizeMode="contain"
-            style={{ width: '100%', height: '100%' }}
-            accessibilityLabel={product.name}
-          />
-        </View>
+        {/* Select dot */}
+        <Pressable
+          onPress={() => onToggleSelect(product.id)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: selected }}
+          accessibilityLabel={
+            selected
+              ? `Remove ${product.name} from comparison`
+              : canSelect
+                ? `Add ${product.name} to comparison`
+                : 'Comparison limit reached'
+          }
+          disabled={!selected && !canSelect}
+          style={{
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            borderWidth: 2,
+            borderColor: '#E0D9CC',
+            backgroundColor: selected ? '#1B5E3B' : 'transparent',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: 4,
+            opacity: !selected && !canSelect ? 0.4 : 1,
+          }}
+        >
+          {selected && (
+            <Text className="text-white font-sans-bold" style={{ fontSize: 11, lineHeight: 13 }}>
+              ✓
+            </Text>
+          )}
+        </Pressable>
 
-        {/* Identity */}
-        <View className="flex-1 min-w-0">
-          <Text className="text-[10px] uppercase tracking-wider text-muted font-semibold" numberOfLines={1}>
-            {product.brand} · {product.stage}
+        {/* Image — click target → detail */}
+        <Pressable
+          onPress={goToDetail}
+          accessibilityRole="button"
+          accessibilityLabel={`Open details for ${product.name}`}
+          style={{
+            width: isMobile ? 64 : 72,
+            height: isMobile ? 64 : 72,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: '#E0D9CC',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}
+        >
+          <Image
+            source={getProductImage(variant?.img ?? product.img)}
+            resizeMode="contain"
+            style={{ width: isMobile ? 56 : 64, height: isMobile ? 56 : 64 }}
+            accessibilityLabel=""
+            accessibilityElementsHidden
+          />
+        </Pressable>
+
+        {/* Identity — click target → detail */}
+        <Pressable
+          onPress={goToDetail}
+          accessibilityLabel=""
+          style={{
+            // Desktop: fixed-ish basis to leave room for metrics column.
+            // Mobile: take all remaining space in the header strip.
+            flex: isMobile ? 1 : 0,
+            flexBasis: isMobile ? undefined : 200,
+            flexShrink: 1,
+            minWidth: 0,
+          }}
+        >
+          <View className="flex-row items-center gap-1.5 flex-wrap">
+            <View
+              className="rounded px-1.5 py-0.5 border border-border"
+              style={{ backgroundColor: '#F9F7F2' }}
+            >
+              <Text className="text-[9.5px] font-sans-bold uppercase tracking-wider text-muted">
+                {product.stage}
+              </Text>
+            </View>
+            {product.specialty && (
+              <Tag
+                label={labelForSpecialty(product.specialty)}
+                specialty={product.specialty}
+              />
+            )}
+            {product.halal && (
+              <View
+                className="rounded px-1.5 py-0.5"
+                style={{ backgroundColor: '#D1FAE5' }}
+              >
+                <Text
+                  className="text-[9px] font-sans-bold uppercase tracking-wider"
+                  style={{ color: '#065F46' }}
+                >
+                  Halal
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <Text className="text-[10.5px] text-muted font-sans-semibold uppercase tracking-wider mt-1">
+            {product.brand}
           </Text>
-          <Text className="text-sm font-semibold text-text" numberOfLines={2}>
+          <Text
+            className="text-[13.5px] font-sans-bold text-text leading-tight mt-0.5"
+            numberOfLines={2}
+          >
             {product.name}
           </Text>
-          <Text className="text-[11px] text-muted mt-0.5" numberOfLines={1}>
-            {product.bestFor}
-          </Text>
-        </View>
+          {product.bestFor ? (
+            <Text className="text-[11px] text-green font-sans-semibold mt-1" numberOfLines={1}>
+              ✓ {product.bestFor}
+            </Text>
+          ) : null}
+        </Pressable>
 
-        {/* Pricing column — right-aligned for easy scanning */}
-        <View className="items-end">
-          <Text className="text-base font-bold text-text">
-            {formatCurrency(defaultVariant?.price ?? product.price)}
-          </Text>
-          <Text className="text-[11px] text-muted">
-            {formatWeight(defaultVariant?.weightG ?? product.weightG ?? 0)}
-          </Text>
-          <Text className="text-[11px] text-muted">
-            {formatUnitPrice(defaultVariant?.pricePerGram ?? product.pricePerGram)} /g
-          </Text>
+        {/* Mobile-only "Details" pill — anchored to the right of the
+            header strip so the user can drill in without scrolling past
+            the metrics. Desktop renders the same CTA at the far right of
+            the row (rendered below outside this strip). */}
+        {isMobile && (
+          <Pressable
+            onPress={goToDetail}
+            accessibilityRole="button"
+            accessibilityLabel={`View full details for ${product.name}`}
+            style={{
+              alignSelf: 'flex-start',
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 8,
+              backgroundColor: '#EBF5EE',
+            }}
+          >
+            <Text className="text-[11px] font-sans-bold" style={{ color: '#1B5E3B' }}>
+              Details →
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
+      {/* ── Variants + metrics column ──────────────────────────────────
+          Desktop: takes the remaining flex space in the outer row.
+          Mobile: full-width band underneath the header strip. */}
+      <View
+        style={{
+          flex: isMobile ? 0 : 1,
+          width: isMobile ? '100%' : undefined,
+          gap: 8,
+        }}
+      >
+        {product.variants.length > 1 && (
+          <View className="flex-row flex-wrap gap-1">
+            {product.variants.map((v, i) => {
+              const isActive = i === variantIndex;
+              return (
+                <Pressable
+                  key={i}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityLabel={`Select ${formatWeight(v.weightG)} variant`}
+                  onPress={() => setVariantIndex(i)}
+                  className="rounded-md px-2 py-0.5"
+                  style={{
+                    backgroundColor: isActive ? '#1B5E3B' : '#F9F7F2',
+                    borderColor:     isActive ? '#1B5E3B' : '#E0D9CC',
+                    borderWidth: 1.5,
+                  }}
+                >
+                  <Text
+                    className="text-[10.5px] font-sans-bold"
+                    style={{ color: isActive ? '#FFFFFF' : '#6B7280' }}
+                  >
+                    {formatWeight(v.weightG)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        <View className="flex-row flex-wrap gap-1.5 items-center">
+          {/* On mobile we show 3 fixed-share tiles ($/gram, Tin, Size) so
+              the row fills the card width edge-to-edge. The `flex: 1`
+              prop on each tile makes them split the available width
+              equally regardless of content. On desktop the tiles size
+              to content (minWidth 58) and the row scrolls horizontally
+              if it overflows — that's the dense-table behaviour the
+              design calls for at >768px. */}
+          <MetricTile
+            label="$/gram"
+            value={`$${pricePerGram.toFixed(4)}`}
+            accent
+            grow={isMobile}
+          />
+          <MetricTile
+            label="Tin"
+            value={`$${price.toFixed(2)}`}
+            grow={isMobile}
+          />
+          {isMobile ? (
+            <MetricTile
+              label="Size"
+              value={formatWeight(variant?.weightG ?? 0)}
+              grow
+            />
+          ) : (
+            <>
+              <MetricTile label="$/scoop" value={`$${pricePerScoop.toFixed(3)}`} />
+              <MetricTile label="$/mL"    value={`$${pricePerMl.toFixed(4)}`} />
+              <MetricTile label="Size"    value={formatWeight(variant?.weightG ?? 0)} />
+              <MetricTile
+                label="Origin"
+                value={`${getOriginFlag(product.origin)} ${product.origin}`}
+              />
+
+              {product.hmo && product.hmo !== 'None' && (
+                <FeatureChip label="HMO" bg="#EDE9FE" fg="#6D28D9" />
+              )}
+              {product.probiotic && product.probiotic !== 'None' && (
+                <FeatureChip label="PROB" bg="#FEF9C3" fg="#713F12" />
+              )}
+              {product.palmFree && (
+                <FeatureChip label="PALM FREE" bg="#ECFDF5" fg="#065F46" />
+              )}
+              {product.organic && (
+                <FeatureChip label="ORGANIC" bg="#DCFCE7" fg="#166534" />
+              )}
+              <Text className="text-[10px] text-muted font-sans">
+                {getMilkTypeIcon(product.milkType)} {product.milkType}
+              </Text>
+            </>
+          )}
         </View>
-      </Pressable>
-    </Link>
+      </View>
+
+      {/* ── Desktop-only Details CTA ─────────────────────────────────── */}
+      {!isMobile && (
+        <Pressable
+          onPress={goToDetail}
+          accessibilityRole="button"
+          accessibilityLabel={`View full details for ${product.name}`}
+          className="rounded-lg px-3.5 py-2 self-center"
+          style={{ backgroundColor: '#EBF5EE' }}
+        >
+          <Text className="text-xs font-sans-bold" style={{ color: '#1B5E3B' }}>
+            Details →
+          </Text>
+        </Pressable>
+      )}
+    </View>
   );
 };
+
+/* -------------------------------------------------------------------------- */
+/* Local presentational helpers                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `MetricTile` — one of the small price/size pills in the list row.
+ *
+ * `grow` makes the tile claim a 1-fr slice of the parent row. We use it on
+ * mobile so 2-3 tiles span the full card width edge-to-edge instead of
+ * sitting in a left-aligned cluster with empty space on the right.
+ *
+ * Without `grow`, tiles stay content-sized (`minWidth: 58`) — the design's
+ * desktop dense-row layout where many tiles + chips share the row.
+ */
+const MetricTile = ({
+  label,
+  value,
+  accent,
+  grow,
+}: {
+  label: string;
+  value: string;
+  accent?: boolean;
+  grow?: boolean;
+}) => (
+  <View
+    className="rounded-lg items-center px-2 py-1.5"
+    style={{
+      backgroundColor: accent ? '#EBF5EE' : '#F9F7F2',
+      minWidth: 58,
+      // `flex: 1` lets the tile fill its share of the parent's main-axis
+      // width. We also set `flexBasis: 0` implicitly via `flex: 1`, which
+      // means siblings without `grow` won't be squeezed.
+      ...(grow ? { flex: 1 } : {}),
+    }}
+  >
+    <Text
+      className="text-[9px] font-sans-bold uppercase tracking-wider"
+      style={{ color: accent ? '#1B5E3B' : '#6B7280' }}
+    >
+      {label}
+    </Text>
+    <Text
+      className="text-[12.5px] font-sans-bold mt-0.5"
+      style={{ color: accent ? '#1B5E3B' : '#1A1A1A' }}
+    >
+      {value}
+    </Text>
+  </View>
+);
+
+const FeatureChip = ({
+  label,
+  bg,
+  fg,
+}: {
+  label: string;
+  bg: string;
+  fg: string;
+}) => (
+  <View className="rounded px-1.5 py-1" style={{ backgroundColor: bg }}>
+    <Text
+      className="text-[9px] font-sans-bold uppercase tracking-wider"
+      style={{ color: fg }}
+    >
+      {label}
+    </Text>
+  </View>
+);

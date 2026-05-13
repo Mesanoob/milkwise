@@ -22,7 +22,10 @@ export const ProductPicture = ({ product }: ProductPictureProps) => {
     <Link href={`/product/${product.id}`} asChild>
       <Pressable
         accessibilityLabel={`Open details for ${product.name}`}
-        className="bg-surface rounded-lg border border-border overflow-hidden flex-1 min-w-[120px] max-w-[200px]"
+        className="bg-surface border border-border overflow-hidden flex-1 min-w-[120px] max-w-[200px]"
+        // 14px corner radius matches the design's `--radius` token —
+        // Tailwind's `rounded-lg` is only 8px so the value is set inline.
+        style={{ borderRadius: 14 }}
       >
         <View className="w-full aspect-square bg-surface2 items-center justify-center">
           <Image
@@ -33,7 +36,7 @@ export const ProductPicture = ({ product }: ProductPictureProps) => {
           />
         </View>
         <View className="px-2 py-1.5 items-center">
-          <Text className="text-xs font-bold text-text">
+          <Text className="text-xs font-sans-bold text-text">
             {formatCurrency(defaultVariant?.price ?? product.price)}
           </Text>
         </View>

@@ -18,9 +18,10 @@ export interface SortDropdownProps {
 // User-facing labels separate from `SortField` keys so we can localise
 // the labels later without touching the sort logic.
 const SORT_OPTIONS: Array<{ value: SortField; label: string }> = [
-  { value: 'price',         label: 'Price (tin)' },
-  { value: 'pricePerGram',  label: 'Price / 100g' },
-  { value: 'pricePerScoop', label: 'Price / scoop' },
+  { value: 'pricePerGram',  label: '$ / gram' },
+  { value: 'pricePerScoop', label: '$ / scoop' },
+  { value: 'pricePerMl',    label: '$ / mL' },
+  { value: 'price',         label: 'Tin price' },
   { value: 'protein',       label: 'Protein' },
   { value: 'dha',           label: 'DHA' },
   { value: 'name',          label: 'Name (A→Z)' },
@@ -100,7 +101,7 @@ const NativeCycler = ({ value, onChange }: { value: SortField; onChange: (f: Sor
       accessibilityLabel={`Sort by ${currentLabel}, tap to change`}
       className="h-9 px-3 rounded-lg border border-border bg-surface flex-row items-center"
     >
-      <Text className="text-xs text-text font-medium">{currentLabel}</Text>
+      <Text className="text-xs text-text font-sans-medium">{currentLabel}</Text>
     </Pressable>
   );
 };

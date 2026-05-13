@@ -32,7 +32,7 @@ export const EmptyState = ({ title, description, actionLabel, onAction }: EmptyS
           accessibilityLabel={actionLabel}
           className="mt-2 bg-green px-4 py-2 rounded-lg"
         >
-          <Text className="text-white text-sm font-semibold">{actionLabel}</Text>
+          <Text className="text-white text-sm font-sans-semibold">{actionLabel}</Text>
         </Pressable>
       )}
     </View>

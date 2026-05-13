@@ -1,46 +1,57 @@
 /**
- * BrandPills — horizontal scroll of brand filter pills.
+ * BrandPills — horizontal scroll of brand filter pills (multi-select).
  *
- * Same visual pattern as `StageTabs` but the option list is dynamic (read
- * from the dataset). The "All" pill stays pinned to the left.
+ * Empty selection array = "all brands". Each tap toggles one brand in/out
+ * of the array. Visual style matches the design's `.brand-pill` rule.
  */
 
-import { View, Pressable, Text, ScrollView } from 'react-native';
+import { Pressable, Text, ScrollView, View } from 'react-native';
+import type { BrandFilter } from '../../types/filters';
 import { ALL_BRANDS } from '../../data/products';
 
 export interface BrandPillsProps {
-  value:    'All' | string;
-  onChange: (next: 'All' | string) => void;
+  value:    BrandFilter;
+  onToggle: (brand: string) => void;
 }
 
-export const BrandPills = ({ value, onChange }: BrandPillsProps) => {
-  return (
+export const BrandPills = ({ value, onToggle }: BrandPillsProps) => (
+  <View
+    className="bg-surface border-b border-border flex-row items-center"
+    style={{ paddingHorizontal: 16, paddingVertical: 8 }}
+  >
+    {/* Section kicker — matches the design's "BRAND" caption. */}
+    <Text
+      className="text-[11px] font-sans-bold uppercase tracking-wider text-muted"
+      style={{ marginRight: 8 }}
+    >
+      Brand
+    </Text>
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 6 }}
-      className="bg-surface border-b border-border"
+      contentContainerStyle={{ gap: 6, paddingRight: 16 }}
     >
-      {['All', ...ALL_BRANDS].map((brand) => {
-        const isActive = brand === value;
+      {ALL_BRANDS.map((brand) => {
+        const isActive = value.includes(brand);
         return (
           <Pressable
             key={brand}
-            onPress={() => onChange(brand)}
-            accessibilityLabel={`Filter by ${brand}`}
+            onPress={() => onToggle(brand)}
+            accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
-            className={
-              'px-3 py-1 rounded-full border ' +
-              (isActive
-                ? 'bg-green border-green'
-                : 'bg-surface border-border')
-            }
+            accessibilityLabel={`Toggle filter ${brand}`}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderRadius: 999,
+              borderWidth: 1.5,
+              backgroundColor: isActive ? '#1B5E3B' : '#FFFFFF',
+              borderColor:     isActive ? '#1B5E3B' : '#E0D9CC',
+            }}
           >
             <Text
-              className={
-                'text-xs font-semibold ' +
-                (isActive ? 'text-white' : 'text-text')
-              }
+              className="text-[12px] font-sans-semibold"
+              style={{ color: isActive ? '#FFFFFF' : '#1A1A1A' }}
             >
               {brand}
             </Text>
@@ -48,5 +59,5 @@ export const BrandPills = ({ value, onChange }: BrandPillsProps) => {
         );
       })}
     </ScrollView>
-  );
-};
+  </View>
+);

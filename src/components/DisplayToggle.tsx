@@ -43,7 +43,7 @@ export const DisplayToggle = ({ value, onChange }: DisplayToggleProps) => {
             </Text>
             <Text
               className={
-                'text-xs font-semibold ' +
+                'text-xs font-sans-semibold ' +
                 (isActive ? 'text-white' : 'text-muted')
               }
             >

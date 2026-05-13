@@ -1,59 +1,101 @@
 /**
- * StageTabs — the horizontal pill row that filters by infant stage.
+ * StageTabs — top tab bar that filters by infant stage.
  *
- * One pill per stage plus an "All" pill. The active pill is filled green;
- * inactive pills are outlined. The pattern is reused for BrandPills and
- * SpecialtyChips but lives in its own component because the labels and
- * accessibility hints are stage-specific.
+ * Multi-select: each stage can be toggled independently, matching the
+ * design handoff behaviour. "All Stages" clears the filter array. A small
+ * green dot appears on tabs that are active in multi-select mode so the
+ * user sees at a glance which stages are on.
+ *
+ * Horizontally scrollable on narrow screens (the design overflow-wraps
+ * to the right rather than stacking, so the row never grows vertically).
  */
 
-import { View, Pressable, Text, ScrollView } from 'react-native';
+import { Pressable, Text, ScrollView, View } from 'react-native';
+import type { Stage } from '../../types/product';
 import type { StageFilter } from '../../types/filters';
 import { ALL_STAGES } from '../../data/products';
 
 export interface StageTabsProps {
-  value:    StageFilter;
-  onChange: (next: StageFilter) => void;
+  value:       StageFilter;
+  onToggle:    (stage: Stage) => void;
+  onClearAll:  () => void;
 }
 
-// "All" first, then each canonical stage in order. Computed outside the
-// component so we don't allocate a new array per render.
-const OPTIONS: readonly StageFilter[] = ['All', ...ALL_STAGES];
+export const StageTabs = ({ value, onToggle, onClearAll }: StageTabsProps) => {
+  const noneSelected = value.length === 0;
 
-export const StageTabs = ({ value, onChange }: StageTabsProps) => {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 6 }}
-      className="bg-surface border-b border-border"
-    >
-      {OPTIONS.map((option) => {
-        const isActive = option === value;
-        return (
-          <Pressable
-            key={option}
-            onPress={() => onChange(option)}
-            accessibilityLabel={`Filter by ${option}`}
-            accessibilityState={{ selected: isActive }}
-            className={
-              'px-3 py-1.5 rounded-full border ' +
-              (isActive
-                ? 'bg-green border-green'
-                : 'bg-surface border-border')
-            }
+    <View className="bg-surface border-b border-border">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+      >
+        {/* "All Stages" tab — active when the multi-select array is empty.
+            Tapping it clears any current selection. */}
+        <Pressable
+          onPress={onClearAll}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: noneSelected }}
+          accessibilityLabel="Show all stages"
+          style={{
+            paddingVertical: 12,
+            paddingHorizontal: 20,
+            borderBottomWidth: 2,
+            borderBottomColor: noneSelected ? '#1B5E3B' : 'transparent',
+          }}
+        >
+          <Text
+            className="text-[13.5px] font-sans-semibold"
+            style={{ color: noneSelected ? '#1B5E3B' : '#6B7280' }}
           >
-            <Text
-              className={
-                'text-xs font-semibold ' +
-                (isActive ? 'text-white' : 'text-text')
-              }
+            All Stages
+          </Text>
+        </Pressable>
+
+        {ALL_STAGES.map((stage) => {
+          const isActive = value.includes(stage);
+          return (
+            <Pressable
+              key={stage}
+              onPress={() => onToggle(stage)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: isActive }}
+              accessibilityLabel={`Toggle filter ${stage}`}
+              style={{
+                paddingVertical: 12,
+                paddingHorizontal: 20,
+                borderBottomWidth: 2,
+                borderBottomColor: isActive ? '#1B5E3B' : 'transparent',
+                position: 'relative',
+              }}
             >
-              {option}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+              <Text
+                className="text-[13.5px] font-sans-semibold"
+                style={{ color: isActive ? '#1B5E3B' : '#6B7280' }}
+              >
+                {stage}
+              </Text>
+              {/* Tiny dot — visual cue that the tab is "on" in a multi-
+                  select context (the underline alone could be mistaken
+                  for the hover state). */}
+              {isActive && (
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 8,
+                    right: 6,
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
+                    backgroundColor: '#1B5E3B',
+                  }}
+                />
+              )}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 };

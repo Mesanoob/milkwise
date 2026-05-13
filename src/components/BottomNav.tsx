@@ -50,7 +50,7 @@ export const BottomNav = () => {
               </Text>
               <Text
                 className={
-                  'text-[10px] font-semibold ' +
+                  'text-[10px] font-sans-semibold ' +
                   (isActive ? 'text-green' : 'text-muted')
                 }
               >
