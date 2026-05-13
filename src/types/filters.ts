@@ -7,7 +7,7 @@
  * without either depending on the other.
  */
 
-import type { Stage, Specialty } from './product';
+import type { MilkType, Stage, Specialty } from './product';
 
 // ── Display mode ────────────────────────────────────────────────────────────
 // Three layouts in the Compare screen. The user toggles between them.
@@ -16,11 +16,27 @@ import type { Stage, Specialty } from './product';
 //   • picture — image-only gallery, useful on a phone in-store
 export type DisplayMode = 'card' | 'list' | 'picture';
 
-// ── Stage filter ────────────────────────────────────────────────────────────
-// `'All'` is a UI sentinel meaning "no stage filter applied". Using a
-// dedicated literal instead of `undefined` makes the discriminated union
-// exhaustive — TypeScript will tell us if we forget a case.
-export type StageFilter = 'All' | Stage;
+// ── Multi-select filter arrays ──────────────────────────────────────────────
+// Empty array = "no filter applied for this dimension". A user picks any
+// number of stages/brands/specialties and the result is the AND across
+// dimensions, OR within a dimension (same semantics as faceted search on
+// every modern storefront).
+//
+// We chose arrays over `Set<string>` because:
+//   1. Sets don't JSON-serialise — so we can't drop them into a URL query.
+//   2. React state comparisons rely on reference equality; arrays make the
+//      "did this dimension change?" check explicit.
+//
+// Backward-compat note: the previous shape used a literal `'All' | T`
+// string. Code reading the old shape will break — every consumer was
+// updated in the same refactor.
+export type StageFilter     = readonly Stage[];
+export type BrandFilter     = readonly string[];
+export type OriginFilter    = readonly string[];
+export type MilkTypeFilter  = readonly MilkType[];
+// `Specialty` already includes `null` for the "no specialty" case; we
+// strip it out here because the filter array semantics treat empty as "all".
+export type SpecialtyFilter = readonly Exclude<Specialty, null>[];
 
 // ── Sort options ────────────────────────────────────────────────────────────
 // `SortField` is the column being sorted on; `SortDirection` is asc/desc.
@@ -32,6 +48,7 @@ export type SortField =
   | 'price'
   | 'pricePerGram'
   | 'pricePerScoop'
+  | 'pricePerMl'
   | 'protein'
   | 'dha';
 
@@ -47,18 +64,36 @@ export interface SortState {
 // Bundling the keys lets us pass one prop down, persist the state to a URL
 // query string, and reset it in one assignment.
 export interface FilterState {
-  search:    string;
-  stage:     StageFilter;
-  brand:     'All' | string;
-  specialty: Specialty | 'All';
-  sort:      SortState;
+  search:      string;
+  stages:      StageFilter;
+  brands:      BrandFilter;
+  specialties: SpecialtyFilter;
+  origins:     OriginFilter;
+  milkTypes:   MilkTypeFilter;
+  halalOnly:   boolean;
+  partialHydroOnly: boolean;
+  extHydroOnly:     boolean;
+  sort:        SortState;
 }
 
 // Sensible defaults — referenced by the hook and the "Reset filters" button.
+// `as const` arrays serve as readonly empty arrays without allocating a
+// fresh `[]` on every reference.
 export const DEFAULT_FILTER_STATE: FilterState = {
   search: '',
-  stage:  'All',
-  brand:  'All',
-  specialty: 'All',
-  sort: { field: 'price', direction: 'asc' },
+  stages:      [] as const,
+  brands:      [] as const,
+  specialties: [] as const,
+  origins:     [] as const,
+  milkTypes:   [] as const,
+  halalOnly:   false,
+  partialHydroOnly: false,
+  extHydroOnly:     false,
+  sort: { field: 'pricePerGram', direction: 'asc' },
 };
+
+// ── Compare selection ───────────────────────────────────────────────────────
+// Up to N products the user has pinned for side-by-side comparison.
+// Kept in the same state container as filters so a single Context provider
+// covers the whole Compare-screen experience.
+export const MAX_COMPARE_SELECTION = 5;
