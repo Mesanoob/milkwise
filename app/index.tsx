@@ -1,100 +1,223 @@
 /**
  * app/index.tsx — the Compare screen (home).
  *
- * This is the heaviest screen in the app. Its job is to wire together:
- *   • the `useProducts` hook (state + derived data)
- *   • the filter components (SearchBar, StageTabs, BrandPills, SpecialtyChips)
- *   • the display toggle and sort controls
- *   • the product grid in the chosen layout (card / list / picture)
+ * Reads filter + selection state from `ProductsContext` (instantiated once
+ * at the root layout) so:
+ *   • Navigating to a product detail and back preserves filters/sort.
+ *   • The compare drawer survives the round-trip too.
+ *   • A hard browser refresh resets state (intentional UX).
  *
- * Note how thin the component is: every piece of logic lives in a hook or
- * a child component. The screen itself only describes the shape of the page.
- * That's the production pattern — screens *compose*, they don't *compute*.
+ * Layout matches the design handoff's single-toolbar pattern:
+ *   - Search lives in the nav header (see `Header.tsx`), not in this screen.
+ *   - Stage tabs row.
+ *   - Brand pills row.
+ *   - One toolbar with [sort | direction | hint | Filters chip] on the left
+ *     and [product count | view toggle] on the right.
+ *   - When Filters is open, a chip drawer slides in below the toolbar with
+ *     specialty / origin / milk-type / halal / pHF / eHF toggles. Specialty
+ *     no longer has its own permanent row — it lives inside Filters.
  */
 
 import { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { Screen }            from '../src/components/Screen';
-import { SearchBar }         from '../src/components/SearchBar';
 import { StageTabs }         from '../src/components/filters/StageTabs';
 import { BrandPills }        from '../src/components/filters/BrandPills';
-import { SpecialtyChips }    from '../src/components/filters/SpecialtyChips';
+import {
+  AdvancedFilterChipsTrigger,
+  AdvancedFilterChipsDrawer,
+  advancedFilterCount,
+} from '../src/components/filters/AdvancedFilterChips';
 import { DisplayToggle }     from '../src/components/DisplayToggle';
 import { SortDropdown }      from '../src/components/SortDropdown';
 import { ProductGrid }       from '../src/components/product/ProductGrid';
-import { useProducts }       from '../src/hooks/useProducts';
-import type { DisplayMode }  from '../src/types/filters';
-import { APP_TAGLINE }       from '../src/config/constants';
+import { CompareDrawer }     from '../src/components/compare/CompareDrawer';
+import { CompareModal }      from '../src/components/compare/CompareModal';
+import { useProductsContext } from '../src/contexts/ProductsContext';
+import type { DisplayMode, SortField }  from '../src/types/filters';
+
+// Sort fields where "ascending = cheapest first" reads naturally. Used to
+// label the sort-direction arrow with a friendly hint.
+const COST_SORT_FIELDS = new Set<SortField>(['price', 'pricePerGram', 'pricePerScoop', 'pricePerMl']);
 
 export default function CompareScreen() {
-  // `useProducts` is the single source of truth for the screen's data.
-  // Local state below (display mode) is UI-only and never affects data.
   const {
     visibleProducts,
     allProducts,
     isLoading,
     error,
     filters,
-    setSearch,
-    setStage,
-    setBrand,
-    setSpecialty,
+    toggleStage,
+    toggleBrand,
+    toggleSpecialty,
+    toggleOrigin,
+    toggleMilkType,
+    toggleHalalOnly,
+    togglePartialHydroOnly,
+    toggleExtHydroOnly,
+    setStages,
     setSort,
+    clearAdvancedFilters,
     resetFilters,
-  } = useProducts();
+    selectedIds,
+    selectedProducts,
+    canSelectMore,
+    toggleSelection,
+    removeSelection,
+    clearSelection,
+  } = useProductsContext();
 
-  // Display mode is purely visual — kept local so a remount of the screen
-  // resets to the user's preferred default. If we want it to persist, the
-  // next step is moving it into AsyncStorage in a follow-up session.
+  // UI-only state — kept local so a remount resets to defaults. If we ever
+  // want display mode persisted across navigation, promote into Context.
   const [displayMode, setDisplayMode] = useState<DisplayMode>('card');
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [showingCompareModal, setShowingCompareModal] = useState(false);
+
+  // Pad the bottom of the scroll area when the compare drawer is visible
+  // so the last cards don't sit underneath it.
+  const bottomPad = selectedIds.length > 0 ? 120 : 40;
+
+  // The friendly direction hint next to the sort arrow. Only shows for
+  // cost-based fields where "ascending = cheapest first" is intuitive.
+  const isCostSort = COST_SORT_FIELDS.has(filters.sort.field);
+  const directionHint = !isCostSort
+    ? ''
+    : filters.sort.direction === 'asc'
+      ? 'cheapest first'
+      : 'most expensive first';
 
   return (
     <Screen>
-      {/* ── Page heading ────────────────────────────────────────────── */}
-      <View className="px-4 pt-4 pb-2">
-        <Text className="text-2xl font-serif text-green">Compare formulas</Text>
-        <Text className="text-sm text-muted mt-0.5">{APP_TAGLINE}</Text>
-      </View>
+      {/* Stage tabs — multi-select. "All" clears the array. */}
+      <StageTabs
+        value={filters.stages}
+        onToggle={toggleStage}
+        onClearAll={() => setStages([])}
+      />
 
-      {/* ── Search ──────────────────────────────────────────────────── */}
-      <View className="px-4 pb-2">
-        <SearchBar value={filters.search} onChange={setSearch} />
-      </View>
+      {/* Brand row — multi-select pills. */}
+      <BrandPills value={filters.brands} onToggle={toggleBrand} />
 
-      {/* ── Filter rows ─────────────────────────────────────────────── */}
-      <StageTabs       value={filters.stage}     onChange={setStage} />
-      <BrandPills      value={filters.brand}     onChange={setBrand} />
-      <SpecialtyChips  value={filters.specialty} onChange={setSpecialty} />
+      {/* Toolbar — single row, design-aligned.
+          Left:  [sort dropdown] [↑/↓ direction] [hint text] [Filters chip]
+          Right: [N products] [Card/List toggle]
+          The row wraps gracefully on narrow widths so the right cluster
+          drops below without clipping. */}
+      <View
+        className="bg-surface border-b border-border flex-row flex-wrap items-center"
+        style={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
+      >
+        <SortDropdown value={filters.sort} onChange={setSort} />
+        {directionHint ? (
+          <Text className="text-[11.5px] text-green font-sans-semibold">
+            {directionHint}
+          </Text>
+        ) : null}
 
-      {/* ── Toolbar (display mode + sort + result count) ────────────── */}
-      <View className="flex-row items-center justify-between px-4 py-3 gap-3 flex-wrap">
-        <Text className="text-xs text-muted font-medium">
-          {/* Avoid mid-string punctuation that breaks RTL — keep it simple */}
+        <AdvancedFilterChipsTrigger
+          filters={filters}
+          expanded={filtersExpanded}
+          onToggle={() => setFiltersExpanded((v) => !v)}
+          onClear={() => {
+            clearAdvancedFilters();
+          }}
+        />
+
+        <View className="flex-1" />
+
+        <Text className="text-xs text-muted font-sans-medium">
           {isLoading
             ? 'Loading products…'
             : `${visibleProducts.length} of ${allProducts.length} products`}
         </Text>
-        <View className="flex-row items-center gap-2">
-          <SortDropdown    value={filters.sort} onChange={setSort} />
-          <DisplayToggle   value={displayMode}  onChange={setDisplayMode} />
-        </View>
+        <DisplayToggle value={displayMode} onChange={setDisplayMode} />
       </View>
 
-      {/* ── Error band — surfaces fetch failures without blocking the UI */}
+      {/* Filters drawer — sits directly below the toolbar. Only rendered
+          when the user has opened it. Houses specialty + origin + milk
+          type + halal + pHF + eHF toggles. */}
+      {filtersExpanded && (
+        <AdvancedFilterChipsDrawer
+          filters={filters}
+          onToggleSpecialty={toggleSpecialty}
+          onToggleOrigin={toggleOrigin}
+          onToggleMilkType={toggleMilkType}
+          onToggleHalal={toggleHalalOnly}
+          onTogglePartialHydro={togglePartialHydroOnly}
+          onToggleExtHydro={toggleExtHydroOnly}
+        />
+      )}
+
+      {/* Error band */}
       {error && (
-        <View className="mx-4 mb-2 bg-red-100 border border-red-200 rounded-lg px-3 py-2">
-          <Text className="text-red-700 text-xs font-medium">
+        <View
+          className="mx-4 mt-4 rounded-lg border"
+          style={{
+            backgroundColor: '#FFE4E6',
+            borderColor: '#9F1239',
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+          }}
+        >
+          <Text className="text-xs font-sans-bold" style={{ color: '#9F1239' }}>
             Couldn't load products: {error.message}
           </Text>
         </View>
       )}
 
-      {/* ── Results ─────────────────────────────────────────────────── */}
-      <ProductGrid
-        products={visibleProducts}
-        displayMode={displayMode}
-        onReset={resetFilters}
+      {/* Results */}
+      <ScrollView contentContainerStyle={{ paddingBottom: bottomPad }}>
+        <View
+          className="w-full"
+          style={{ maxWidth: 1280, marginHorizontal: 'auto', paddingHorizontal: 16, paddingTop: 16 }}
+        >
+          <ProductGrid
+            products={visibleProducts}
+            displayMode={displayMode}
+            selectedIds={selectedIds}
+            canSelectMore={canSelectMore}
+            onToggleSelect={toggleSelection}
+            onReset={resetFilters}
+          />
+
+          {/* Footer disclaimer */}
+          <View
+            className="rounded-xl mt-10"
+            style={{
+              backgroundColor: '#FFFFFF',
+              paddingHorizontal: 18,
+              paddingVertical: 16,
+            }}
+          >
+            <Text className="text-[11.5px] text-muted font-sans" style={{ lineHeight: 18 }}>
+              <Text className="text-text font-sans-bold">Disclaimer: </Text>
+              All prices are indicative retail data sourced from major
+              Singapore retailers (FairPrice, Watsons, Shopee, Lazada).
+              Always verify current prices before purchasing.
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Bottom drawer — only renders when selection is non-empty. */}
+      <CompareDrawer
+        selected={selectedProducts}
+        onClear={clearSelection}
+        onRemove={removeSelection}
+        onCompare={() => setShowingCompareModal(true)}
       />
+
+      {showingCompareModal && (
+        <CompareModal
+          products={selectedProducts}
+          onClose={() => setShowingCompareModal(false)}
+        />
+      )}
     </Screen>
   );
 }
+
+// Suppress unused-import lint: `advancedFilterCount` is re-exported by
+// AdvancedFilterChips but consumed only in tests. Keeping the import
+// here means typecheck still validates the export surface.
+void advancedFilterCount;
