@@ -30,6 +30,10 @@ export const StageTabs = ({ value, onToggle, onClearAll }: StageTabsProps) => {
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16 }}
+        // ARIA `tablist` parent — required for the `tab` role on each
+        // child Pressable below. Without it the role binding is invalid
+        // and screen readers ignore the tab semantics.
+        accessibilityRole="tablist"
       >
         {/* "All Stages" tab — active when the multi-select array is empty.
             Tapping it clears any current selection. */}

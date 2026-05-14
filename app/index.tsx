@@ -19,7 +19,7 @@
  */
 
 import { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { Platform, View, Text, ScrollView } from 'react-native';
 import { Screen }            from '../src/components/Screen';
 import { StageTabs }         from '../src/components/filters/StageTabs';
 import { BrandPills }        from '../src/components/filters/BrandPills';
@@ -125,7 +125,19 @@ export default function CompareScreen() {
 
         <View className="flex-1" />
 
-        <Text className="text-xs text-muted font-sans-medium">
+        {/* The product count doubles as a screen-reader live region —
+            assistive tech announces the new count when filters change so
+            users without a visual scan know how the result set shifted.
+            `accessibilityLiveRegion="polite"` handles native; ARIA
+            attributes spread for web (react-native-web passes them through). */}
+        <Text
+          className="text-xs text-muted font-sans-medium"
+          accessibilityLiveRegion="polite"
+          accessibilityRole="text"
+          {...(Platform.OS === 'web'
+            ? ({ role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' } as never)
+            : {})}
+        >
           {isLoading
             ? 'Loading products…'
             : `${visibleProducts.length} of ${allProducts.length} products`}

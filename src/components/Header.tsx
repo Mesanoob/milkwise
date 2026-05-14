@@ -112,6 +112,10 @@ export const Header = () => {
                   <Pressable
                     accessibilityRole="link"
                     accessibilityState={{ selected: isActive }}
+                    // Nav row is 58 px tall; the link's visible padding is
+                    // smaller for design density. hitSlop expands the touch
+                    // target vertically to fill that header height.
+                    hitSlop={{ top: 14, bottom: 14, left: 4, right: 4 }}
                     style={{
                       paddingHorizontal: 14,
                       paddingVertical: 6,

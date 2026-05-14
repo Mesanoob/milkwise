@@ -44,7 +44,12 @@ export const BottomNav = () => {
         const isActive = pathname === tab.href;
         return (
           <Link key={tab.href} href={tab.href} asChild>
-            <Pressable className="flex-1 items-center justify-center py-1.5">
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={`Go to ${tab.label}`}
+              accessibilityState={{ selected: isActive }}
+              className="flex-1 items-center justify-center py-1.5"
+            >
               <Text className={isActive ? 'text-green text-lg' : 'text-muted text-lg'}>
                 {tab.icon}
               </Text>

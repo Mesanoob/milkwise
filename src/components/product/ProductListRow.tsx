@@ -118,6 +118,9 @@ export const ProductListRow = ({
                 ? `Add ${product.name} to comparison`
                 : 'Comparison limit reached'
           }
+          // Visible 22×22 dot; hitSlop bumps the touch target to ~44 px
+          // (WCAG 2.5.5).
+          hitSlop={11}
           disabled={!selected && !canSelect}
           style={{
             width: 22,
@@ -233,6 +236,7 @@ export const ProductListRow = ({
             onPress={goToDetail}
             accessibilityRole="button"
             accessibilityLabel={`View full details for ${product.name}`}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
             style={{
               alignSelf: 'flex-start',
               paddingHorizontal: 10,
@@ -259,7 +263,11 @@ export const ProductListRow = ({
         }}
       >
         {product.variants.length > 1 && (
-          <View className="flex-row flex-wrap gap-1">
+          <View
+            className="flex-row flex-wrap gap-1"
+            accessibilityRole="radiogroup"
+            accessibilityLabel="Pack size"
+          >
             {product.variants.map((v, i) => {
               const isActive = i === variantIndex;
               return (
@@ -269,6 +277,7 @@ export const ProductListRow = ({
                   accessibilityState={{ selected: isActive }}
                   accessibilityLabel={`Select ${formatWeight(v.weightG)} variant`}
                   onPress={() => setVariantIndex(i)}
+                  hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                   className="rounded-md px-2 py-0.5"
                   style={{
                     backgroundColor: isActive ? '#1B5E3B' : '#F9F7F2',

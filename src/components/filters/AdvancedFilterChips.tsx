@@ -63,6 +63,7 @@ export const AdvancedFilterChipsTrigger = ({
         accessibilityRole="button"
         accessibilityState={{ expanded }}
         accessibilityLabel={expanded ? 'Hide advanced filters' : 'Show advanced filters'}
+        hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -112,6 +113,7 @@ export const AdvancedFilterChipsTrigger = ({
           onPress={onClear}
           accessibilityRole="button"
           accessibilityLabel="Clear advanced filters"
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
           style={{
             paddingHorizontal: 12,
             paddingVertical: 7,
@@ -233,6 +235,7 @@ const Chip = ({
     accessibilityRole="button"
     accessibilityState={{ selected: active }}
     accessibilityLabel={`Toggle filter ${label}`}
+    hitSlop={{ top: 9, bottom: 9, left: 4, right: 4 }}
     style={{
       paddingHorizontal: 13,
       paddingVertical: 6,

@@ -43,7 +43,9 @@ export const SortDropdown = ({ value, onChange }: SortDropdownProps) => {
 
       <Pressable
         onPress={flipDirection}
-        accessibilityLabel={`Sort ${value.direction === 'asc' ? 'ascending' : 'descending'}`}
+        accessibilityRole="button"
+        accessibilityLabel={`Sort direction, currently ${value.direction === 'asc' ? 'ascending' : 'descending'}, tap to flip`}
+        hitSlop={6}
         className="w-9 h-9 rounded-lg border border-border bg-surface items-center justify-center"
       >
         <Text className="text-base text-text">{directionIcon}</Text>

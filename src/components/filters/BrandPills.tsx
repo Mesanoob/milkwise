@@ -40,6 +40,9 @@ export const BrandPills = ({ value, onToggle }: BrandPillsProps) => (
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={`Toggle filter ${brand}`}
+            // Pill is ~24 px tall by design; hitSlop:10 takes the touch
+            // target to ~44 px without visually inflating the row.
+            hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
             style={{
               paddingHorizontal: 12,
               paddingVertical: 5,

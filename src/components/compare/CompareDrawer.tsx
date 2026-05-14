@@ -105,7 +105,9 @@ export const CompareDrawer = ({
                 onPress={() => onRemove(p.id)}
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${p.name} from comparison`}
-                hitSlop={6}
+                // Visible "×" glyph is ~15 px; hitSlop:14 brings the
+                // touch target close to WCAG's 44 px minimum.
+                hitSlop={14}
               >
                 <Text className="text-white" style={{ fontSize: 15, lineHeight: 15 }}>
                   ×
@@ -122,6 +124,7 @@ export const CompareDrawer = ({
             onPress={onClear}
             accessibilityRole="button"
             accessibilityLabel="Clear all selected products"
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             style={{
               paddingHorizontal: 14,
               paddingVertical: 7,
@@ -141,6 +144,7 @@ export const CompareDrawer = ({
                 ? `Compare ${selected.length} products`
                 : 'Select at least 2 products to compare'
             }
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
             style={{
               paddingHorizontal: 18,
               paddingVertical: 7,

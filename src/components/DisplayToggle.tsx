@@ -31,8 +31,10 @@ export const DisplayToggle = ({ value, onChange }: DisplayToggleProps) => {
           <Pressable
             key={mode.value}
             onPress={() => onChange(mode.value)}
+            accessibilityRole="button"
             accessibilityLabel={`Show ${mode.label} view`}
             accessibilityState={{ selected: isActive }}
+            hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
             className={
               'px-3 py-1.5 rounded-full flex-row items-center gap-1.5 ' +
               (isActive ? 'bg-green' : '')

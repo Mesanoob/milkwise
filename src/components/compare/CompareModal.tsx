@@ -9,18 +9,109 @@
  *   • Highlights the best (lowest) cell per pricing row in brand green
  *
  * Implementation notes:
- *   - On web we render `position: fixed`. On native we'd use RN's `Modal`
- *     component for proper safe-area handling; this is web-first for now
- *     and we'll add a `Platform.OS === 'web'` branch when native ships.
- *   - The first-column sticky behaviour relies on CSS `position: sticky`
- *     which works on `react-native-web` View elements but not on native.
- *     A future native path would replace this with a fixed left rail.
+ *   - The platform branch lives in `ModalShell` below. Web renders a
+ *     `position: 'fixed'` overlay; native uses RN's built-in `<Modal>`
+ *     so the sheet floats above the navigation stack, handles the
+ *     Android hardware back button via `onRequestClose`, and bleeds
+ *     under the status bar for full-screen dimming.
+ *   - The first-column / header-row sticky behaviour relies on CSS
+ *     `position: sticky` which works on `react-native-web` View
+ *     elements but NOT on native. Native users see the same table
+ *     scroll non-sticky, which we accept for v1 — the dataset (≤5
+ *     selected products) fits in a single viewport on phone widths.
+ *     A future native path could swap in a fixed left rail.
  */
 
-import { View, Text, Pressable, Image, ScrollView } from 'react-native';
+import { useEffect, type ReactNode } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  Image,
+  ScrollView,
+  Platform,
+  Modal as RNModal,
+} from 'react-native';
 import type { Product } from '../../types/product';
 import { getProductImage } from '../../data/imageMap';
 import { getMilkTypeIcon } from '../../utils/icons';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+
+/* -------------------------------------------------------------------------- */
+/* Platform shell                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * `ModalShell` — the platform-specific outer chrome.
+ *
+ *   • Web → a `position: 'fixed'` overlay so the sheet floats above the
+ *     page. The focus-trap hook + body-scroll-lock useEffect handle the
+ *     accessibility plumbing that an HTML `<dialog>` would give us.
+ *   • Native → React Native's built-in `<Modal>`. It hosts the sheet in
+ *     a separate window so it sits above the navigation stack, handles
+ *     the hardware back button on Android (`onRequestClose`), and bleeds
+ *     under the status bar (`statusBarTranslucent`) so the dim layer
+ *     covers the full screen.
+ *
+ * Both branches render the SAME `children` so the dialog markup lives in
+ * one place. The decision is structural, not stylistic.
+ */
+const ModalShell = ({
+  onClose,
+  children,
+}: {
+  onClose: () => void;
+  children: ReactNode;
+}) => {
+  if (Platform.OS === 'web') {
+    return (
+      <View
+        // Fixed overlay covering the viewport. The outer Pressable inside
+        // `children` handles backdrop-to-dismiss.
+        style={{
+          position: 'fixed' as never,
+          top: 0, bottom: 0, left: 0, right: 0,
+          zIndex: 200,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+        }}
+      >
+        {children}
+      </View>
+    );
+  }
+
+  // Native path. `transparent` lets us paint our own dim layer instead of
+  // RN's default opaque background. `animationType="slide"` matches iOS /
+  // Android conventions for bottom-sheet modals.
+  return (
+    <RNModal
+      visible
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      // Android-only: makes the modal draw under the translucent status
+      // bar so the dim layer covers the whole screen. iOS already does
+      // this by default.
+      statusBarTranslucent
+      // RN ≥0.71 supports this — gives a sensible default supported
+      // orientation set. Safe to pass; older versions ignore it.
+      supportedOrientations={['portrait', 'landscape']}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.55)',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+        }}
+      >
+        {children}
+      </View>
+    </RNModal>
+  );
+};
 
 export interface CompareModalProps {
   products: Product[];
@@ -97,31 +188,55 @@ const minNumericValue = (products: Product[], key: RowDef['key']): number | null
 /* -------------------------------------------------------------------------- */
 
 export const CompareModal = ({ products, onClose }: CompareModalProps) => {
+  // Focus trap + Esc handler. Returns a ref we spread onto the sheet container
+  // so keyboard users can't tab back into the page behind the modal.
+  const sheetRef = useFocusTrap<HTMLDivElement>({ active: true, onEscape: onClose });
+
+  // Lock background scroll while the modal is open so the page underneath
+  // doesn't jiggle when the user scrolls inside the modal. Web-only; native
+  // gets this for free from the RN `<Modal>` component (future native path).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof document === 'undefined') return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, []);
+
   if (products.length < 2) return null;
 
   return (
-    <View
-      // Fixed overlay covering the viewport. The outer Pressable handles
-      // backdrop-to-dismiss; the inner sheet stops propagation so taps
-      // inside it don't close the modal.
-      style={{
-        position: 'fixed' as never,
-        top: 0, bottom: 0, left: 0, right: 0,
-        zIndex: 200,
-        backgroundColor: 'rgba(0,0,0,0.55)',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-      }}
-    >
-      {/* Backdrop click area */}
+    <ModalShell onClose={onClose}>
+      {/* Backdrop click area. `aria-hidden` keeps screen readers from
+          announcing it; the inner sheet owns the dialog semantics.
+          On native this Pressable also handles tap-outside-to-dismiss
+          because RN `<Modal>`'s `onRequestClose` only fires for the
+          hardware back button — we still need a manual tap target. */}
       <Pressable
         onPress={onClose}
         accessibilityLabel="Close comparison"
+        accessibilityElementsHidden
         style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }}
       />
 
-      {/* Sheet */}
+      {/* Sheet — the actual dialog. `role="dialog"` + `aria-modal` + an
+          `aria-labelledby` that points at the visible H1 give screen
+          readers everything they need to announce the modal correctly. */}
       <View
+        ref={sheetRef as never}
+        accessibilityViewIsModal
+        accessibilityLabel="Side-by-Side Comparison"
+        // Web-only ARIA attributes. RN forwards unknown props through
+        // `react-native-web` so these land on the rendered <div>.
+        {...(Platform.OS === 'web'
+          ? ({
+              role: 'dialog',
+              'aria-modal': 'true',
+              'aria-labelledby': 'compare-modal-title',
+            } as never)
+          : {})}
         style={{
           backgroundColor: '#FFFFFF',
           borderTopLeftRadius: 20,
@@ -138,17 +253,27 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
           style={{ paddingHorizontal: 24, paddingVertical: 18 }}
         >
           <View>
-            <Text className="text-[22px] font-serif text-text">
+            <Text
+              className="text-[22px] font-serif text-text"
+              // Stable id so `aria-labelledby` on the dialog container
+              // can point at this heading for screen-reader announcement.
+              nativeID="compare-modal-title"
+            >
               Side-by-Side Comparison
             </Text>
             <Text className="text-[12px] text-muted font-sans mt-0.5">
               Singapore Prices · ✓ best value highlighted
             </Text>
           </View>
+          {/* Close button — sized to WCAG 2.5.5 minimum (44×44 px touch
+              target). The visible circle stays 36 px for design parity;
+              `hitSlop` extends the tappable area to 44 px without
+              changing the layout. */}
           <Pressable
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel="Close comparison"
+            hitSlop={8}
             style={{
               width: 36, height: 36,
               borderRadius: 18,
@@ -286,7 +411,7 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
           </Text>
         </View>
       </View>
-    </View>
+    </ModalShell>
   );
 };
 

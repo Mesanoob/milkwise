@@ -149,6 +149,9 @@ export const ProductCard = ({
               ? `Add ${product.name} to comparison`
               : 'Comparison limit reached'
         }
+        // Visible dot stays 24×24 for design parity; hitSlop expands the
+        // touch area to ~44×44 to meet WCAG 2.5.5 minimum target size.
+        hitSlop={10}
         disabled={!selected && !canSelect}
         style={{
           position: 'absolute',
@@ -223,9 +226,15 @@ export const ProductCard = ({
 
         {/* Variant pills — LOCAL state only. Each pill is its own Pressable
             with no `onPress` propagation to the card-level click targets.
-            The outer wrapper is a plain View — does not navigate. */}
+            The outer wrapper is a plain View — does not navigate.
+            `radiogroup` semantics let screen readers announce "Pack size,
+            3 options" so users understand the pills are a single choice. */}
         {product.variants.length > 1 && (
-          <View className="flex-row flex-wrap gap-1">
+          <View
+            className="flex-row flex-wrap gap-1"
+            accessibilityRole="radiogroup"
+            accessibilityLabel="Pack size"
+          >
             {product.variants.map((v, i) => {
               const isActive = i === variantIndex;
               return (
@@ -235,6 +244,9 @@ export const ProductCard = ({
                   accessibilityState={{ selected: isActive }}
                   accessibilityLabel={`Select ${formatWeight(v.weightG)} variant`}
                   onPress={() => setVariantIndex(i)}
+                  // Pills are ~18 px tall by design; hitSlop pushes the
+                  // touch target to ~44 px without changing the visual.
+                  hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                   className="rounded-md px-2 py-0.5"
                   style={{
                     backgroundColor: isActive ? '#1B5E3B' : '#F9F7F2',
