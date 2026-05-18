@@ -32,11 +32,15 @@ export interface TagProps {
 // Centralised colour table for the generic variants. Adding a new variant
 // is a one-place change. The class string is "<bg-class> <text-class>"
 // because NativeWind expects them on separate elements (View vs Text).
+// v2 token classes (CSS-var backed → flip with the theme). The legacy
+// `amber` slot maps to the warm warn pair (its closest v2 analogue with
+// AA contrast); `green` → accent. specialty colours are NOT v2 — they
+// stay spec-exact via the inline-style path below (CLAUDE.md §7b).
 const VARIANT_STYLES: Record<TagVariant, string> = {
-  green:  'bg-green-light text-green',
-  amber:  'bg-amber-light text-amber',
-  muted:  'bg-surface2 text-muted',
-  danger: 'bg-red-100 text-red-700',
+  green:  'bg-mw-accent-tint text-mw-accent',
+  amber:  'bg-mw-warn-bg text-mw-warn-text',
+  muted:  'bg-mw-bg-panel text-mw-text-muted',
+  danger: 'bg-mw-danger-soft text-mw-danger',
 };
 
 // Size tokens. Card view uses `sm` to keep tag rows compact under the

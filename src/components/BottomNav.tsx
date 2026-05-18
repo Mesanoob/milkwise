@@ -38,7 +38,7 @@ export const BottomNav = () => {
       // combined with bottom/left/right. On native we get the safe-area
       // padding from the parent SafeAreaView.
       style={{ position: 'fixed' as never, bottom: 0, left: 0, right: 0 }}
-      className="bg-surface border-t border-border z-50 flex-row py-1.5"
+      className="bg-mw-bg-card border-t border-mw-border z-50 flex-row py-1.5"
     >
       {TABS.map((tab) => {
         const isActive = pathname === tab.href;
@@ -50,13 +50,13 @@ export const BottomNav = () => {
               accessibilityState={{ selected: isActive }}
               className="flex-1 items-center justify-center py-1.5"
             >
-              <Text className={isActive ? 'text-green text-lg' : 'text-muted text-lg'}>
+              <Text className={isActive ? 'text-mw-accent text-lg' : 'text-mw-text-muted text-lg'}>
                 {tab.icon}
               </Text>
               <Text
                 className={
                   'text-[10px] font-sans-semibold ' +
-                  (isActive ? 'text-green' : 'text-muted')
+                  (isActive ? 'text-mw-accent' : 'text-mw-text-muted')
                 }
               >
                 {tab.label}

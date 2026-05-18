@@ -24,7 +24,7 @@ const MODES: Array<{ value: DisplayMode; label: string; icon: string }> = [
 
 export const DisplayToggle = ({ value, onChange }: DisplayToggleProps) => {
   return (
-    <View className="flex-row bg-surface2 border border-border rounded-full p-0.5">
+    <View className="flex-row bg-mw-bg-panel border border-mw-border rounded-full p-0.5">
       {MODES.map((mode) => {
         const isActive = mode.value === value;
         return (
@@ -37,16 +37,16 @@ export const DisplayToggle = ({ value, onChange }: DisplayToggleProps) => {
             hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
             className={
               'px-3 py-1.5 rounded-full flex-row items-center gap-1.5 ' +
-              (isActive ? 'bg-green' : '')
+              (isActive ? 'bg-mw-accent' : '')
             }
           >
-            <Text className={isActive ? 'text-white text-xs' : 'text-muted text-xs'}>
+            <Text className={isActive ? 'text-mw-text-inverse text-xs' : 'text-mw-text-muted text-xs'}>
               {mode.icon}
             </Text>
             <Text
               className={
                 'text-xs font-sans-semibold ' +
-                (isActive ? 'text-white' : 'text-muted')
+                (isActive ? 'text-mw-text-inverse' : 'text-mw-text-muted')
               }
             >
               {mode.label}

@@ -28,7 +28,7 @@ export interface ScreenProps {
 export const Screen = ({ children, withChrome = true, scroll = true }: ScreenProps) => {
   return (
     // `edges={['top']}` because the bottom inset is handled inside BottomNav.
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <SafeAreaView edges={['top']} className="flex-1 bg-mw-bg">
       {withChrome && <Header />}
 
       {scroll ? (

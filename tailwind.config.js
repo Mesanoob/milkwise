@@ -62,22 +62,45 @@ module.exports = {
 
         // ── v2 palette (mirror of theme.ts `palette`) ───────────────────
         // Namespaced `mw-*` so it never collides with the live v1 keys
-        // (`bg`, `text`, `border`, `danger`…). Phase 2 ships the LIGHT
-        // values statically; Phase 3 rewrites these to CSS-var refs that
-        // flip with the OS/manual theme. Phase 4 migrates components onto
-        // `bg-mw-*` / `text-mw-*` and deletes the v1 keys above.
+        // (`bg`, `text`, `border`, `danger`…). Backed by CSS variables
+        // declared in global.css: `:root` = light, `.dark` = dark. The
+        // ThemeContext toggles the `.dark` class (web) / NativeWind scheme
+        // (native), so one swap re-points every token — no per-component
+        // hex, full flip (CLAUDE.md §7b). Channels are space-separated RGB
+        // triplets so Tailwind's `<alpha-value>` (e.g. `bg-mw-bg/60`) works.
+        // `nav-bg` is intentionally a whole translucent value (not a
+        // channel triplet) — it already carries its own alpha.
         mw: {
-          bg: "#F7F3EA", "bg-panel": "#EFE9DA", "bg-card": "#FCF8EE", "bg-inverse": "#25241F",
-          text: "#2A2823", "text-muted": "#6E6A60", "text-faint": "#9B9789", "text-inverse": "#F7F3EA",
-          accent: "#6B9682", "accent-hover": "#547A68", "accent-soft": "#D6E3DA", "accent-tint": "#E8EFE9",
-          cream: "#E8D4BC", "cream-soft": "#F2E4CE", "cream-tint": "#FAF1DF",
-          butter: "#F0DC9A", "butter-soft": "#F8ECC4",
-          clay: "#D4A893", "clay-soft": "#EBD4C5",
-          info: "#7DA1B2", "info-soft": "#D8E3E8",
-          danger: "#B07A78", "danger-soft": "#EAD4D2",
-          "warn-bg": "#F8ECC4", "warn-text": "#7A5A1F",
-          success: "#6B9682",
-          border: "#DCD3BD", "border-strong": "#C0B79F", divider: "#E5DDC8",
+          bg: "rgb(var(--mw-bg) / <alpha-value>)",
+          "bg-panel": "rgb(var(--mw-bg-panel) / <alpha-value>)",
+          "bg-card": "rgb(var(--mw-bg-card) / <alpha-value>)",
+          "bg-inverse": "rgb(var(--mw-bg-inverse) / <alpha-value>)",
+          text: "rgb(var(--mw-text) / <alpha-value>)",
+          "text-muted": "rgb(var(--mw-text-muted) / <alpha-value>)",
+          "text-faint": "rgb(var(--mw-text-faint) / <alpha-value>)",
+          "text-inverse": "rgb(var(--mw-text-inverse) / <alpha-value>)",
+          accent: "rgb(var(--mw-accent) / <alpha-value>)",
+          "accent-hover": "rgb(var(--mw-accent-hover) / <alpha-value>)",
+          "accent-soft": "rgb(var(--mw-accent-soft) / <alpha-value>)",
+          "accent-tint": "rgb(var(--mw-accent-tint) / <alpha-value>)",
+          cream: "rgb(var(--mw-cream) / <alpha-value>)",
+          "cream-soft": "rgb(var(--mw-cream-soft) / <alpha-value>)",
+          "cream-tint": "rgb(var(--mw-cream-tint) / <alpha-value>)",
+          butter: "rgb(var(--mw-butter) / <alpha-value>)",
+          "butter-soft": "rgb(var(--mw-butter-soft) / <alpha-value>)",
+          clay: "rgb(var(--mw-clay) / <alpha-value>)",
+          "clay-soft": "rgb(var(--mw-clay-soft) / <alpha-value>)",
+          info: "rgb(var(--mw-info) / <alpha-value>)",
+          "info-soft": "rgb(var(--mw-info-soft) / <alpha-value>)",
+          danger: "rgb(var(--mw-danger) / <alpha-value>)",
+          "danger-soft": "rgb(var(--mw-danger-soft) / <alpha-value>)",
+          "warn-bg": "rgb(var(--mw-warn-bg) / <alpha-value>)",
+          "warn-text": "rgb(var(--mw-warn-text) / <alpha-value>)",
+          success: "rgb(var(--mw-success) / <alpha-value>)",
+          border: "rgb(var(--mw-border) / <alpha-value>)",
+          "border-strong": "rgb(var(--mw-border-strong) / <alpha-value>)",
+          divider: "rgb(var(--mw-divider) / <alpha-value>)",
+          "nav-bg": "var(--mw-nav-bg)",
         },
       },
 

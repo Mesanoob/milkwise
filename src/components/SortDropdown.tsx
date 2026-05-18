@@ -9,6 +9,7 @@
 
 import { Platform, Pressable, Text, View } from 'react-native';
 import type { SortField, SortState } from '../types/filters';
+import { useTheme } from '../contexts/ThemeContext';
 
 export interface SortDropdownProps {
   value:    SortState;
@@ -46,9 +47,9 @@ export const SortDropdown = ({ value, onChange }: SortDropdownProps) => {
         accessibilityRole="button"
         accessibilityLabel={`Sort direction, currently ${value.direction === 'asc' ? 'ascending' : 'descending'}, tap to flip`}
         hitSlop={6}
-        className="w-9 h-9 rounded-lg border border-border bg-surface items-center justify-center"
+        className="w-9 h-9 rounded-lg border border-mw-border bg-mw-bg-card items-center justify-center"
       >
-        <Text className="text-base text-text">{directionIcon}</Text>
+        <Text className="text-base text-mw-text">{directionIcon}</Text>
       </Pressable>
     </View>
   );
@@ -62,6 +63,10 @@ const WebSelect = ({ value, onChange }: { value: SortField; onChange: (f: SortFi
   const Select: any = 'select' as any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const Option: any = 'option' as any;
+  // Native <select> is styled inline (no className), so theme-reactive
+  // colours come from the context. `color` is set explicitly now too —
+  // in dark mode the OS default text colour would otherwise wash out.
+  const { tokens } = useTheme();
 
   return (
     <Select
@@ -73,8 +78,9 @@ const WebSelect = ({ value, onChange }: { value: SortField; onChange: (f: SortFi
         paddingRight: 28,
         borderRadius: 8,
         borderWidth: 1,
-        borderColor: '#E0D9CC',
-        background: '#FFFFFF',
+        borderColor: tokens.colors.border,
+        background: tokens.colors.bgCard,
+        color: tokens.colors.text,
         fontSize: 13,
         fontFamily: 'inherit',
       }}
@@ -101,9 +107,9 @@ const NativeCycler = ({ value, onChange }: { value: SortField; onChange: (f: Sor
     <Pressable
       onPress={cycle}
       accessibilityLabel={`Sort by ${currentLabel}, tap to change`}
-      className="h-9 px-3 rounded-lg border border-border bg-surface flex-row items-center"
+      className="h-9 px-3 rounded-lg border border-mw-border bg-mw-bg-card flex-row items-center"
     >
-      <Text className="text-xs text-text font-sans-medium">{currentLabel}</Text>
+      <Text className="text-xs text-mw-text font-sans-medium">{currentLabel}</Text>
     </Pressable>
   );
 };

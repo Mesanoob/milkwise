@@ -12,7 +12,7 @@
  */
 
 import { Platform, TextInput, View, Pressable, Text, type TextStyle } from 'react-native';
-import { colors } from '../config/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export interface SearchBarProps {
   value:    string;
@@ -24,15 +24,18 @@ export const SearchBar = ({ value, onChange, placeholder }: SearchBarProps) => {
   // Show a clear button only when there is text to clear — avoids visual
   // clutter when the field is empty.
   const showClear = value.length > 0;
+  // Inline styles can't take Tailwind classes, so theme-reactive colour
+  // values come from the context instead (CSS-var classes for the rest).
+  const { tokens } = useTheme();
 
   return (
-    <View className="flex-row items-center bg-surface border border-border rounded-full px-4 py-2 gap-2 w-full">
-      <Text className="text-muted">⌕</Text>
+    <View className="flex-row items-center bg-mw-bg-card border border-mw-border rounded-full px-4 py-2 gap-2 w-full">
+      <Text className="text-mw-text-muted">⌕</Text>
       <TextInput
         value={value}
         onChangeText={onChange}
         placeholder={placeholder ?? 'Search formulas, brands, specialty…'}
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={tokens.colors.textMuted}
         // Disable auto-correct: brand names ("Aptamil") are not in the
         // dictionary and getting auto-corrected to "Aptitude" is worse than
         // typing the full name yourself.
@@ -44,7 +47,7 @@ export const SearchBar = ({ value, onChange, placeholder }: SearchBarProps) => {
         // `outline: none` removes the blue browser focus ring — web only;
         // RN ignores unknown style keys but TypeScript needs the cast.
         style={[
-          { flex: 1, color: colors.text, fontSize: 14 },
+          { flex: 1, color: tokens.colors.text, fontSize: 14 },
           // `outlineWidth: 0` is the cross-platform-safe way to remove the
           // browser's blue focus ring without tripping RN's stricter typing.
           Platform.OS === 'web' ? ({ outlineWidth: 0 } as TextStyle) : null,
@@ -59,7 +62,7 @@ export const SearchBar = ({ value, onChange, placeholder }: SearchBarProps) => {
           accessibilityLabel="Clear search"
           hitSlop={8}
         >
-          <Text className="text-muted text-base">✕</Text>
+          <Text className="text-mw-text-muted text-base">✕</Text>
         </Pressable>
       )}
     </View>
