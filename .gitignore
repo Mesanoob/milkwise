@@ -40,6 +40,10 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# v2 design re-skin: read-only reference, re-pullable from ../Milkwise-designrepo
+# (the upstream). Not part of the build; kept local for porting + visual diff.
+design-reference/
+
 # generated native folders
 /ios
 /android

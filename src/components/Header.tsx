@@ -23,6 +23,7 @@
 import { Platform, View, Text, TextInput, Pressable, useWindowDimensions, type TextStyle } from 'react-native';
 import { Link, usePathname, useRouter } from 'expo-router';
 import { useProductsContext } from '../contexts/ProductsContext';
+import { useTheme, type ThemePreference } from '../contexts/ThemeContext';
 
 const TABLET_BREAKPOINT = 768;
 
@@ -157,17 +158,34 @@ export const Header = () => {
             style={{ marginLeft: 16, flex: 1, maxWidth: 280 }}
           />
         )}
+
+        {/* Theme toggle sits at the far right of the nav cluster on
+            desktop. The 8px container gap spaces it from the search. */}
+        {!isCompact && <ThemeToggle />}
       </View>
 
       {/* Mobile search — sits in a second row below the nav on phone
-          widths because horizontally there's no room next to the logo. */}
+          widths because horizontally there's no room next to the logo.
+          The theme toggle rides alongside it so dark mode is reachable
+          without a hamburger menu. */}
       {isCompact && (
-        <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
-          <SearchField
-            value={filters.search}
-            onChange={handleSearchChange}
-            onClear={() => setSearch('')}
-          />
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            paddingHorizontal: 14,
+            paddingBottom: 10,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <SearchField
+              value={filters.search}
+              onChange={handleSearchChange}
+              onClear={() => setSearch('')}
+            />
+          </View>
+          <ThemeToggle />
         </View>
       )}
     </View>
@@ -231,3 +249,59 @@ const SearchField = ({
     )}
   </View>
 );
+
+/**
+ * `ThemeToggle` — the sun / moon / auto control. Cycles
+ * system → light → dark → system (CLAUDE.md §7b decision).
+ *
+ * This is intentionally styled from the LIVE v2 token set
+ * (`useTheme().tokens`) rather than the v1 hex the rest of this header
+ * still uses. It is net-new code (not a migration), so it may consume v2
+ * directly — and doing so makes it the one on-screen proof that the
+ * dark-mode mechanism actually flips before Phase 4 migrates the rest.
+ */
+const TOGGLE_GLYPH: Record<ThemePreference, string> = {
+  system: '◐', // half-filled = "auto / follow OS"
+  light: '☀',
+  dark: '☾',
+};
+const NEXT_LABEL: Record<ThemePreference, string> = {
+  system: 'light',
+  light: 'dark',
+  dark: 'system',
+};
+
+const ThemeToggle = () => {
+  const { preference, scheme, tokens, cyclePreference } = useTheme();
+  const { colors } = tokens;
+
+  return (
+    <Pressable
+      onPress={cyclePreference}
+      accessibilityRole="button"
+      // Announce both the current mode and what a press will do — a
+      // screen-reader user can't see the glyph change.
+      accessibilityLabel={`Theme: ${preference}${
+        preference === 'system' ? ` (currently ${scheme})` : ''
+      }. Activate to switch to ${NEXT_LABEL[preference]}.`}
+      // 36px visible box; hitSlop lifts the touch target to ≥44px (WCAG
+      // 2.5.5) to match the other header controls.
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: colors.border,
+        backgroundColor: colors.bgPanel,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <Text style={{ color: colors.accent, fontSize: 16, lineHeight: 20 }}>
+        {TOGGLE_GLYPH[preference]}
+      </Text>
+    </Pressable>
+  );
+};

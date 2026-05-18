@@ -302,14 +302,21 @@ Each phase is independently shippable and `npm run typecheck`-clean before movin
 
 | Phase | Task | Touches | Effort |
 |---|---|---|---|
-| 0 | Pull `tokens.ts` / `tokens.json` / `colors_and_type.css` into `milkwise/design-reference/` (read-only ref, gitignored from build) | new ref dir | L |
-| 1 | **Fonts** — `npx expo install @expo-google-fonts/inter @expo-google-fonts/inter-tight @expo-google-fonts/jetbrains-mono`; load in `_layout.tsx`; remove DM deps | `_layout.tsx`, `theme.ts`, `tailwind.config.js` | M |
-| 2 | **Token merge** — port `tokens.ts` (light+dark colors, spacing, radii, shadows, tracking, motion) into `src/config/theme.ts` + mirror in `tailwind.config.js` | `theme.ts`, `tailwind.config.js` | M |
-| 3 | **Dark-mode mechanism** — theme context (OS-seeded), sun/moon toggle in nav header, persist via AsyncStorage, drive NativeWind color scheme. ~40 lines new code (only new code in the whole re-skin) | new `ThemeContext`, `Header.tsx`, `_layout.tsx` | M |
-| 4 | **Full inline-hex sweep** — replace every hardcoded hex across ALL components with token refs (decision: full sweep) | every component with inline color | H |
+| 0 | ✅ **DONE** Pull `tokens.ts` / `tokens.json` / `colors_and_type.css` (+`data-mapping.md`, `INTEGRATION.md`, `README.md`) into `milkwise/design-reference/`. Gitignored + `tsconfig` `exclude`d so it's never built/typechecked. Re-pull cmd in that README. | ref dir, `.gitignore`, `tsconfig.json` | L |
+| 1 | ✅ **DONE** **Fonts** — Inter/Inter Tight/JetBrains Mono installed, DM removed, 7 weights loaded in `_layout.tsx`. `theme.ts` `fonts` has semantic v2 keys (`displayBold`, `body`, `mono`, …) + **back-compat aliases** (`serif`/`sans*`) so un-migrated components still render; aliases (and their `tailwind` mirrors) get deleted after Phase 4. | `_layout.tsx`, `theme.ts`, `tailwind.config.js`, `global.css` | M |
+| 2 | ✅ **DONE** **Token merge** — full v2 surface ported into `theme.ts` (`palette` light+dark, `space`, `radius` v2 keys merged in, `elevation` light/dark, `weight`, `fontSize`, `lineHeight`, `trackingEm`+`tracking()`, `motion`, `layout`, `heroMesh`, `Scheme`, `themeFor()`). **Additive only** — v1 `colors`/`shadow`/`fontSizes` untouched, deleted after Phase 4. Tailwind mirror under **`mw-*` namespace** (static light hex; Phase 3 made dark flip via class). Verified pixel-identical (no component touched). | `theme.ts`, `tailwind.config.js` | M |
+| 3 | ✅ **DONE** **Dark-mode mechanism** — `src/contexts/ThemeContext.tsx` (OS-seeded, `system`→`light`→`dark` cycle, AsyncStorage-persisted, drives `nativewind` colorScheme). `darkMode:'class'` set. Toggle in `Header.tsx` (desktop + mobile), styled from live v2 tokens so it's the on-screen proof. Verified: cycle, persistence-across-reload, explicit-dark → `<html class="dark">` (Phase 4 `dark:` dependency), `system`→media-query. No existing screen visually changed. | new `ThemeContext`, `Header.tsx`, `_layout.tsx`, `tailwind.config.js` | M |
+| 4 | ⏭️ **NEXT** **Full inline-hex sweep** — replace every hardcoded hex across ALL components with token refs (decision: full sweep). **Open fork — decide before starting:** consume v2 via (a) Tailwind `mw-*` classes wired to CSS vars that flip on `.dark`, or (b) `useTheme().tokens` JS refs. (b) flips reliably on web+native today and matches the Phase 3 toggle's own approach; (a) needs CSS-var plumbing added in this phase. | every component with inline color | H |
 | 5 | **Mono-tabular numerals** — every price/ratio/per-unit/scoop/calculator number → `fonts.mono` + `fontVariant: ['tabular-nums']` | ProductCard, ProductListRow, CompareModal, calculator, detail, most-sold | M |
-| 6 | **Token application** — radii (4/8/24), 2-step shadows, spacing scale applied per §7b surface rules | shared components | M |
+| 6 | **Token application** — radii, 2-step shadows, spacing scale applied per §7b surface rules | shared components | M |
 | 7 | **A11y + dark-mode QA** — re-run Phase D checks against new tokens in BOTH themes (contrast AA, focus ring on sage/dark, tap targets), Puppeteer + Safari sweep | — | M |
+
+**⚠️ Radii — canonical values resolved (read before Phase 6):** §7b prose
+("4px inputs, 8px cards, 24px pills") **conflicts with canonical
+`tokens.ts`** (`input:8, card:12, cardLg:18, pill:999`). Same class of trap
+as the README green/Fraunces warning in §7b. **`tokens.ts` wins** (§7b itself
+declares it canonical and says don't re-derive). Phase 2 merged the
+`tokens.ts` values; Phase 6 applies them. Treat the §7b radii prose as stale.
 
 **Hard rules for this roadmap:**
 - Do NOT add/modify screens, components' structure, data, or logic. Re-skin = swap visual tokens on the existing tree.

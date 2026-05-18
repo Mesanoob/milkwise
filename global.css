@@ -11,9 +11,9 @@
    ────────────────────────────────────────────────────────────────────── */
 
 /* Fallback system font stack used during the brief window between page
-   load and `useFonts` resolving DM Sans. Using `-apple-system` etc keeps
-   text close to the eventual DM Sans metrics, which minimises layout shift
-   (CLS) when the real font swaps in.
+   load and `useFonts` resolving Inter. Using `-apple-system` etc keeps
+   text close to Inter's metrics, which minimises layout shift (CLS) when
+   the real font swaps in.
 
    The brand background colour matches `theme.colors.bg` so the splash-to-
    shell transition does not flash white. */
