@@ -2,7 +2,7 @@
 
 Single source of truth for this project. Read top-to-bottom on first session, then jump back to sections 8, 9, and 9b as work progresses. Last updated 2026-05-18.
 
-> **ACTIVE WORK: v2 design re-skin.** A new design system (sage/cream, Inter/JetBrains fonts, dark mode) is being applied on branch `redesign-v2`. This is a **visual re-skin only** — no screen, data, or logic changes. See §4 (branch model), §7b (design system rules), §9b (re-skin roadmap). `testingprod` remains the shippable v1.
+> **ACTIVE WORK: v2 design re-skin (Phases 0–3 ✅, Phase 4 ~95%).** New design system (sage/cream, Inter/Inter Tight/JetBrains Mono, OS-seeded dark mode) on branch `redesign-v2`. **Visual re-skin only** — no screen/data/logic changes. **Resume point:** sweep `app/product/[id].tsx` (last file with v1 hex), then Phase 4c (delete v1 token block + font aliases + `_layout.tsx` `colors.bg` ref, full light/dark QA of all 5 screens). Exact conventions + commit trail in §9b. `testingprod` remains the shippable v1; all v2 work is committed locally on `redesign-v2` (not pushed).
 
 ---
 
@@ -213,12 +213,13 @@ The v2 work is a **visual re-skin ONLY**. Hard scope boundary:
 - Mobile: logo only + search field on second row; BottomNav with 4 tabs
 - `usePathname` highlights the active route
 
-### Design system
-- DM Sans (300-700) + DM Serif Display loaded via `@expo-google-fonts/*`
-- Splash screen held until fonts resolve (no FOUT)
-- 11 specialty + 4 stage colour palettes — spec-exact, in `theme.ts`, mirrored in `tailwind.config.js`
-- 14 px corner radius on cards (`--radius`)
-- System font fallback stack in `global.css` to minimise CLS during font swap
+### Design system — **v2 re-skin layered on (see §9b for live status)**
+- **Fonts (v2, shipped):** Inter (body 400/500/600) + Inter Tight (display 600/700) + JetBrains Mono (400/500) via `@expo-google-fonts/*`; DM removed. `theme.ts` `fonts` exposes semantic v2 keys **plus** back-compat `serif`/`sans*` aliases (deleted in Phase 4c). Splash held until fonts resolve (no FOUT).
+- **Tokens (v2, shipped):** full v2 surface in `theme.ts` — `palette` (light+dark), `space`, `radius` (v1+v2 keys coexist), `elevation`, `weight`, `fontSize`, `lineHeight`, `trackingEm`/`tracking()`, `motion`, `layout`, `heroMesh`, `themeFor()`. Mirrored in `tailwind.config.js` as `mw-*` colours backed by CSS vars (`global.css` `:root`/`.dark` channel triplets) → one `.dark` swap flips everything.
+- **Dark mode (v2, shipped):** `ThemeContext` — OS-seeded, `system→light→dark` cycle, AsyncStorage-persisted; drives NativeWind `colorScheme` + the `.dark` web class. Sun/moon/auto toggle in `Header` (desktop + mobile).
+- **v1 still present (deleted in Phase 4c):** the v1 flat `colors`/`shadow`/`fontSizes` block + `theme` aggregate in `theme.ts`, still imported by `app/product/[id].tsx` (not yet swept) and `app/_layout.tsx` (one intentional `colors.bg` light-scheme fallback). The §8/header doc-comment example `className="bg-green"` in `_layout.tsx` is stale.
+- 11 specialty + 4 stage palettes — spec-exact, **NOT part of v2** (deliberately untouched by the re-skin per §7b); medal gold/silver/bronze in `most-sold.tsx` likewise theme-independent.
+- System font fallback stack in `global.css` to minimise CLS; web shell bg + focus ring now flip via CSS vars.
 
 ### State management
 - `ProductsContext` is the single source of truth for filter + selection state (mounted in `_layout.tsx`)
@@ -239,6 +240,7 @@ The v2 work is a **visual re-skin ONLY**. Hard scope boundary:
 - Product images marked decorative (`alt=""`); name is read via adjacent text
 
 ### Cross-browser verification
+- ⚠️ **This verification predates the v2 re-skin.** During the re-skin, web light+dark was Puppeteer-verified through the leaf-component layer only; a full light+dark sweep of all 5 screens is the open Phase 4c task (§9b). Treat the rows below as v1-era.
 - **Chromium (Puppeteer):** all 4 routes + product detail + Compare modal flow (desktop + 375 px mobile) — pass
 - **Safari:** all 4 routes via native screencapture — visual parity to Chromium — pass
 - **Firefox:** not installed, not tested
