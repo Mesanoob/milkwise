@@ -471,7 +471,7 @@ export default function CalculatorScreen() {
           </Card>
         ) : (
           <View className="items-center py-12">
-            <Text className="text-5xl mb-3">^</Text>
+            <Text className="text-5xl mb-3 text-mw-text-muted">^</Text>
             <Text className="text-xl font-serif text-mw-text mb-2" selectable>
               Enter your baby's birthday above
             </Text>
