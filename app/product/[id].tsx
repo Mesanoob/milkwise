@@ -20,6 +20,11 @@
  * The screen reads filter state via the ProductsContext so navigating back
  * via "← All Products" preserves the user's filter intent (bug fix from
  * Session 2).
+ *
+ * v2 re-skin (CLAUDE.md §9b Phase 4): all structural colour comes from
+ * `useTheme().tokens` so light/dark flips with no per-component hex. The
+ * specialty/stage/macro hue pairs are spec-exact per the design handoff and
+ * deliberately survive the re-skin unchanged (§7b) — they do NOT theme.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -35,10 +40,12 @@ import { formatWeight } from '../../src/utils/format';
 import { labelForSpecialty } from '../../src/utils/strings';
 import { getOriginFlag, getMilkTypeIcon } from '../../src/utils/icons';
 import { specialtyColors, type SpecialtyKey } from '../../src/config/theme';
+import { useTheme } from '../../src/contexts/ThemeContext';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { tokens } = useTheme();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [detail,  setDetail]  = useState<ProductDetail | null>(null);
@@ -101,7 +108,7 @@ export default function ProductDetailScreen() {
     return (
       <Screen>
         <View className="px-4 py-12 items-center">
-          <Text className="text-muted text-sm font-sans">Loading product…</Text>
+          <Text className="text-mw-text-muted text-sm font-sans">Loading product…</Text>
         </View>
       </Screen>
     );
@@ -148,15 +155,15 @@ export default function ProductDetailScreen() {
           <View className="flex-row items-center flex-wrap gap-1.5 mb-5">
             <Link href="/" asChild>
               <Pressable accessibilityRole="link">
-                <Text className="text-[12.5px] text-green font-sans-bold">
+                <Text className="text-[12.5px] text-mw-accent font-sans-bold">
                   ← All Products
                 </Text>
               </Pressable>
             </Link>
-            <Text className="text-[12.5px] text-muted font-sans">/</Text>
-            <Text className="text-[12.5px] text-muted font-sans">{product.stage}</Text>
-            <Text className="text-[12.5px] text-muted font-sans">/</Text>
-            <Text className="text-[12.5px] text-text font-sans-medium">{product.name}</Text>
+            <Text className="text-[12.5px] text-mw-text-muted font-sans">/</Text>
+            <Text className="text-[12.5px] text-mw-text-muted font-sans">{product.stage}</Text>
+            <Text className="text-[12.5px] text-mw-text-muted font-sans">/</Text>
+            <Text className="text-[12.5px] text-mw-text font-sans-medium">{product.name}</Text>
           </View>
 
           {/* ── Hero card ──────────────────────────────────────────────── */}
@@ -167,9 +174,13 @@ export default function ProductDetailScreen() {
                 className="gap-4"
                 style={{ flexBasis: 320, flexGrow: 0, flexShrink: 1, minWidth: 280 }}
               >
+                {/* Product-tin photography is shot on white; the hero plate
+                    stays a fixed white in BOTH themes for image legibility
+                    (theme-independent backdrop per CLAUDE.md §9b). Only the
+                    hairline border flips. */}
                 <View
-                  className="bg-surface rounded-2xl border border-border items-center justify-center overflow-hidden"
-                  style={{ aspectRatio: 1, padding: 16 }}
+                  className="rounded-2xl items-center justify-center overflow-hidden"
+                  style={{ aspectRatio: 1, padding: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: tokens.colors.border }}
                 >
                   <Image
                     source={getProductImage(variant?.img ?? product.img)}
@@ -181,7 +192,7 @@ export default function ProductDetailScreen() {
 
                 {product.variants.length > 1 && (
                   <View>
-                    <Text className="text-[11px] font-sans-bold text-muted uppercase tracking-wider mb-2.5">
+                    <Text className="text-[11px] font-sans-bold text-mw-text-muted uppercase tracking-wider mb-2.5">
                       Available Sizes
                     </Text>
                     <View className="flex-row flex-wrap gap-2">
@@ -201,15 +212,15 @@ export default function ProductDetailScreen() {
                               alignItems: 'center',
                               borderRadius: 12,
                               borderWidth: 2,
-                              borderColor: isActive ? '#1B5E3B' : '#E0D9CC',
-                              backgroundColor: isActive ? '#EBF5EE' : '#FFFFFF',
+                              borderColor: isActive ? tokens.colors.accent : tokens.colors.border,
+                              backgroundColor: isActive ? tokens.colors.accentTint : tokens.colors.bgCard,
                               padding: 14,
                             }}
                           >
                             <View
                               style={{
                                 width: 48, height: 48,
-                                backgroundColor: isActive ? '#FFFFFF' : '#F9F7F2',
+                                backgroundColor: isActive ? tokens.colors.bgCard : tokens.colors.bgPanel,
                                 borderRadius: 8,
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -227,19 +238,19 @@ export default function ProductDetailScreen() {
                             </View>
                             <Text
                               className="font-sans-bold text-[12px]"
-                              style={{ color: isActive ? '#1B5E3B' : '#1A1A1A' }}
+                              style={{ color: isActive ? tokens.colors.accent : tokens.colors.text }}
                             >
                               {formatWeight(vt.weightG)}
                             </Text>
                             <Text
                               className="font-sans-semibold text-[11px] mt-0.5"
-                              style={{ color: isActive ? '#2D7A52' : '#6B7280' }}
+                              style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted }}
                             >
                               ${vt.price.toFixed(2)}
                             </Text>
                             <Text
                               className="font-sans text-[10px] mt-0.5"
-                              style={{ color: isActive ? '#2D7A52' : '#6B7280' }}
+                              style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted }}
                             >
                               ${(vt.pricePerGram ?? 0).toFixed(4)}/g
                             </Text>
@@ -255,7 +266,7 @@ export default function ProductDetailScreen() {
               <View className="flex-1 gap-5" style={{ minWidth: 280 }}>
                 {/* Badges row */}
                 <View className="flex-row flex-wrap items-center gap-2">
-                  <Badge bg="#1B5E3B" fg="#FFFFFF" label={product.stage} />
+                  <Badge bg={tokens.colors.accent} fg={tokens.colors.textInverse} label={product.stage} />
                   {product.specialty && (
                     <SpecialtyBadge specialty={product.specialty as SpecialtyKey} />
                   )}
@@ -269,11 +280,11 @@ export default function ProductDetailScreen() {
 
                 {/* Brand kicker + name */}
                 <View>
-                  <Text className="text-[12px] font-sans-bold text-muted uppercase tracking-wider mb-1.5">
+                  <Text className="text-[12px] font-sans-bold text-mw-text-muted uppercase tracking-wider mb-1.5">
                     {product.brand}
                   </Text>
                   <Text
-                    className="font-serif text-text leading-tight"
+                    className="font-serif text-mw-text leading-tight"
                     style={{ fontSize: 28 }}
                   >
                     {product.fullName}
@@ -281,7 +292,7 @@ export default function ProductDetailScreen() {
                 </View>
 
                 {/* Description */}
-                <Text className="text-[14.5px] text-muted font-sans" style={{ lineHeight: 24 }}>
+                <Text className="text-[14.5px] text-mw-text-muted font-sans" style={{ lineHeight: 24 }}>
                   {product.desc}
                 </Text>
 
@@ -291,22 +302,22 @@ export default function ProductDetailScreen() {
                     style={{
                       paddingHorizontal: 16,
                       paddingVertical: 12,
-                      backgroundColor: '#EBF5EE',
+                      backgroundColor: tokens.colors.accentTint,
                       borderRadius: 10,
                       borderWidth: 1,
-                      borderColor: '#B7E4C7',
+                      borderColor: tokens.colors.accentSoft,
                     }}
                   >
                     <Text className="text-[13px] font-sans">
-                      <Text className="font-sans-bold" style={{ color: '#1B5E3B' }}>✓ Best for: </Text>
-                      <Text style={{ color: '#2D7A52' }}>{product.bestFor}</Text>
+                      <Text className="font-sans-bold" style={{ color: tokens.colors.accent }}>✓ Best for: </Text>
+                      <Text style={{ color: tokens.colors.accentHover }}>{product.bestFor}</Text>
                     </Text>
                   </View>
                 )}
 
                 {/* Pricing grid */}
                 <View>
-                  <Text className="text-[11px] font-sans-bold text-muted uppercase tracking-wider mb-2.5">
+                  <Text className="text-[11px] font-sans-bold text-mw-text-muted uppercase tracking-wider mb-2.5">
                     Pricing — {formatWeight(variant?.weightG ?? 0)} tin
                   </Text>
                   <View className="flex-row flex-wrap gap-2.5">
@@ -322,10 +333,10 @@ export default function ProductDetailScreen() {
                   style={{
                     paddingHorizontal: 16,
                     paddingVertical: 12,
-                    backgroundColor: '#F9F7F2',
+                    backgroundColor: tokens.colors.bgPanel,
                     borderRadius: 10,
                     borderWidth: 1,
-                    borderColor: '#E0D9CC',
+                    borderColor: tokens.colors.border,
                   }}
                 >
                   <View className="flex-row flex-wrap gap-6">
@@ -351,7 +362,7 @@ export default function ProductDetailScreen() {
           {/* ── Price comparison in stage ──────────────────────────────── */}
           <Card style={{ marginTop: 24 }}>
             <SectionHead icon="💰" title={`Price comparison — ${product.stage} ($ per gram, low to high)`} />
-            <Text className="text-[12px] text-muted font-sans mb-4">
+            <Text className="text-[12px] text-mw-text-muted font-sans mb-4">
               Ranked #{rankInStage} of {stageProducts.length} products by $/gram · Default size shown
             </Text>
             <View className="gap-2">
@@ -372,21 +383,21 @@ export default function ProductDetailScreen() {
                       paddingHorizontal: 12,
                       paddingVertical: 8,
                       borderRadius: 10,
-                      backgroundColor: isThis ? '#EBF5EE' : '#F9F7F2',
+                      backgroundColor: isThis ? tokens.colors.accentTint : tokens.colors.bgPanel,
                       borderWidth: 1.5,
-                      borderColor: isThis ? '#1B5E3B' : '#E0D9CC',
+                      borderColor: isThis ? tokens.colors.accent : tokens.colors.border,
                     }}
                   >
                     <View
                       style={{
                         width: 22, height: 22, borderRadius: 11,
-                        backgroundColor: isThis ? '#1B5E3B' : '#E0D9CC',
+                        backgroundColor: isThis ? tokens.colors.accent : tokens.colors.border,
                         alignItems: 'center', justifyContent: 'center',
                       }}
                     >
                       <Text
                         className="font-sans-bold text-[10px]"
-                        style={{ color: isThis ? '#FFFFFF' : '#6B7280' }}
+                        style={{ color: isThis ? tokens.colors.textInverse : tokens.colors.textMuted }}
                       >
                         {i + 1}
                       </Text>
@@ -394,10 +405,10 @@ export default function ProductDetailScreen() {
                     <View
                       style={{
                         width: 32, height: 32,
-                        backgroundColor: '#FFFFFF',
+                        backgroundColor: tokens.colors.bgCard,
                         borderRadius: 6,
                         borderWidth: 1,
-                        borderColor: '#E0D9CC',
+                        borderColor: tokens.colors.border,
                         alignItems: 'center', justifyContent: 'center',
                         overflow: 'hidden',
                       }}
@@ -416,7 +427,7 @@ export default function ProductDetailScreen() {
                         numberOfLines={1}
                         style={{
                           fontWeight: isThis ? '700' : '500',
-                          color: isThis ? '#1B5E3B' : '#1A1A1A',
+                          color: isThis ? tokens.colors.accent : tokens.colors.text,
                         }}
                       >
                         {q.name}
@@ -425,14 +436,14 @@ export default function ProductDetailScreen() {
                         style={{
                           width: `${pct}%`,
                           height: 6,
-                          backgroundColor: isThis ? '#1B5E3B' : '#CBD5E1',
+                          backgroundColor: isThis ? tokens.colors.accent : tokens.colors.border,
                           borderRadius: 3,
                         }}
                       />
                     </View>
                     <Text
                       className="font-sans-bold text-[13px]"
-                      style={{ color: isThis ? '#1B5E3B' : '#1A1A1A' }}
+                      style={{ color: isThis ? tokens.colors.accent : tokens.colors.text }}
                     >
                       ${ppg.toFixed(4)}/g
                     </Text>
@@ -475,21 +486,21 @@ export default function ProductDetailScreen() {
                           paddingRight: i % 2 === 0 ? 24 : 0,
                           paddingLeft:  i % 2 === 1 ? 24 : 0,
                           borderRightWidth: i % 2 === 0 ? 1 : 0,
-                          borderRightColor: '#E0D9CC',
+                          borderRightColor: tokens.colors.border,
                           borderBottomWidth: 1,
-                          borderBottomColor: '#E0D9CC',
+                          borderBottomColor: tokens.colors.border,
                           flexDirection: 'row',
                           gap: 10,
                           alignItems: 'flex-start',
                         }}
                       >
                         <Text
-                          className="font-sans-semibold text-[12px] text-muted uppercase tracking-wider"
+                          className="font-sans-semibold text-[12px] text-mw-text-muted uppercase tracking-wider"
                           style={{ minWidth: 130 }}
                         >
                           {s.l}
                         </Text>
-                        <Text className="font-sans-medium text-[13.5px] text-text flex-1">
+                        <Text className="font-sans-medium text-[13.5px] text-mw-text flex-1">
                           {s.v}
                         </Text>
                       </View>
@@ -509,11 +520,11 @@ export default function ProductDetailScreen() {
                   {/* Header row */}
                   <View
                     className="flex-row"
-                    style={{ backgroundColor: '#F9F7F2', borderBottomWidth: 1, borderBottomColor: '#E0D9CC' }}
+                    style={{ backgroundColor: tokens.colors.bgPanel, borderBottomWidth: 1, borderBottomColor: tokens.colors.border }}
                   >
                     {['Size', 'Tin Price', '$ / gram', '$ / scoop', '$ / mL', 'Scoops', 'Scoop', 'Water'].map((h) => (
                       <View key={h} style={{ width: 96, paddingHorizontal: 14, paddingVertical: 10 }}>
-                        <Text className="font-sans-bold text-[10.5px] uppercase tracking-wider text-muted">{h}</Text>
+                        <Text className="font-sans-bold text-[10.5px] uppercase tracking-wider text-mw-text-muted">{h}</Text>
                       </View>
                     ))}
                   </View>
@@ -534,21 +545,21 @@ export default function ProductDetailScreen() {
                           accessibilityLabel={`Select ${formatWeight(vt.weightG)} variant`}
                           className="flex-row"
                           style={{
-                            backgroundColor: isSelected ? '#EBF5EE' : 'transparent',
+                            backgroundColor: isSelected ? tokens.colors.accentTint : 'transparent',
                           }}
                         >
-                          <Cell width={96} bold color={isSelected ? '#1B5E3B' : '#1A1A1A'}>
+                          <Cell width={96} bold color={isSelected ? tokens.colors.accent : tokens.colors.text}>
                             {formatWeight(vt.weightG)}
                             {isSelected && (
-                              <Text className="font-sans-bold text-[10px] text-white" style={{ backgroundColor: '#1B5E3B', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 6 }}>
+                              <Text className="font-sans-bold text-[10px]" style={{ color: tokens.colors.textInverse, backgroundColor: tokens.colors.accent, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 6 }}>
                                 {' selected'}
                               </Text>
                             )}
                           </Cell>
-                          <Cell width={96} bold size={15} color={isSelected ? '#1B5E3B' : '#1A1A1A'}>
+                          <Cell width={96} bold size={15} color={isSelected ? tokens.colors.accent : tokens.colors.text}>
                             ${vt.price.toFixed(2)}
                           </Cell>
-                          <Cell width={96} bold color={isBest ? '#1B5E3B' : '#1A1A1A'}>
+                          <Cell width={96} bold color={isBest ? tokens.colors.accent : tokens.colors.text}>
                             ${ppg.toFixed(4)}
                             {isBest && (
                               <Text className="font-sans-bold text-[10px]" style={{ color: '#065F46', backgroundColor: '#D1FAE5', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 5 }}>
@@ -567,7 +578,7 @@ export default function ProductDetailScreen() {
                   })()}
                 </View>
               </ScrollView>
-              <Text className="text-[12px] text-muted font-sans mt-3">
+              <Text className="text-[12px] text-mw-text-muted font-sans mt-3">
                 💡 Tap a row to view that size. "Best" = lowest price per gram across all sizes of this product.
               </Text>
             </Card>
@@ -590,14 +601,14 @@ export default function ProductDetailScreen() {
                       gap: 10,
                       paddingHorizontal: 14,
                       paddingVertical: 12,
-                      backgroundColor: '#EBF5EE',
+                      backgroundColor: tokens.colors.accentTint,
                       borderRadius: 10,
                       borderWidth: 1,
-                      borderColor: '#B7E4C7',
+                      borderColor: tokens.colors.accentSoft,
                     }}
                   >
                     <Text style={{ fontSize: 22 }}>{f.icon}</Text>
-                    <Text className="font-sans-semibold text-[13px]" style={{ color: '#1B5E3B' }}>
+                    <Text className="font-sans-semibold text-[13px]" style={{ color: tokens.colors.accent }}>
                       {f.label}
                     </Text>
                   </View>
@@ -649,51 +660,54 @@ export default function ProductDetailScreen() {
             <Card style={{ marginTop: 24 }}>
               <SectionHead icon="🧪" title="Full Ingredients List" />
               {detail.allergen && (
+                // Allergen notice is a semantic warning (not a specialty tag),
+                // so it uses the themed warn tokens — it must stay legible in
+                // dark mode rather than freezing as a raw amber chip.
                 <View
                   style={{
                     marginBottom: 14,
                     paddingHorizontal: 14,
                     paddingVertical: 10,
-                    backgroundColor: '#FEF3C7',
+                    backgroundColor: tokens.colors.warnBg,
                     borderRadius: 8,
                     borderWidth: 1,
-                    borderColor: '#FCD34D',
+                    borderColor: tokens.colors.border,
                   }}
                 >
-                  <Text className="font-sans-semibold text-[12.5px]" style={{ color: '#92400E' }}>
+                  <Text className="font-sans-semibold text-[12.5px]" style={{ color: tokens.colors.warnText }}>
                     ⚠️ {detail.allergen}
                   </Text>
                 </View>
               )}
               <View
                 style={{
-                  backgroundColor: '#F9F7F2',
+                  backgroundColor: tokens.colors.bgPanel,
                   borderRadius: 10,
                   borderWidth: 1,
-                  borderColor: '#E0D9CC',
+                  borderColor: tokens.colors.border,
                   paddingHorizontal: 18,
                   paddingVertical: 16,
                 }}
               >
-                <Text className="text-[13.5px] text-text font-sans" style={{ lineHeight: 25 }}>
+                <Text className="text-[13.5px] text-mw-text font-sans" style={{ lineHeight: 25 }}>
                   {detail.ingredients.split(',').map((item, i, arr) => (
                     <Text key={i}>
                       <Text
                         style={{
-                          color: '#1A1A1A',
+                          color: tokens.colors.text,
                           fontWeight: i === 0 ? '700' : '400',
                         }}
                       >
                         {item.trim()}
                       </Text>
                       {i < arr.length - 1 && (
-                        <Text style={{ color: '#6B7280' }}>, </Text>
+                        <Text style={{ color: tokens.colors.textMuted }}>, </Text>
                       )}
                     </Text>
                   ))}
                 </Text>
               </View>
-              <Text className="text-[11.5px] text-muted font-sans mt-2.5">
+              <Text className="text-[11.5px] text-mw-text-muted font-sans mt-2.5">
                 Ingredients listed in descending order by weight as declared on product label.
               </Text>
             </Card>
@@ -704,7 +718,7 @@ export default function ProductDetailScreen() {
             <Card style={{ marginTop: 24 }}>
               <SectionHead icon="📊" title="Nutritional Information (per 100g powder)" />
               <NutritionTable rows={detail.fullNutrition} />
-              <Text className="text-[11.5px] text-muted font-sans mt-2.5">
+              <Text className="text-[11.5px] text-mw-text-muted font-sans mt-2.5">
                 💡 Values per 100g of powder unless stated. Source: product label.
               </Text>
             </Card>
@@ -728,20 +742,20 @@ export default function ProductDetailScreen() {
                       flexDirection: 'row',
                       gap: 12,
                       padding: 12,
-                      backgroundColor: '#F9F7F2',
+                      backgroundColor: tokens.colors.bgPanel,
                       borderRadius: 12,
                       borderWidth: 1.5,
-                      borderColor: '#E0D9CC',
+                      borderColor: tokens.colors.border,
                       alignItems: 'center',
                     }}
                   >
                     <View
                       style={{
                         width: 52, height: 52,
-                        backgroundColor: '#FFFFFF',
+                        backgroundColor: tokens.colors.bgCard,
                         borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: '#E0D9CC',
+                        borderColor: tokens.colors.border,
                         alignItems: 'center',
                         justifyContent: 'center',
                         overflow: 'hidden',
@@ -756,13 +770,13 @@ export default function ProductDetailScreen() {
                       />
                     </View>
                     <View className="flex-1 min-w-0">
-                      <Text className="text-[10px] font-sans-bold text-muted uppercase tracking-wider">
+                      <Text className="text-[10px] font-sans-bold text-mw-text-muted uppercase tracking-wider">
                         {q.brand}
                       </Text>
-                      <Text className="text-[12.5px] font-sans-bold text-text mt-0.5" numberOfLines={2}>
+                      <Text className="text-[12.5px] font-sans-bold text-mw-text mt-0.5" numberOfLines={2}>
                         {q.name}
                       </Text>
-                      <Text className="text-[11.5px] font-sans-bold text-green mt-1">
+                      <Text className="text-[11.5px] font-sans-bold text-mw-accent mt-1">
                         ${(q.pricePerGram ?? 0).toFixed(4)}/g
                       </Text>
                     </View>
@@ -776,13 +790,13 @@ export default function ProductDetailScreen() {
           <View
             className="rounded-xl mt-6"
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: tokens.colors.bgCard,
               paddingHorizontal: 18,
               paddingVertical: 16,
             }}
           >
-            <Text className="text-[11.5px] text-muted font-sans" style={{ lineHeight: 18 }}>
-              <Text className="font-sans-bold text-text">Disclaimer: </Text>
+            <Text className="text-[11.5px] text-mw-text-muted font-sans" style={{ lineHeight: 18 }}>
+              <Text className="font-sans-bold text-mw-text">Disclaimer: </Text>
               All product data, prices, and nutritional information are sourced
               from Singapore retail channels and product labels. Always check
               the actual product label and consult your paediatrician before
@@ -800,39 +814,48 @@ export default function ProductDetailScreen() {
 /* Local presentational helpers                                                */
 /* -------------------------------------------------------------------------- */
 
-/** White card with brand-spec radius + shadow + 24px padding. */
+/** Card surface with brand-spec radius + shadow + 24px padding. */
 const Card = ({
   children,
   style,
 }: {
   children: React.ReactNode;
   style?: object;
-}) => (
-  <View
-    style={{
-      backgroundColor: '#FFFFFF',
-      borderRadius: 14,
-      padding: 24,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.07,
-      shadowRadius: 12,
-      elevation: 1,
-      ...style,
-    }}
-  >
-    {children}
-  </View>
-);
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <View
+      style={{
+        backgroundColor: tokens.colors.bgCard,
+        borderRadius: 14,
+        padding: 24,
+        // shadowColor stays #000 until Phase 6 reworks elevation onto the
+        // theme-keyed `tokens.shadow` 2-step scale.
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.07,
+        shadowRadius: 12,
+        elevation: 1,
+        ...style,
+      }}
+    >
+      {children}
+    </View>
+  );
+};
 
 const SectionHead = ({ icon, title }: { icon: string; title: string }) => (
   <View className="flex-row items-center gap-2.5 mb-4">
     <Text style={{ fontSize: 20 }}>{icon}</Text>
-    <Text className="font-serif text-text" style={{ fontSize: 20 }}>{title}</Text>
+    <Text className="font-serif text-mw-text" style={{ fontSize: 20 }}>{title}</Text>
   </View>
 );
 
-/** Simple coloured pill — used for stage badge, halal, organic. */
+/**
+ * Simple coloured pill — used for the stage badge (themed accent, passed
+ * from the call site) and the spec-exact halal/organic chips (raw handoff
+ * hues, intentionally NOT themed).
+ */
 const Badge = ({ bg, fg, label }: { bg: string; fg: string; label: string }) => (
   <View
     style={{
@@ -851,7 +874,7 @@ const Badge = ({ bg, fg, label }: { bg: string; fg: string; label: string }) => 
   </View>
 );
 
-/** Specialty-themed badge — reads its colour pair from the theme. */
+/** Specialty-themed badge — reads its spec-exact colour pair from the theme. */
 const SpecialtyBadge = ({ specialty }: { specialty: SpecialtyKey }) => {
   const { bg, fg } = specialtyColors[specialty];
   return (
@@ -873,7 +896,7 @@ const SpecialtyBadge = ({ specialty }: { specialty: SpecialtyKey }) => {
   );
 };
 
-/** Pricing stat tile — `highlight` paints the brand-green variant. */
+/** Pricing stat tile — `highlight` paints the brand-accent variant. */
 const StatBox = ({
   label,
   value,
@@ -882,66 +905,77 @@ const StatBox = ({
   label: string;
   value: string;
   highlight?: boolean;
-}) => (
-  <View
-    style={{
-      flex: 1,
-      flexBasis: 120,
-      minWidth: 110,
-      paddingHorizontal: 14,
-      paddingVertical: 14,
-      backgroundColor: highlight ? '#EBF5EE' : '#F9F7F2',
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: highlight ? '#B7E4C7' : '#E0D9CC',
-      alignItems: 'center',
-    }}
-  >
-    <Text
-      className="font-serif"
-      style={{ fontSize: 20, color: highlight ? '#1B5E3B' : '#1A1A1A', lineHeight: 22 }}
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        flexBasis: 120,
+        minWidth: 110,
+        paddingHorizontal: 14,
+        paddingVertical: 14,
+        backgroundColor: highlight ? tokens.colors.accentTint : tokens.colors.bgPanel,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: highlight ? tokens.colors.accentSoft : tokens.colors.border,
+        alignItems: 'center',
+      }}
     >
-      {value}
-    </Text>
-    <Text className="font-sans-medium text-[11px] text-muted mt-1.5">{label}</Text>
-  </View>
-);
+      <Text
+        className="font-serif"
+        style={{ fontSize: 20, color: highlight ? tokens.colors.accent : tokens.colors.text, lineHeight: 22 }}
+      >
+        {value}
+      </Text>
+      <Text className="font-sans-medium text-[11px] text-mw-text-muted mt-1.5">{label}</Text>
+    </View>
+  );
+};
 
 /** Scoop info fact — small label/value pair used in the scoop strip. */
 const ScoopFact = ({ label, value }: { label: string; value: string }) => (
   <View className="items-center">
-    <Text className="font-sans-bold text-[10px] uppercase tracking-wider text-muted mb-0.5">
+    <Text className="font-sans-bold text-[10px] uppercase tracking-wider text-mw-text-muted mb-0.5">
       {label}
     </Text>
-    <Text className="font-sans-bold text-text" style={{ fontSize: 16 }}>
+    <Text className="font-sans-bold text-mw-text" style={{ fontSize: 16 }}>
       {value}
     </Text>
   </View>
 );
 
 /** Green-light feature pill — icon + label. */
-const InfoPill = ({ icon, label }: { icon: string; label: string }) => (
-  <View
-    style={{
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-      paddingHorizontal: 11,
-      paddingVertical: 5,
-      borderRadius: 8,
-      backgroundColor: '#EBF5EE',
-      borderWidth: 1,
-      borderColor: '#B7E4C7',
-    }}
-  >
-    <Text className="text-[14px]">{icon}</Text>
-    <Text className="font-sans-semibold text-[12px]" style={{ color: '#1B5E3B' }}>
-      {label}
-    </Text>
-  </View>
-);
+const InfoPill = ({ icon, label }: { icon: string; label: string }) => {
+  const { tokens } = useTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        paddingHorizontal: 11,
+        paddingVertical: 5,
+        borderRadius: 8,
+        backgroundColor: tokens.colors.accentTint,
+        borderWidth: 1,
+        borderColor: tokens.colors.accentSoft,
+      }}
+    >
+      <Text className="text-[14px]">{icon}</Text>
+      <Text className="font-sans-semibold text-[12px]" style={{ color: tokens.colors.accent }}>
+        {label}
+      </Text>
+    </View>
+  );
+};
 
-/** Highlighted feature block — used for Probiotic and HMO callouts. */
+/**
+ * Highlighted feature block — used for Probiotic and HMO callouts. Colours
+ * are passed in from the call site as spec-exact handoff hues (the goat /
+ * HA palette pairs), so this stays prop-driven and is intentionally NOT
+ * themed — same contract as the specialty badges.
+ */
 const FeatureBlock = ({
   bg, border, labelColor, valueColor, icon, label, value,
 }: {
@@ -980,7 +1014,11 @@ const FeatureBlock = ({
   </View>
 );
 
-/** Nutrition macro tile — bg-tinted card with stat-style value + label. */
+/**
+ * Nutrition macro tile — bg-tinted card with stat-style value + label.
+ * The bg/fg pair is the spec-exact macro palette from the design handoff
+ * (energy=mustard, protein=emerald, …), intentionally NOT themed.
+ */
 const NutBlock = ({
   value, label, bg, fg,
 }: {
@@ -1022,28 +1060,31 @@ const Cell = ({
   bold?: boolean;
   size?: number;
   color?: string;
-}) => (
-  <View
-    style={{
-      width,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: '#E0D9CC',
-    }}
-  >
-    <Text
-      className="font-sans"
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <View
       style={{
-        fontSize: size ?? 13.5,
-        fontWeight: bold ? '700' : '400',
-        color: color ?? '#1A1A1A',
+        width,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: tokens.colors.border,
       }}
     >
-      {children}
-    </Text>
-  </View>
-);
+      <Text
+        className="font-sans"
+        style={{
+          fontSize: size ?? 13.5,
+          fontWeight: bold ? '700' : '400',
+          color: color ?? tokens.colors.text,
+        }}
+      >
+        {children}
+      </Text>
+    </View>
+  );
+};
 
 /* -------------------------------------------------------------------------- */
 /* NutritionTable — categorises rows into Macros / Vitamins / Minerals / etc. */
@@ -1069,6 +1110,8 @@ const NUT_CATEGORIES: Readonly<Record<string, readonly string[]>> = {
 };
 
 const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
+  const { tokens } = useTheme();
+
   // Bucket rows by category — first match wins. Anything unmatched goes
   // into "Other" at the end so we never silently drop data.
   const buckets = useMemo(() => {
@@ -1094,7 +1137,7 @@ const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
         {/* Header row */}
         <View
           className="flex-row"
-          style={{ backgroundColor: '#1B5E3B' }}
+          style={{ backgroundColor: tokens.colors.accent }}
         >
           <TableHeader text="Nutrient" width={240} />
           <TableHeader text="Unit"     width={80} />
@@ -1107,12 +1150,12 @@ const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
             {/* Category divider */}
             <View
               className="flex-row"
-              style={{ backgroundColor: '#EBF5EE' }}
+              style={{ backgroundColor: tokens.colors.accentTint }}
             >
               <View style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
                 <Text
                   className="font-sans-bold text-[11px] uppercase tracking-wider"
-                  style={{ color: '#1B5E3B' }}
+                  style={{ color: tokens.colors.accent }}
                 >
                   {cat}
                 </Text>
@@ -1124,15 +1167,15 @@ const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
                 key={`${cat}-${r.nutrient}-${i}`}
                 className="flex-row"
                 style={{
-                  backgroundColor: i % 2 === 1 ? '#F9F7F2' : 'transparent',
+                  backgroundColor: i % 2 === 1 ? tokens.colors.bgPanel : 'transparent',
                   borderBottomWidth: 1,
-                  borderBottomColor: '#E0D9CC',
+                  borderBottomColor: tokens.colors.border,
                 }}
               >
                 <TableCell text={r.nutrient}                               width={240} />
                 <TableCell text={r.unit}                                   width={80} muted size={12} />
                 <TableCell text={r.per100g != null ? String(r.per100g) : '—'}   width={110} align="right" bold />
-                <TableCell text={r.per100ml != null ? String(r.per100ml) : '—'} width={110} align="right" bold color="#1B5E3B" />
+                <TableCell text={r.per100ml != null ? String(r.per100ml) : '—'} width={110} align="right" bold color={tokens.colors.accent} />
               </View>
             ))}
           </View>
@@ -1150,16 +1193,19 @@ const TableHeader = ({
   text: string;
   width: number;
   align?: 'right';
-}) => (
-  <View style={{ width, paddingHorizontal: 14, paddingVertical: 9 }}>
-    <Text
-      className="font-sans-bold text-[11px] uppercase tracking-wider text-white"
-      style={{ textAlign: align ?? 'left' }}
-    >
-      {text}
-    </Text>
-  </View>
-);
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <View style={{ width, paddingHorizontal: 14, paddingVertical: 9 }}>
+      <Text
+        className="font-sans-bold text-[11px] uppercase tracking-wider"
+        style={{ color: tokens.colors.textInverse, textAlign: align ?? 'left' }}
+      >
+        {text}
+      </Text>
+    </View>
+  );
+};
 
 const TableCell = ({
   text,
@@ -1177,18 +1223,21 @@ const TableCell = ({
   size?: number;
   color?: string;
   align?: 'right';
-}) => (
-  <View style={{ width, paddingHorizontal: 14, paddingVertical: 9 }}>
-    <Text
-      className="font-sans"
-      style={{
-        fontSize: size ?? 13,
-        fontWeight: bold ? '600' : '500',
-        color: color ?? (muted ? '#6B7280' : '#1A1A1A'),
-        textAlign: align ?? 'left',
-      }}
-    >
-      {text}
-    </Text>
-  </View>
-);
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <View style={{ width, paddingHorizontal: 14, paddingVertical: 9 }}>
+      <Text
+        className="font-sans"
+        style={{
+          fontSize: size ?? 13,
+          fontWeight: bold ? '600' : '500',
+          color: color ?? (muted ? tokens.colors.textMuted : tokens.colors.text),
+          textAlign: align ?? 'left',
+        }}
+      >
+        {text}
+      </Text>
+    </View>
+  );
+};
