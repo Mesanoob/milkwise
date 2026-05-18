@@ -25,6 +25,7 @@ import { Screen } from '../src/components/Screen';
 import type { Product } from '../src/types/product';
 import { getAllProducts } from '../src/data/products';
 import { getProductImage } from '../src/data/imageMap';
+import { useTheme } from '../src/contexts/ThemeContext';
 
 /* -------------------------------------------------------------------------- */
 /* Curated ranking data                                                       */
@@ -80,6 +81,7 @@ const MEDAL_ICON: Readonly<Record<number, string>> = {
 type RankedProduct = Product & RankingEntry;
 
 export default function MostSoldScreen() {
+  const { tokens } = useTheme();
   // Merge curated ranking with the live product dataset. Drop missing IDs
   // so a future rename in `products.json` doesn't break this screen.
   const ranked: RankedProduct[] = RANKING
@@ -110,7 +112,7 @@ export default function MostSoldScreen() {
         {/* ── Hero ───────────────────────────────────────────────────── */}
         <View
           style={{
-            backgroundColor: '#1B5E3B',
+            backgroundColor: tokens.colors.accent,
             paddingHorizontal: 24,
             paddingTop: 40,
             paddingBottom: 36,
@@ -118,7 +120,7 @@ export default function MostSoldScreen() {
           }}
         >
           <Text
-            className="font-serif text-white"
+            className="font-serif text-mw-text-inverse"
             style={{ fontSize: 32, lineHeight: 36, textAlign: 'center' }}
           >
             Most Sold Formula in Singapore
@@ -127,7 +129,9 @@ export default function MostSoldScreen() {
             className="font-sans"
             style={{
               fontSize: 14,
-              color: 'rgba(255,255,255,0.75)',
+              // textInverse (not translucent white): white would vanish on
+              // the dark-scheme light-sage accent band.
+              color: tokens.colors.textInverse,
               marginTop: 12,
               maxWidth: 520,
               textAlign: 'center',
@@ -147,7 +151,7 @@ export default function MostSoldScreen() {
           {top3.length === 3 && (
             <View>
               <Text
-                className="font-serif text-text"
+                className="font-serif text-mw-text"
                 style={{ fontSize: 26, marginBottom: 24 }}
               >
                 🏆 Top 3 Best Sellers
@@ -173,7 +177,7 @@ export default function MostSoldScreen() {
           {rest.length > 0 && (
             <View>
               <Text
-                className="font-serif text-text"
+                className="font-serif text-mw-text"
                 style={{ fontSize: 22, marginBottom: 16 }}
               >
                 📊 Rankings #4–{ranked.length}
@@ -189,7 +193,7 @@ export default function MostSoldScreen() {
           {/* ── Market share chart ───────────────────────────────────── */}
           <View
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: tokens.colors.bgCard,
               borderRadius: 14,
               padding: 24,
               shadowColor: '#000',
@@ -200,14 +204,14 @@ export default function MostSoldScreen() {
             }}
           >
             <Text
-              className="font-serif text-text"
+              className="font-serif text-mw-text"
               style={{ fontSize: 22, marginBottom: 6 }}
             >
               📈 Estimated Market Share
             </Text>
             <Text
               className="font-sans"
-              style={{ fontSize: 12.5, color: '#6B7280', marginBottom: 20, lineHeight: 18 }}
+              style={{ fontSize: 12.5, color: tokens.colors.textMuted, marginBottom: 20, lineHeight: 18 }}
             >
               Stage 1 formula · Singapore retail · April 2026 · Indicative
               estimates only
@@ -229,13 +233,13 @@ export default function MostSoldScreen() {
           {/* ── Disclaimer ───────────────────────────────────────────── */}
           <View
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: tokens.colors.bgCard,
               borderRadius: 12,
               padding: 16,
             }}
           >
-            <Text className="text-[11.5px] text-muted font-sans" style={{ lineHeight: 18 }}>
-              <Text className="font-sans-bold text-text">Disclaimer: </Text>
+            <Text className="text-[11.5px] text-mw-text-muted font-sans" style={{ lineHeight: 18 }}>
+              <Text className="font-sans-bold text-mw-text">Disclaimer: </Text>
               Market share estimates are indicative and based on publicly
               available retail data, paediatrician survey reports, and parent
               community forums as of April 2026. Actual market share figures
@@ -260,6 +264,7 @@ const PodiumCard = ({
   big: boolean;
 }) => {
   const router = useRouter();
+  const { tokens } = useTheme();
   const goToDetail = () => router.push(`/product/${product.id}`);
 
   return (
@@ -272,11 +277,13 @@ const PodiumCard = ({
         flexBasis: big ? 320 : 260,
         maxWidth: big ? 320 : 260,
         minWidth: 240,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: tokens.colors.bgCard,
         borderRadius: 14,
         overflow: 'hidden',
         borderWidth: 2,
-        borderColor: MEDAL_BORDER[product.rank] ?? '#E0D9CC',
+        // Medal border is a fixed gold/silver/bronze ranking palette
+        // (spec-exact, theme-independent); border token is the fallback.
+        borderColor: MEDAL_BORDER[product.rank] ?? tokens.colors.border,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.13,
@@ -286,6 +293,9 @@ const PodiumCard = ({
     >
       {/* Medal header */}
       <View
+        // Medal strip: fixed gold/silver/bronze palette, theme-independent
+        // (so the white text/subtitle below it stay literal white — they
+        // sit on a non-flipping surface).
         style={{
           backgroundColor: MEDAL_BG[product.rank] ?? '#94A3B8',
           paddingHorizontal: big ? 16 : 12,
@@ -313,7 +323,7 @@ const PodiumCard = ({
       {/* Image */}
       <View
         style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: tokens.colors.bgCard,
           padding: big ? 20 : 12,
           height: big ? 160 : 120,
           alignItems: 'center',
@@ -333,13 +343,13 @@ const PodiumCard = ({
       <View style={{ paddingHorizontal: 16, paddingVertical: 14, gap: 10 }}>
         <View>
           <Text
-            className="font-sans-semibold text-muted"
+            className="font-sans-semibold text-mw-text-muted"
             style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 0.5 }}
           >
             {product.brand}
           </Text>
           <Text
-            className="font-sans-bold text-text"
+            className="font-sans-bold text-mw-text"
             style={{ fontSize: big ? 15 : 13.5, marginTop: 2, lineHeight: big ? 18 : 16 }}
             numberOfLines={2}
           >
@@ -348,7 +358,7 @@ const PodiumCard = ({
           {product.desc ? (
             <Text
               className="font-sans"
-              style={{ fontSize: 11.5, color: '#6B7280', marginTop: 4, lineHeight: 17 }}
+              style={{ fontSize: 11.5, color: tokens.colors.textMuted, marginTop: 4, lineHeight: 17 }}
               numberOfLines={2}
             >
               {product.desc}
@@ -368,7 +378,7 @@ const PodiumCard = ({
           style={{
             paddingHorizontal: 12,
             paddingVertical: 10,
-            backgroundColor: '#EBF5EE',
+            backgroundColor: tokens.colors.accentTint,
             borderRadius: 8,
           }}
         >
@@ -376,7 +386,7 @@ const PodiumCard = ({
             className="font-sans-bold"
             style={{
               fontSize: 10,
-              color: '#1B5E3B',
+              color: tokens.colors.accent,
               textTransform: 'uppercase',
               letterSpacing: 0.6,
               marginBottom: 4,
@@ -386,7 +396,7 @@ const PodiumCard = ({
           </Text>
           <Text
             className="font-sans"
-            style={{ fontSize: 11.5, color: '#2D7A52', lineHeight: 17 }}
+            style={{ fontSize: 11.5, color: tokens.colors.accentHover, lineHeight: 17 }}
           >
             {product.why}
           </Text>
@@ -396,13 +406,13 @@ const PodiumCard = ({
         <View
           style={{
             paddingVertical: 8,
-            backgroundColor: '#1B5E3B',
+            backgroundColor: tokens.colors.accent,
             borderRadius: 8,
             alignItems: 'center',
           }}
         >
           <Text
-            className="font-sans-semibold text-white"
+            className="font-sans-semibold text-mw-text-inverse"
             style={{ fontSize: 13 }}
           >
             View details →
@@ -425,6 +435,7 @@ const RankRow = ({
   maxShare: number;
 }) => {
   const router = useRouter();
+  const { tokens } = useTheme();
   const goToDetail = () => router.push(`/product/${product.id}`);
   const sharePct = Math.min(100, Math.round((product.share / maxShare) * 100));
 
@@ -434,7 +445,7 @@ const RankRow = ({
       accessibilityRole="link"
       accessibilityLabel={`Rank ${product.rank}: ${product.name}. Open details.`}
       style={{
-        backgroundColor: '#FFFFFF',
+        backgroundColor: tokens.colors.bgCard,
         borderRadius: 14,
         flexDirection: 'row',
         alignItems: 'center',
@@ -454,16 +465,16 @@ const RankRow = ({
           width: 38,
           height: 38,
           borderRadius: 19,
-          backgroundColor: '#F9F7F2',
+          backgroundColor: tokens.colors.bgPanel,
           borderWidth: 2,
-          borderColor: '#E0D9CC',
+          borderColor: tokens.colors.border,
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
         }}
       >
         <Text
-          className="font-sans-bold text-muted"
+          className="font-sans-bold text-mw-text-muted"
           style={{ fontSize: 15 }}
         >
           {product.rank}
@@ -475,10 +486,10 @@ const RankRow = ({
         style={{
           width: 56,
           height: 56,
-          backgroundColor: '#FFFFFF',
+          backgroundColor: tokens.colors.bgCard,
           borderRadius: 10,
           borderWidth: 1,
-          borderColor: '#E0D9CC',
+          borderColor: tokens.colors.border,
           alignItems: 'center',
           justifyContent: 'center',
           padding: 4,
@@ -497,13 +508,13 @@ const RankRow = ({
       {/* Identity column */}
       <View style={{ flexBasis: 220, flexGrow: 0, flexShrink: 1, minWidth: 160 }}>
         <Text
-          className="font-sans-semibold text-muted"
+          className="font-sans-semibold text-mw-text-muted"
           style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 0.4 }}
         >
           {product.brand}
         </Text>
         <Text
-          className="font-sans-bold text-text"
+          className="font-sans-bold text-mw-text"
           style={{ fontSize: 14, marginTop: 2, lineHeight: 17 }}
           numberOfLines={2}
         >
@@ -511,7 +522,7 @@ const RankRow = ({
         </Text>
         {product.bestFor ? (
           <Text
-            className="font-sans-semibold text-green"
+            className="font-sans-semibold text-mw-accent"
             style={{ fontSize: 11.5, marginTop: 3 }}
             numberOfLines={1}
           >
@@ -529,17 +540,17 @@ const RankRow = ({
             marginBottom: 5,
           }}
         >
-          <Text className="font-sans" style={{ fontSize: 11, color: '#6B7280' }}>
+          <Text className="font-sans" style={{ fontSize: 11, color: tokens.colors.textMuted }}>
             Est. market share
           </Text>
-          <Text className="font-sans-bold text-text" style={{ fontSize: 11 }}>
+          <Text className="font-sans-bold text-mw-text" style={{ fontSize: 11 }}>
             {product.share}%
           </Text>
         </View>
         <View
           style={{
             height: 8,
-            backgroundColor: '#E0D9CC',
+            backgroundColor: tokens.colors.border,
             borderRadius: 4,
             overflow: 'hidden',
           }}
@@ -548,7 +559,7 @@ const RankRow = ({
             style={{
               height: '100%',
               width: `${sharePct}%`,
-              backgroundColor: '#1B5E3B',
+              backgroundColor: tokens.colors.accent,
               borderRadius: 4,
             }}
           />
@@ -559,7 +570,7 @@ const RankRow = ({
       <View style={{ flexBasis: 240, flexShrink: 1, minWidth: 0 }}>
         <Text
           className="font-sans"
-          style={{ fontSize: 11.5, color: '#6B7280', lineHeight: 17 }}
+          style={{ fontSize: 11.5, color: tokens.colors.textMuted, lineHeight: 17 }}
           numberOfLines={2}
         >
           {product.why}
@@ -592,17 +603,18 @@ const ShareBar = ({
   maxShare: number;
   highlight: boolean;
 }) => {
+  const { tokens } = useTheme();
   const pct = Math.min(100, Math.round((share / maxShare) * 100));
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <Text
-        className="font-sans-bold text-muted"
+        className="font-sans-bold text-mw-text-muted"
         style={{ width: 26, fontSize: 12, textAlign: 'right' }}
       >
         #{rank}
       </Text>
       <Text
-        className="font-sans-semibold text-text"
+        className="font-sans-semibold text-mw-text"
         style={{ width: 160, fontSize: 12 }}
         numberOfLines={1}
       >
@@ -612,7 +624,7 @@ const ShareBar = ({
         style={{
           flex: 1,
           height: 22,
-          backgroundColor: '#F9F7F2',
+          backgroundColor: tokens.colors.bgPanel,
           borderRadius: 4,
           overflow: 'hidden',
         }}
@@ -621,13 +633,14 @@ const ShareBar = ({
           style={{
             width: `${pct}%`,
             height: '100%',
-            backgroundColor: highlight ? '#1B5E3B' : '#B7E4C7',
+            // Leader bars use solid accent; the rest a soft accent tint.
+            backgroundColor: highlight ? tokens.colors.accent : tokens.colors.accentSoft,
             borderRadius: 4,
           }}
         />
       </View>
       <Text
-        className="font-sans-bold text-green"
+        className="font-sans-bold text-mw-accent"
         style={{ width: 40, fontSize: 12, textAlign: 'right' }}
       >
         {share}%
@@ -648,37 +661,40 @@ const MiniMetric = ({
   label: string;
   value: string;
   accent?: boolean;
-}) => (
-  <View
-    style={{
-      flex: 1,
-      minWidth: 58,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      backgroundColor: accent ? '#EBF5EE' : '#F9F7F2',
-      borderRadius: 8,
-      alignItems: 'center',
-    }}
-  >
-    <Text
-      className="font-sans-bold uppercase"
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <View
       style={{
-        fontSize: 9.5,
-        color: accent ? '#1B5E3B' : '#6B7280',
-        letterSpacing: 0.4,
+        flex: 1,
+        minWidth: 58,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        backgroundColor: accent ? tokens.colors.accentTint : tokens.colors.bgPanel,
+        borderRadius: 8,
+        alignItems: 'center',
       }}
     >
-      {label}
-    </Text>
-    <Text
-      className="font-sans-bold"
-      style={{
-        fontSize: 12.5,
-        color: accent ? '#1B5E3B' : '#1A1A1A',
-        marginTop: 1,
-      }}
-    >
-      {value}
-    </Text>
-  </View>
-);
+      <Text
+        className="font-sans-bold uppercase"
+        style={{
+          fontSize: 9.5,
+          color: accent ? tokens.colors.accent : tokens.colors.textMuted,
+          letterSpacing: 0.4,
+        }}
+      >
+        {label}
+      </Text>
+      <Text
+        className="font-sans-bold"
+        style={{
+          fontSize: 12.5,
+          color: accent ? tokens.colors.accent : tokens.colors.text,
+          marginTop: 1,
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+};

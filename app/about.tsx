@@ -21,8 +21,10 @@ import { View, Text, Animated, Easing, Pressable } from 'react-native';
 import { Link } from 'expo-router';
 import { Screen } from '../src/components/Screen';
 import { APP_NAME } from '../src/config/constants';
+import { useTheme } from '../src/contexts/ThemeContext';
 
 export default function AboutScreen() {
+  const { tokens } = useTheme();
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function AboutScreen() {
       <Animated.View style={animatedStyle}>
         <View
           style={{
-            backgroundColor: '#1B5E3B',
+            backgroundColor: tokens.colors.accent,
             paddingHorizontal: 24,
             paddingTop: 56,
             paddingBottom: 56,
@@ -60,7 +62,9 @@ export default function AboutScreen() {
           }}
         >
           <View style={{ maxWidth: 640, width: '100%', alignItems: 'center' }}>
-            {/* Glass-effect icon container — semi-transparent white over green */}
+            {/* Glass-effect icon container — translucent white wash over the
+                accent band; theme-independent (sits on a non-flipping surface
+                relative to its parent, holds an emoji that renders anyway). */}
             <View
               style={{
                 width: 64,
@@ -83,7 +87,7 @@ export default function AboutScreen() {
                 the design uses `<em>` which is italic but here we lean on
                 the off-white tint to read as visual emphasis. */}
             <Text
-              className="font-serif text-white"
+              className="font-serif text-mw-text-inverse"
               style={{
                 fontSize: 38,
                 lineHeight: 42,
@@ -98,7 +102,7 @@ export default function AboutScreen() {
                 fontSize: 38,
                 lineHeight: 42,
                 textAlign: 'center',
-                color: 'rgba(255,255,255,0.92)',
+                color: tokens.colors.textInverse,
                 fontStyle: 'italic',
               }}
             >
@@ -109,7 +113,7 @@ export default function AboutScreen() {
               className="font-sans"
               style={{
                 fontSize: 15,
-                color: 'rgba(255,255,255,0.75)',
+                color: tokens.colors.textInverse,
                 marginTop: 20,
                 lineHeight: 26,
                 maxWidth: 520,
@@ -129,13 +133,13 @@ export default function AboutScreen() {
                   marginTop: 28,
                   paddingHorizontal: 28,
                   paddingVertical: 12,
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: tokens.colors.bgCard,
                   borderRadius: 999,
                 }}
               >
                 <Text
                   className="font-sans-bold"
-                  style={{ color: '#1B5E3B', fontSize: 14 }}
+                  style={{ color: tokens.colors.accent, fontSize: 14 }}
                 >
                   Start Comparing →
                 </Text>
@@ -149,7 +153,7 @@ export default function AboutScreen() {
       <Animated.View style={animatedStyle}>
         <View
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: tokens.colors.bgCard,
             paddingHorizontal: 24,
             paddingVertical: 56,
             alignItems: 'center',
@@ -158,7 +162,7 @@ export default function AboutScreen() {
           <View style={{ maxWidth: 860, width: '100%' }}>
             <View style={{ alignItems: 'center', marginBottom: 40 }}>
               <Text
-                className="font-serif text-text"
+                className="font-serif text-mw-text"
                 style={{ fontSize: 30, textAlign: 'center' }}
               >
                 Why We Built This
@@ -167,7 +171,7 @@ export default function AboutScreen() {
                 className="font-sans"
                 style={{
                   fontSize: 14,
-                  color: '#6B7280',
+                  color: tokens.colors.textMuted,
                   marginTop: 10,
                   maxWidth: 500,
                   textAlign: 'center',
@@ -215,7 +219,7 @@ export default function AboutScreen() {
       <Animated.View style={animatedStyle}>
         <View
           style={{
-            backgroundColor: '#F5F2EB',
+            backgroundColor: tokens.colors.bg,
             paddingHorizontal: 24,
             paddingVertical: 56,
             alignItems: 'center',
@@ -223,7 +227,7 @@ export default function AboutScreen() {
         >
           <View style={{ maxWidth: 860, width: '100%' }}>
             <Text
-              className="font-serif text-text"
+              className="font-serif text-mw-text"
               style={{ fontSize: 30, marginBottom: 10 }}
             >
               How We Compare Products
@@ -232,7 +236,7 @@ export default function AboutScreen() {
               className="font-sans"
               style={{
                 fontSize: 14,
-                color: '#6B7280',
+                color: tokens.colors.textMuted,
                 marginBottom: 36,
                 lineHeight: 22,
               }}
@@ -275,7 +279,9 @@ export default function AboutScreen() {
       <Animated.View style={animatedStyle}>
         <View
           style={{
-            backgroundColor: '#FDF0E6',
+            // Medical-notice callout → the v2 warn pair (amber has no v2
+            // token; warn is its semantic successor and holds AA contrast).
+            backgroundColor: tokens.colors.warnBg,
             paddingHorizontal: 24,
             paddingVertical: 40,
             alignItems: 'center',
@@ -287,7 +293,7 @@ export default function AboutScreen() {
               <View style={{ flex: 1 }}>
                 <Text
                   className="font-serif"
-                  style={{ fontSize: 18, color: '#E07B39', marginBottom: 8 }}
+                  style={{ fontSize: 18, color: tokens.colors.warnText, marginBottom: 8 }}
                 >
                   Always Consult Your Paediatrician
                 </Text>
@@ -295,7 +301,7 @@ export default function AboutScreen() {
                   className="font-sans"
                   style={{
                     fontSize: 13.5,
-                    color: '#92400E',
+                    color: tokens.colors.warnText,
                     lineHeight: 24,
                   }}
                 >
@@ -313,7 +319,7 @@ export default function AboutScreen() {
       <Animated.View style={animatedStyle}>
         <View
           style={{
-            backgroundColor: '#FFFFFF',
+            backgroundColor: tokens.colors.bgCard,
             paddingHorizontal: 24,
             paddingVertical: 56,
             alignItems: 'center',
@@ -321,7 +327,7 @@ export default function AboutScreen() {
         >
           <View style={{ maxWidth: 860, width: '100%' }}>
             <Text
-              className="font-serif text-text"
+              className="font-serif text-mw-text"
               style={{ fontSize: 30, marginBottom: 10 }}
             >
               Frequently Asked Questions
@@ -330,7 +336,7 @@ export default function AboutScreen() {
               className="font-sans"
               style={{
                 fontSize: 14,
-                color: '#6B7280',
+                color: tokens.colors.textMuted,
                 marginBottom: 32,
                 lineHeight: 22,
               }}
@@ -351,7 +357,7 @@ export default function AboutScreen() {
       <Animated.View style={animatedStyle}>
         <View
           style={{
-            backgroundColor: '#F5F2EB',
+            backgroundColor: tokens.colors.bg,
             paddingHorizontal: 24,
             paddingVertical: 56,
             alignItems: 'center',
@@ -359,7 +365,7 @@ export default function AboutScreen() {
         >
           <View style={{ maxWidth: 860, width: '100%', alignItems: 'center' }}>
             <Text
-              className="font-serif text-text"
+              className="font-serif text-mw-text"
               style={{ fontSize: 30, marginBottom: 12, textAlign: 'center' }}
             >
               Built by Parents, for Parents
@@ -368,7 +374,7 @@ export default function AboutScreen() {
               className="font-sans"
               style={{
                 fontSize: 14,
-                color: '#6B7280',
+                color: tokens.colors.textMuted,
                 maxWidth: 540,
                 textAlign: 'center',
                 lineHeight: 26,
@@ -395,11 +401,11 @@ export default function AboutScreen() {
                   style={{
                     paddingHorizontal: 24,
                     paddingVertical: 12,
-                    backgroundColor: '#1B5E3B',
+                    backgroundColor: tokens.colors.accent,
                     borderRadius: 999,
                   }}
                 >
-                  <Text className="font-sans-semibold" style={{ color: '#FFFFFF', fontSize: 14 }}>
+                  <Text className="font-sans-semibold" style={{ color: tokens.colors.textInverse, fontSize: 14 }}>
                     🍼 Start Comparing
                   </Text>
                 </Pressable>
@@ -413,13 +419,13 @@ export default function AboutScreen() {
                 style={{
                   paddingHorizontal: 24,
                   paddingVertical: 12,
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: tokens.colors.bgCard,
                   borderRadius: 999,
                   borderWidth: 1.5,
-                  borderColor: '#E0D9CC',
+                  borderColor: tokens.colors.border,
                 }}
               >
-                <Text className="font-sans-semibold" style={{ color: '#1A1A1A', fontSize: 14 }}>
+                <Text className="font-sans-semibold" style={{ color: tokens.colors.text, fontSize: 14 }}>
                   ✉️ hello@milkwisesg.com
                 </Text>
               </Pressable>
@@ -432,11 +438,11 @@ export default function AboutScreen() {
               style={{
                 flexDirection: 'row',
                 marginTop: 48,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: tokens.colors.bgCard,
                 borderRadius: 14,
                 overflow: 'hidden',
                 borderWidth: 1,
-                borderColor: '#E0D9CC',
+                borderColor: tokens.colors.border,
                 width: '100%',
                 maxWidth: 720,
               }}
@@ -454,7 +460,7 @@ export default function AboutScreen() {
       <Animated.View style={animatedStyle}>
         <View
           style={{
-            backgroundColor: '#1B5E3B',
+            backgroundColor: tokens.colors.accent,
             paddingHorizontal: 24,
             paddingVertical: 28,
             alignItems: 'center',
@@ -462,7 +468,7 @@ export default function AboutScreen() {
         >
           <Text
             className="font-serif"
-            style={{ fontSize: 18, color: '#FFFFFF', marginBottom: 6 }}
+            style={{ fontSize: 18, color: tokens.colors.textInverse, marginBottom: 6 }}
           >
             {APP_NAME}
           </Text>
@@ -470,7 +476,7 @@ export default function AboutScreen() {
             className="font-sans"
             style={{
               fontSize: 12,
-              color: 'rgba(255,255,255,0.5)',
+              color: tokens.colors.textInverse,
               textAlign: 'center',
               maxWidth: 540,
             }}
@@ -481,21 +487,21 @@ export default function AboutScreen() {
           <View style={{ flexDirection: 'row', gap: 16, marginTop: 14 }}>
             <Link href="/" asChild>
               <Pressable accessibilityRole="link" accessibilityLabel="Compare">
-                <Text className="font-sans" style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.7)' }}>
+                <Text className="font-sans" style={{ fontSize: 12.5, color: tokens.colors.textInverse }}>
                   Compare
                 </Text>
               </Pressable>
             </Link>
             <Link href="/most-sold" asChild>
               <Pressable accessibilityRole="link" accessibilityLabel="Most Sold">
-                <Text className="font-sans" style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.7)' }}>
+                <Text className="font-sans" style={{ fontSize: 12.5, color: tokens.colors.textInverse }}>
                   Most Sold
                 </Text>
               </Pressable>
             </Link>
             <Link href="/about" asChild>
               <Pressable accessibilityRole="link" accessibilityLabel="About">
-                <Text className="font-sans" style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.7)' }}>
+                <Text className="font-sans" style={{ fontSize: 12.5, color: tokens.colors.textInverse }}>
                   About
                 </Text>
               </Pressable>
@@ -518,35 +524,38 @@ export default function AboutScreen() {
  */
 const Pillar = ({
   icon, title, body,
-}: { icon: string; title: string; body: string }) => (
+}: { icon: string; title: string; body: string }) => {
+  const { tokens } = useTheme();
+  return (
   <View
     style={{
       flex: 1,
       flexBasis: 220,
       minWidth: 220,
-      backgroundColor: '#F9F7F2',
+      backgroundColor: tokens.colors.bgPanel,
       borderRadius: 14,
       borderWidth: 1,
-      borderColor: '#E0D9CC',
+      borderColor: tokens.colors.border,
       paddingHorizontal: 24,
       paddingVertical: 28,
     }}
   >
     <Text style={{ fontSize: 36, marginBottom: 14 }}>{icon}</Text>
     <Text
-      className="font-serif text-text"
+      className="font-serif text-mw-text"
       style={{ fontSize: 17, marginBottom: 8, lineHeight: 22 }}
     >
       {title}
     </Text>
     <Text
       className="font-sans"
-      style={{ fontSize: 13.5, color: '#6B7280', lineHeight: 22 }}
+      style={{ fontSize: 13.5, color: tokens.colors.textMuted, lineHeight: 22 }}
     >
       {body}
     </Text>
   </View>
-);
+  );
+};
 
 /**
  * `Step` — one numbered methodology step. Circular green badge with the
@@ -554,13 +563,15 @@ const Pillar = ({
  */
 const Step = ({
   number, title, body,
-}: { number: number; title: string; body: string }) => (
+}: { number: number; title: string; body: string }) => {
+  const { tokens } = useTheme();
+  return (
   <View
     style={{
       flexDirection: 'row',
       gap: 18,
       alignItems: 'flex-start',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: tokens.colors.bgCard,
       borderRadius: 14,
       paddingHorizontal: 22,
       paddingVertical: 20,
@@ -576,32 +587,33 @@ const Step = ({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#1B5E3B',
+        backgroundColor: tokens.colors.accent,
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
       }}
     >
-      <Text className="font-sans-bold text-white" style={{ fontSize: 17 }}>
+      <Text className="font-sans-bold text-mw-text-inverse" style={{ fontSize: 17 }}>
         {number}
       </Text>
     </View>
     <View style={{ flex: 1 }}>
       <Text
-        className="font-serif text-text"
+        className="font-serif text-mw-text"
         style={{ fontSize: 16, marginBottom: 6, lineHeight: 22 }}
       >
         {title}
       </Text>
       <Text
         className="font-sans"
-        style={{ fontSize: 13.5, color: '#6B7280', lineHeight: 22 }}
+        style={{ fontSize: 13.5, color: tokens.colors.textMuted, lineHeight: 22 }}
       >
         {body}
       </Text>
     </View>
   </View>
-);
+  );
+};
 
 /**
  * `FaqRow` — a single accordion row. Uses local `open` state because the
@@ -610,13 +622,14 @@ const Step = ({
  */
 const FaqRow = ({ q, a }: { q: string; a: string }) => {
   const [open, setOpen] = useState(false);
+  const { tokens } = useTheme();
   return (
     <View
       style={{
-        backgroundColor: '#F9F7F2',
+        backgroundColor: tokens.colors.bgPanel,
         borderRadius: 10,
         borderWidth: 1,
-        borderColor: '#E0D9CC',
+        borderColor: tokens.colors.border,
         overflow: 'hidden',
       }}
     >
@@ -636,7 +649,7 @@ const FaqRow = ({ q, a }: { q: string; a: string }) => {
       >
         <Text
           className="font-sans-semibold"
-          style={{ flex: 1, fontSize: 14, color: '#1A1A1A' }}
+          style={{ flex: 1, fontSize: 14, color: tokens.colors.text }}
         >
           {q}
         </Text>
@@ -647,7 +660,7 @@ const FaqRow = ({ q, a }: { q: string; a: string }) => {
           className="font-sans-bold"
           style={{
             fontSize: 16,
-            color: '#6B7280',
+            color: tokens.colors.textMuted,
             transform: [{ rotate: open ? '180deg' : '0deg' }],
           }}
         >
@@ -658,7 +671,7 @@ const FaqRow = ({ q, a }: { q: string; a: string }) => {
         <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
           <Text
             className="font-sans"
-            style={{ fontSize: 13.5, color: '#6B7280', lineHeight: 24 }}
+            style={{ fontSize: 13.5, color: tokens.colors.textMuted, lineHeight: 24 }}
           >
             {a}
           </Text>
@@ -675,7 +688,9 @@ const FaqRow = ({ q, a }: { q: string; a: string }) => {
  */
 const StatCell = ({
   value, label, divider,
-}: { value: string; label: string; divider?: boolean }) => (
+}: { value: string; label: string; divider?: boolean }) => {
+  const { tokens } = useTheme();
+  return (
   <View
     style={{
       flex: 1,
@@ -683,23 +698,24 @@ const StatCell = ({
       paddingVertical: 24,
       alignItems: 'center',
       borderRightWidth: divider ? 1 : 0,
-      borderRightColor: '#E0D9CC',
+      borderRightColor: tokens.colors.border,
     }}
   >
     <Text
       className="font-serif"
-      style={{ fontSize: 32, color: '#1B5E3B', lineHeight: 36 }}
+      style={{ fontSize: 32, color: tokens.colors.accent, lineHeight: 36 }}
     >
       {value}
     </Text>
     <Text
       className="font-sans"
-      style={{ fontSize: 12, color: '#6B7280', marginTop: 4, textAlign: 'center' }}
+      style={{ fontSize: 12, color: tokens.colors.textMuted, marginTop: 4, textAlign: 'center' }}
     >
       {label}
     </Text>
   </View>
-);
+  );
+};
 
 /* -------------------------------------------------------------------------- */
 /* FAQ content — kept at module scope so it isn't reallocated each render     */

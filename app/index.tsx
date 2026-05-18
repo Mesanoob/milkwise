@@ -34,6 +34,7 @@ import { ProductGrid }       from '../src/components/product/ProductGrid';
 import { CompareDrawer }     from '../src/components/compare/CompareDrawer';
 import { CompareModal }      from '../src/components/compare/CompareModal';
 import { useProductsContext } from '../src/contexts/ProductsContext';
+import { useTheme } from '../src/contexts/ThemeContext';
 import type { DisplayMode, SortField }  from '../src/types/filters';
 
 // Sort fields where "ascending = cheapest first" reads naturally. Used to
@@ -72,6 +73,7 @@ export default function CompareScreen() {
   const [displayMode, setDisplayMode] = useState<DisplayMode>('card');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [showingCompareModal, setShowingCompareModal] = useState(false);
+  const { tokens } = useTheme();
 
   // Pad the bottom of the scroll area when the compare drawer is visible
   // so the last cards don't sit underneath it.
@@ -104,12 +106,12 @@ export default function CompareScreen() {
           The row wraps gracefully on narrow widths so the right cluster
           drops below without clipping. */}
       <View
-        className="bg-surface border-b border-border flex-row flex-wrap items-center"
+        className="bg-mw-bg-card border-b border-mw-border flex-row flex-wrap items-center"
         style={{ paddingHorizontal: 16, paddingVertical: 10, gap: 8 }}
       >
         <SortDropdown value={filters.sort} onChange={setSort} />
         {directionHint ? (
-          <Text className="text-[11.5px] text-green font-sans-semibold">
+          <Text className="text-[11.5px] text-mw-accent font-sans-semibold">
             {directionHint}
           </Text>
         ) : null}
@@ -131,7 +133,7 @@ export default function CompareScreen() {
             `accessibilityLiveRegion="polite"` handles native; ARIA
             attributes spread for web (react-native-web passes them through). */}
         <Text
-          className="text-xs text-muted font-sans-medium"
+          className="text-xs text-mw-text-muted font-sans-medium"
           accessibilityLiveRegion="polite"
           accessibilityRole="text"
           {...(Platform.OS === 'web'
@@ -165,13 +167,13 @@ export default function CompareScreen() {
         <View
           className="mx-4 mt-4 rounded-lg border"
           style={{
-            backgroundColor: '#FFE4E6',
-            borderColor: '#9F1239',
+            backgroundColor: tokens.colors.dangerSoft,
+            borderColor: tokens.colors.danger,
             paddingHorizontal: 12,
             paddingVertical: 8,
           }}
         >
-          <Text className="text-xs font-sans-bold" style={{ color: '#9F1239' }}>
+          <Text className="text-xs font-sans-bold" style={{ color: tokens.colors.danger }}>
             Couldn't load products: {error.message}
           </Text>
         </View>
@@ -196,13 +198,13 @@ export default function CompareScreen() {
           <View
             className="rounded-xl mt-10"
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: tokens.colors.bgCard,
               paddingHorizontal: 18,
               paddingVertical: 16,
             }}
           >
-            <Text className="text-[11.5px] text-muted font-sans" style={{ lineHeight: 18 }}>
-              <Text className="text-text font-sans-bold">Disclaimer: </Text>
+            <Text className="text-[11.5px] text-mw-text-muted font-sans" style={{ lineHeight: 18 }}>
+              <Text className="text-mw-text font-sans-bold">Disclaimer: </Text>
               All prices are indicative retail data sourced from major
               Singapore retailers (FairPrice, Watsons, Shopee, Lazada).
               Always verify current prices before purchasing.
