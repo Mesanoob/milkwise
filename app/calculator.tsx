@@ -26,7 +26,7 @@ import { BenchmarkChart } from '../src/components/calculator/BenchmarkChart';
 import { CumulativeSpendChart } from '../src/components/calculator/CumulativeSpendChart';
 import { SpendChart } from '../src/components/calculator/SpendChart';
 import { Stepper } from '../src/components/calculator/Stepper';
-import { colors } from '../src/config/theme';
+import { useTheme } from '../src/contexts/ThemeContext';
 import { formatCurrency, formatNumber, formatWeight } from '../src/utils/format';
 import {
   calcAge,
@@ -37,19 +37,50 @@ import {
 type Gender = 'boy' | 'girl' | '';
 type SolidsLevel = 'starting' | 'established' | 'full';
 
-const PRODUCT_SELECT_STYLE = {
+/**
+ * v1→v2 colour shim. This screen consistently uses a `colors.<v1key>`
+ * namespace across ~15 sub-components; rather than rewrite every call
+ * site, each component grabs `const colors = useV2Colors()` and the
+ * existing references keep working — now theme-reactive v2 values.
+ * `amber*` maps to the warn pair (its v2 semantic successor) since the
+ * only amber use here is the optional-solids notice. Removed when the
+ * v1 token block is deleted is N/A — this shim *is* the v2 binding.
+ */
+const useV2Colors = () => {
+  const { tokens } = useTheme();
+  const c = tokens.colors;
+  return {
+    green: c.accent,
+    greenMid: c.accentHover,
+    greenLight: c.accentTint,
+    surface: c.bgCard,
+    surface2: c.bgPanel,
+    amber: c.warnText,
+    amberLight: c.warnBg,
+    text: c.text,
+    muted: c.textMuted,
+    border: c.border,
+    danger: c.danger,
+    info: c.info,
+    infoSoft: c.infoSoft,
+    textInverse: c.textInverse,
+  };
+};
+
+const makeProductSelectStyle = (c: ReturnType<typeof useV2Colors>) => ({
   width: '100%',
   padding: 11,
   borderRadius: 10,
   borderWidth: 1.5,
-  borderColor: colors.border,
-  background: colors.surface2,
-  color: colors.text,
+  borderColor: c.border,
+  background: c.surface2,
+  color: c.text,
   fontSize: 14,
   fontFamily: 'inherit',
-};
+});
 
 export default function CalculatorScreen() {
+  const colors = useV2Colors();
   const products = useMemo(
     () => getAllProducts().sort((a, b) => a.name.localeCompare(b.name)),
     [],
@@ -147,10 +178,10 @@ export default function CalculatorScreen() {
   return (
     <Screen>
       <View style={{ backgroundColor: colors.green, paddingHorizontal: 24, paddingVertical: 36, alignItems: 'center' }}>
-        <Text className="font-serif text-white text-center" style={{ fontSize: 38, lineHeight: 42 }} selectable>
+        <Text className="font-serif text-mw-text-inverse text-center" style={{ fontSize: 38, lineHeight: 42 }} selectable>
           Baby Feeding Calculator
         </Text>
-        <Text className="text-white/80 text-center font-sans mt-3 max-w-[560px]" style={{ lineHeight: 22 }} selectable>
+        <Text className="text-mw-text-inverse text-center font-sans mt-3 max-w-[560px]" style={{ lineHeight: 22 }} selectable>
           Based on Singapore HPB and KKH-style feeding benchmarks. Estimate intake, formula use, and cost from birth to 12 months.
         </Text>
       </View>
@@ -158,7 +189,7 @@ export default function CalculatorScreen() {
       <View style={{ maxWidth: 960, width: '100%', marginHorizontal: 'auto', paddingHorizontal: 20, paddingVertical: 28, gap: 24 }}>
         <Card>
           <SectionTitle title="Baby Info" icon="1" />
-          <Text className="text-sm text-muted font-sans mb-5" selectable>
+          <Text className="text-sm text-mw-text-muted font-sans mb-5" selectable>
             Enter birth date and feeding details to personalise the benchmark and cost estimate.
           </Text>
 
@@ -167,9 +198,9 @@ export default function CalculatorScreen() {
               <Label>Date of birth</Label>
               <View className="flex-row items-end gap-2">
                 <DobPart label="DD" value={day} onChange={setDay} maxLength={2} width={60} />
-                <Text className="text-2xl text-border pb-2">/</Text>
+                <Text className="text-2xl text-mw-border pb-2">/</Text>
                 <DobPart label="MM" value={month} onChange={setMonth} maxLength={2} width={60} />
-                <Text className="text-2xl text-border pb-2">/</Text>
+                <Text className="text-2xl text-mw-border pb-2">/</Text>
                 <DobPart label="YYYY" value={year} onChange={setYear} maxLength={4} width={86} />
               </View>
               {dobError ? (
@@ -216,7 +247,7 @@ export default function CalculatorScreen() {
 
           {age && guideline ? (
             <View className="mt-3 rounded-lg" style={{ backgroundColor: colors.surface2, padding: 12 }}>
-              <Text className="text-xs text-muted font-sans" style={{ lineHeight: 18 }} selectable>
+              <Text className="text-xs text-mw-text-muted font-sans" style={{ lineHeight: 18 }} selectable>
                 At {age.months} months: {guideline.note}
               </Text>
             </View>
@@ -226,14 +257,14 @@ export default function CalculatorScreen() {
         {hasDob && ageMonths !== null ? (
           <Card>
             <SectionTitle title="Singapore Feeding Benchmark" icon="2" />
-            <Text className="text-sm text-muted font-sans mb-4" selectable>
+            <Text className="text-sm text-mw-text-muted font-sans mb-4" selectable>
               Recommended daily milk intake by month. Shaded band is the benchmark range.
             </Text>
             <BenchmarkChart babyMonths={ageMonths} currentDailyMl={estimate.dailyMl} />
             <View className="flex-row flex-wrap gap-3 mt-3">
-              <LegendSwatch color="rgba(27,94,59,.15)" label="Recommended range" boxed />
+              <LegendSwatch color={colors.greenLight} label="Recommended range" boxed />
               <LegendSwatch color={colors.green} label="Benchmark midpoint" />
-              <LegendSwatch color="#2563EB" label="Your baby in range" />
+              <LegendSwatch color={colors.info} label="Your baby in range" />
               <LegendSwatch color={colors.danger} label="Below range" />
             </View>
           </Card>
@@ -242,7 +273,7 @@ export default function CalculatorScreen() {
         {hasDob ? (
           <Card>
             <SectionTitle title="Your Baby's Feeding" icon="3" />
-            <Text className="text-sm text-muted font-sans mb-5" selectable>
+            <Text className="text-sm text-mw-text-muted font-sans mb-5" selectable>
               Current feeding pattern drives powder usage and monthly formula cost.
             </Text>
 
@@ -272,17 +303,17 @@ export default function CalculatorScreen() {
                   <Switch
                     value={useSupplement}
                     onValueChange={setUseSupplement}
-                    trackColor={{ false: '#D1D5DB', true: '#B7E4C7' }}
-                    thumbColor={useSupplement ? colors.green : '#FFFFFF'}
+                    trackColor={{ false: colors.border, true: colors.greenLight }}
+                    thumbColor={useSupplement ? colors.green : colors.surface}
                   />
-                  <Text className="text-sm font-sans-semibold text-text" selectable>
+                  <Text className="text-sm font-sans-semibold text-mw-text" selectable>
                     {primaryIsBreastmilk ? 'Supplementing with formula' : 'Supplementing with a second formula'}
                   </Text>
                 </View>
               ) : null}
 
               {useSupplement ? (
-                <View className="rounded-xl border border-border" style={{ backgroundColor: colors.surface2, padding: 16, gap: 14 }}>
+                <View className="rounded-xl border border-mw-border" style={{ backgroundColor: colors.surface2, padding: 16, gap: 14 }}>
                   <ProductSelect
                     label="Supplemental formula"
                     value={supplementId}
@@ -312,30 +343,30 @@ export default function CalculatorScreen() {
               </View>
 
               <View className="rounded-lg flex-row flex-wrap items-center gap-2" style={{ backgroundColor: colors.surface2, padding: 12 }}>
-                <Text className="text-sm text-muted font-sans">Total milk today:</Text>
+                <Text className="text-sm text-mw-text-muted font-sans">Total milk today:</Text>
                 <Text className="text-lg font-sans-bold" style={{ color: colors.green }} selectable>
                   {estimate.dailyMl}ml
                 </Text>
-                <Text className="text-sm text-muted font-sans" selectable>
+                <Text className="text-sm text-mw-text-muted font-sans" selectable>
                   ({mlPerFeed}ml x {feedsPerDay} feeds)
                 </Text>
                 {estimate.formulaShare > 0 && estimate.formulaShare < 1 ? (
-                  <Text className="text-xs text-muted font-sans" selectable>
+                  <Text className="text-xs text-mw-text-muted font-sans" selectable>
                     Formula portion: {Math.round(estimate.formulaDailyMl)}ml
                   </Text>
                 ) : null}
               </View>
 
               {ageMonths !== null && ageMonths >= 6 ? (
-                <View className="rounded-xl border" style={{ backgroundColor: colors.amberLight, borderColor: '#FCD34D', padding: 16 }}>
+                <View className="rounded-xl border" style={{ backgroundColor: colors.amberLight, borderColor: colors.amber, padding: 16 }}>
                   <View className="flex-row items-center gap-3">
                     <Switch
                       value={hasSolids}
                       onValueChange={setHasSolids}
-                      trackColor={{ false: '#D1D5DB', true: '#FCD34D' }}
-                      thumbColor={hasSolids ? colors.amber : '#FFFFFF'}
+                      trackColor={{ false: colors.border, true: colors.amber }}
+                      thumbColor={hasSolids ? colors.amber : colors.surface}
                     />
-                    <Text className="text-sm font-sans-bold" style={{ color: '#92400E' }} selectable>
+                    <Text className="text-sm font-sans-bold" style={{ color: colors.amber }} selectable>
                       My baby has started solids
                     </Text>
                   </View>
@@ -351,7 +382,7 @@ export default function CalculatorScreen() {
                         ]}
                         onChange={(next) => setSolidsLevel(next as SolidsLevel)}
                       />
-                      <Text className="text-xs font-sans mt-3" style={{ color: '#92400E', lineHeight: 18 }} selectable>
+                      <Text className="text-xs font-sans mt-3" style={{ color: colors.amber, lineHeight: 18 }} selectable>
                         Milk remains the primary nutrition source until 12 months. Use this as a planning estimate, not medical advice.
                       </Text>
                     </View>
@@ -375,7 +406,7 @@ export default function CalculatorScreen() {
         {hasDob && showCost ? (
           <Card>
             <SectionTitle title="Formula Usage & Cost" icon="4" />
-            <Text className="text-sm text-muted font-sans mb-5" selectable>
+            <Text className="text-sm text-mw-text-muted font-sans mb-5" selectable>
               {primaryIsBreastmilk
                 ? `Breastmilk primary + ${supplementalLabel} supplement`
                 : `${primaryLabel}${useSupplement && supplementalLabel ? ` + ${supplementalLabel}` : ''}`} · {estimate.effectivePricePerGram ? `${formatCurrency(estimate.effectivePricePerGram)}/g effective` : 'No formula cost'}
@@ -389,10 +420,10 @@ export default function CalculatorScreen() {
               <StatCard value={formatCurrency((estimate.costPerMonth ?? 0) * 12)} label="Est. / year" />
             </View>
 
-            <Text className="text-base font-sans-bold text-text mb-1" selectable>
+            <Text className="text-base font-sans-bold text-mw-text mb-1" selectable>
               Monthly formula cost, 0 to 12 months
             </Text>
-            <Text className="text-xs text-muted font-sans mb-3" selectable>
+            <Text className="text-xs text-mw-text-muted font-sans mb-3" selectable>
               Light green = past estimate, dark green = current month, grey = projected.
             </Text>
             <SpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths ?? 0} />
@@ -402,7 +433,7 @@ export default function CalculatorScreen() {
         {hasDob && showCost && ageMonths !== null && ageMonths > 0 ? (
           <Card>
             <SectionTitle title="Estimated Lifetime Formula Spend" icon="5" />
-            <Text className="text-sm text-muted font-sans mb-5" selectable>
+            <Text className="text-sm text-mw-text-muted font-sans mb-5" selectable>
               Past spend is estimated from benchmark intake. Projected spend uses your entered feeding rate.
             </Text>
             <View className="flex-row flex-wrap gap-3 mb-6">
@@ -410,10 +441,10 @@ export default function CalculatorScreen() {
               <SpendSummary tone="greenLight" value={formatCurrency(estimate.projectedSpend)} label={`Projected months ${ageMonths}-11`} />
               <SpendSummary tone="green" value={formatCurrency(estimate.totalSpend)} label="Stage 1 total birth to 12 months" />
             </View>
-            <Text className="text-base font-sans-bold text-text mb-1" selectable>
+            <Text className="text-base font-sans-bold text-mw-text mb-1" selectable>
               Cumulative spend curve
             </Text>
-            <Text className="text-xs text-muted font-sans mb-3" selectable>
+            <Text className="text-xs text-mw-text-muted font-sans mb-3" selectable>
               Solid line is estimated actual spend. Dashed line is projected spend.
             </Text>
             <CumulativeSpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths} />
@@ -434,17 +465,17 @@ export default function CalculatorScreen() {
                 ))}
               </View>
             </ScrollView>
-            <Text className="text-[11.5px] text-muted font-sans mt-3" style={{ lineHeight: 18 }} selectable>
+            <Text className="text-[11.5px] text-mw-text-muted font-sans mt-3" style={{ lineHeight: 18 }} selectable>
               Source note: these are planning benchmarks adapted from the provided MilkWise design handoff. Always follow your paediatrician's specific advice.
             </Text>
           </Card>
         ) : (
           <View className="items-center py-12">
             <Text className="text-5xl mb-3">^</Text>
-            <Text className="text-xl font-serif text-text mb-2" selectable>
+            <Text className="text-xl font-serif text-mw-text mb-2" selectable>
               Enter your baby's birthday above
             </Text>
-            <Text className="text-sm text-muted font-sans text-center" selectable>
+            <Text className="text-sm text-mw-text-muted font-sans text-center" selectable>
               The calculator will show personalised feeding benchmarks, usage, and cost estimates.
             </Text>
           </View>
@@ -456,7 +487,7 @@ export default function CalculatorScreen() {
 
 const Card = ({ children }: { children: React.ReactNode }) => (
   <View
-    className="bg-surface rounded-xl"
+    className="bg-mw-bg-card rounded-xl"
     style={{
       padding: 24,
       shadowColor: '#000',
@@ -470,17 +501,20 @@ const Card = ({ children }: { children: React.ReactNode }) => (
   </View>
 );
 
-const SectionTitle = ({ title, icon }: { title: string; icon: string }) => (
+const SectionTitle = ({ title, icon }: { title: string; icon: string }) => {
+  const colors = useV2Colors();
+  return (
   <View className="flex-row items-center gap-2 mb-1">
     <View className="w-7 h-7 rounded-full items-center justify-center" style={{ backgroundColor: colors.greenLight }}>
       <Text className="text-xs font-sans-bold" style={{ color: colors.green }}>{icon}</Text>
     </View>
-    <Text className="font-serif text-text" style={{ fontSize: 22 }} selectable>{title}</Text>
+    <Text className="font-serif text-mw-text" style={{ fontSize: 22 }} selectable>{title}</Text>
   </View>
-);
+  );
+};
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <Text className="text-[11px] font-sans-bold uppercase tracking-wider text-muted mb-2" selectable>
+  <Text className="text-[11px] font-sans-bold uppercase tracking-wider text-mw-text-muted mb-2" selectable>
     {children}
   </Text>
 );
@@ -499,14 +533,14 @@ const DobPart = ({
   width: number;
 }) => (
   <View>
-    <Text className="text-[10px] text-muted font-sans-bold text-center mb-1">{label}</Text>
+    <Text className="text-[10px] text-mw-text-muted font-sans-bold text-center mb-1">{label}</Text>
     <TextInput
       value={value}
       onChangeText={(next) => onChange(next.replace(/\D/g, '').slice(0, maxLength))}
       keyboardType="numeric"
       maxLength={maxLength}
       placeholder={label}
-      className="rounded-lg border border-border bg-surface2 text-text text-center font-sans-bold"
+      className="rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text text-center font-sans-bold"
       style={{ width, paddingVertical: 10, fontSize: 17 }}
     />
   </View>
@@ -520,8 +554,10 @@ const SegmentedControl = ({
   value: string;
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
-}) => (
-  <View className="flex-row rounded-lg border border-border bg-surface2 p-1 gap-1">
+}) => {
+  const colors = useV2Colors();
+  return (
+  <View className="flex-row rounded-lg border border-mw-border bg-mw-bg-panel p-1 gap-1">
     {options.map((option) => {
       const active = option.value === value;
       return (
@@ -540,21 +576,28 @@ const SegmentedControl = ({
       );
     })}
   </View>
-);
+  );
+};
 
-const MiniStat = ({ value, label }: { value: string; label: string }) => (
-  <View className="rounded-lg bg-surface2 items-center" style={{ minWidth: 88, padding: 12 }}>
+const MiniStat = ({ value, label }: { value: string; label: string }) => {
+  const colors = useV2Colors();
+  return (
+  <View className="rounded-lg bg-mw-bg-panel items-center" style={{ minWidth: 88, padding: 12 }}>
     <Text className="font-serif" style={{ fontSize: 18, color: colors.green }} selectable>{value}</Text>
-    <Text className="text-[11px] text-muted font-sans mt-1" selectable>{label}</Text>
+    <Text className="text-[11px] text-mw-text-muted font-sans mt-1" selectable>{label}</Text>
   </View>
-);
+  );
+};
 
-const StatCard = ({ value, label }: { value: string; label: string }) => (
-  <View className="rounded-lg bg-surface2 items-center" style={{ flex: 1, minWidth: 128, paddingHorizontal: 12, paddingVertical: 14 }}>
+const StatCard = ({ value, label }: { value: string; label: string }) => {
+  const colors = useV2Colors();
+  return (
+  <View className="rounded-lg bg-mw-bg-panel items-center" style={{ flex: 1, minWidth: 128, paddingHorizontal: 12, paddingVertical: 14 }}>
     <Text className="font-serif text-center" style={{ fontSize: 21, color: colors.green }} selectable>{value}</Text>
-    <Text className="text-[11px] text-muted font-sans mt-1 text-center" selectable>{label}</Text>
+    <Text className="text-[11px] text-mw-text-muted font-sans mt-1 text-center" selectable>{label}</Text>
   </View>
-);
+  );
+};
 
 /**
  * Parse a composite selection key `productId#variantIdx` into its parts.
@@ -615,6 +658,7 @@ const ProductSelect = ({
   includeBreastmilk?: boolean;
   onChange: (value: string) => void;
 }) => {
+  const colors = useV2Colors();
   if (Platform.OS === 'web') {
     // React Native does not provide a Picker; on web, the native HTML select
     // gives keyboard and screen-reader behavior for free.
@@ -630,7 +674,7 @@ const ProductSelect = ({
         <Select
           value={value}
           onChange={(event: { target: { value: string } }) => onChange(event.target.value)}
-          style={PRODUCT_SELECT_STYLE}
+          style={makeProductSelectStyle(colors)}
           aria-label={label}
         >
           <Option value="">{placeholder}</Option>
@@ -680,7 +724,9 @@ const ProductSelect = ({
   );
 };
 
-const SelectionChip = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => (
+const SelectionChip = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => {
+  const colors = useV2Colors();
+  return (
   <Pressable
     onPress={onPress}
     className="rounded-full border px-3 py-2"
@@ -689,13 +735,16 @@ const SelectionChip = ({ label, active, onPress }: { label: string; active: bool
       borderColor: active ? colors.green : colors.border,
     }}
   >
-    <Text className="text-xs font-sans-semibold" style={{ color: active ? colors.surface : colors.text }} numberOfLines={1}>
+    <Text className="text-xs font-sans-semibold" style={{ color: active ? colors.textInverse : colors.text }} numberOfLines={1}>
       {label}
     </Text>
   </Pressable>
-);
+  );
+};
 
-const ProductInfoCard = ({ product, compact = false }: { product: Product; compact?: boolean }) => (
+const ProductInfoCard = ({ product, compact = false }: { product: Product; compact?: boolean }) => {
+  const colors = useV2Colors();
+  return (
   <View className="flex-row items-center gap-3 rounded-lg" style={{ backgroundColor: compact ? colors.surface : colors.surface2, padding: compact ? 10 : 12 }}>
     <Image
       source={getProductImage(product.img)}
@@ -712,16 +761,19 @@ const ProductInfoCard = ({ product, compact = false }: { product: Product; compa
       accessibilityElementsHidden
     />
     <View className="flex-1">
-      <Text className="text-[11px] text-muted font-sans-bold uppercase" selectable>{product.brand}</Text>
-      <Text className="text-[13.5px] font-sans-bold text-text" numberOfLines={2} selectable>{product.name}</Text>
-      <Text className="text-xs text-muted font-sans mt-0.5" selectable>
+      <Text className="text-[11px] text-mw-text-muted font-sans-bold uppercase" selectable>{product.brand}</Text>
+      <Text className="text-[13.5px] font-sans-bold text-mw-text" numberOfLines={2} selectable>{product.name}</Text>
+      <Text className="text-xs text-mw-text-muted font-sans mt-0.5" selectable>
         {formatWeight(product.weightG ?? 0)} · {formatCurrency(product.price)} · {formatCurrency(product.pricePerGram)}/g · {product.scoopG ?? '-'}g/scoop
       </Text>
     </View>
   </View>
-);
+  );
+};
 
-const RatioControl = ({ value, onChange }: { value: number; onChange: (value: number) => void }) => (
+const RatioControl = ({ value, onChange }: { value: number; onChange: (value: number) => void }) => {
+  const colors = useV2Colors();
+  return (
   <View>
     <View className="flex-row flex-wrap gap-2">
       {[10, 30, 50, 70, 90].map((pct) => (
@@ -734,20 +786,22 @@ const RatioControl = ({ value, onChange }: { value: number; onChange: (value: nu
             borderColor: value === pct ? colors.green : colors.border,
           }}
         >
-          <Text className="text-xs font-sans-bold" style={{ color: value === pct ? colors.surface : colors.text }}>
+          <Text className="text-xs font-sans-bold" style={{ color: value === pct ? colors.textInverse : colors.text }}>
             {pct}/{100 - pct}
           </Text>
         </Pressable>
       ))}
     </View>
   </View>
-);
+  );
+};
 
 const InfoBox = ({ tone, children }: { tone: 'green' | 'amber' | 'blue' | 'muted'; children: React.ReactNode }) => {
+  const colors = useV2Colors();
   const palette = {
-    green: { bg: colors.greenLight, border: colors.green, fg: '#166534' },
-    amber: { bg: colors.amberLight, border: colors.amber, fg: '#92400E' },
-    blue: { bg: '#EFF6FF', border: '#BFDBFE', fg: '#1D4ED8' },
+    green: { bg: colors.greenLight, border: colors.green, fg: colors.green },
+    amber: { bg: colors.amberLight, border: colors.amber, fg: colors.amber },
+    blue: { bg: colors.infoSoft, border: colors.info, fg: colors.info },
     muted: { bg: colors.surface2, border: colors.border, fg: colors.muted },
   }[tone];
   return (
@@ -768,10 +822,11 @@ const SpendSummary = ({
   value: string;
   label: string;
 }) => {
+  const colors = useV2Colors();
   const styles = {
-    amber: { bg: '#FEF3C7', fg: '#92400E', border: '#FCD34D' },
-    greenLight: { bg: colors.greenLight, fg: colors.green, border: '#6EE7B7' },
-    green: { bg: colors.green, fg: '#FFFFFF', border: colors.green },
+    amber: { bg: colors.amberLight, fg: colors.amber, border: colors.amber },
+    greenLight: { bg: colors.greenLight, fg: colors.green, border: colors.green },
+    green: { bg: colors.green, fg: colors.textInverse, border: colors.green },
   }[tone];
   return (
     <View className="rounded-xl items-center border" style={{ flex: 1, minWidth: 180, padding: 18, backgroundColor: styles.bg, borderColor: styles.border }}>
@@ -795,16 +850,16 @@ const LegendSwatch = ({ color, label, boxed = false }: { color: string; label: s
         borderColor: 'rgba(27,94,59,.3)',
       }}
     />
-    <Text className="text-xs text-muted font-sans" selectable>{label}</Text>
+    <Text className="text-xs text-mw-text-muted font-sans" selectable>{label}</Text>
   </View>
 );
 
 const GuidelineHeader = () => (
-  <View className="flex-row bg-surface2 border-b border-border">
+  <View className="flex-row bg-mw-bg-panel border-b border-mw-border">
     {['Age', 'ml / feed', 'Feeds / day', 'Daily total', 'Notes'].map((label, index) => (
       <Text
         key={label}
-        className="text-[10.5px] font-sans-bold uppercase tracking-wider text-muted"
+        className="text-[10.5px] font-sans-bold uppercase tracking-wider text-mw-text-muted"
         style={{ width: index === 4 ? 260 : 90, paddingHorizontal: 10, paddingVertical: 9 }}
       >
         {label}
@@ -819,15 +874,18 @@ const GuidelineRow = ({
 }: {
   guideline: (typeof SG_GUIDELINES)[number];
   current: boolean;
-}) => (
-  <View className="flex-row border-b border-border" style={{ backgroundColor: current ? colors.greenLight : 'transparent' }}>
+}) => {
+  const colors = useV2Colors();
+  return (
+  <View className="flex-row border-b border-mw-border" style={{ backgroundColor: current ? colors.greenLight : 'transparent' }}>
     <GuidelineCell text={guideline.label} width={90} current={current} />
     <GuidelineCell text={`${guideline.mlMin}-${guideline.mlMax}ml`} width={90} current={current} />
     <GuidelineCell text={`${guideline.fMin}-${guideline.fMax}x`} width={90} current={current} />
     <GuidelineCell text={`${guideline.dMin}-${guideline.dMax}ml`} width={90} current={current} />
     <GuidelineCell text={guideline.note} width={260} muted />
   </View>
-);
+  );
+};
 
 const GuidelineCell = ({
   text,
@@ -839,7 +897,9 @@ const GuidelineCell = ({
   width: number;
   current?: boolean;
   muted?: boolean;
-}) => (
+}) => {
+  const colors = useV2Colors();
+  return (
   <Text
     className="text-xs font-sans"
     style={{
@@ -854,4 +914,5 @@ const GuidelineCell = ({
   >
     {text}
   </Text>
-);
+  );
+};
