@@ -1,6 +1,8 @@
 # CLAUDE.md — MilkWise SG
 
-Single source of truth for this project. Read top-to-bottom on first session, then jump back to sections 8 and 9 as work progresses. Last updated 2026-05-14.
+Single source of truth for this project. Read top-to-bottom on first session, then jump back to sections 8, 9, and 9b as work progresses. Last updated 2026-05-18.
+
+> **ACTIVE WORK: v2 design re-skin.** A new design system (sage/cream, Inter/JetBrains fonts, dark mode) is being applied on branch `redesign-v2`. This is a **visual re-skin only** — no screen, data, or logic changes. See §4 (branch model), §7b (design system rules), §9b (re-skin roadmap). `testingprod` remains the shippable v1.
 
 ---
 
@@ -45,9 +47,17 @@ Senior Tech Lead + Cybersecurity Expert posture. The earlier "Beginner Mentor / 
 
 - **Repo path:** `/Users/dave/Documents/Claude/Projects/milkwise-claude-design/milkwise`
 - **Remote:** `github.com:Mesanoob/milkwise`
-- **Active branch:** `testingprod` (tracks `origin/testingprod`)
 - **Do NOT push** to `main` or any branch unless the user explicitly asks
-- **Design source:** `/private/tmp/milkwise-design/milk-comparison-website/project/design_handoff_milkwise_sg/` (HTML + 61 images)
+
+**Branch model:**
+| Branch | Role |
+|---|---|
+| `testingprod` | **v1 — shippable.** Current design (forest green, DM fonts). Stays working/launchable. |
+| `redesign-v2` | **Active dev.** v2 visual re-skin (sage/cream, Inter/JetBrains, dark mode). Branched off clean `testingprod`. Do work here. |
+| `main` | Do not touch. |
+
+- **v1 design source (current, on `testingprod`):** `/private/tmp/milkwise-design/milk-comparison-website/project/design_handoff_milkwise_sg/`
+- **v2 design source (new, drives `redesign-v2`):** `../Milkwise-designrepo/` — sibling of this repo. Canonical token files: `design-reference/tokens.ts`, `design-reference/tokens.json`, `colors_and_type.css`. Visual reference: `ui_kits/website/` prototype + `design-reference/screens/` PNGs.
 
 ---
 
@@ -117,6 +127,28 @@ These choices are non-obvious from the code alone.
 - **Image filename rule:** Metro mangles `+` to ` ` (space) in filenames. Use `-` instead.
 
 - **Tailwind `content` must include `./src/`.** A Session 1 bug had arbitrary widths (`min-w-[160px]`) not compiling. Don't drop the path.
+
+---
+
+## 7b. Design system v2 — re-skin rules (active on `redesign-v2`)
+
+The v2 work is a **visual re-skin ONLY**. Hard scope boundary:
+
+- ✅ **In scope:** fonts, colors, dark mode, radii, shadows, spacing tokens, mono-tabular numerals, focus ring.
+- ❌ **Out of scope:** screens (no Home / Nutrition Guide / For New Parents — keep the existing 5), component restructure, routing, `ProductsContext`, `useProducts`, repository, `products.json`, `productDetails.json`, nutrition data, the design's `formulas.json`/`nutrition.json` (reference only — do NOT import). No logic or data changes of any kind.
+
+**Canonical source & a known trap:**
+- `../Milkwise-designrepo/design-reference/tokens.ts` is **canonical** (it declares itself so). `tokens.json` = raw values, `colors_and_type.css` = upstream CSS vars.
+- ⚠️ The repo's `README.md` prose is **stale and self-contradictory** — it says "forest green `#1A6B4A`" and "Fraunces/Geist". **Ignore the prose.** The accent is **sage `#6B9682`** (light) / `#9CC4AB` (dark); fonts are **Inter / Inter Tight / JetBrains Mono** per `tokens.ts` + `INTEGRATION.md`. Do not "fix" sage back to green.
+
+**Rules (carry into every v2 change):**
+- **No hardcoded hex anywhere.** Reference token keys only. The full inline-hex sweep (decision: full, all components) replaces every literal like `#1B5E3B` with a token ref. This is prerequisite for dark mode to work everywhere.
+- **Fonts:** Inter (body 400/500/600), Inter Tight (display 600/700), JetBrains Mono (all numerals). Remove `@expo-google-fonts/dm-*`. RN doesn't synthesize weights — use the explicit family per weight.
+- **Numerals:** every price / ratio / per-gram / per-scoop / scoop count / calculator output uses `fonts.mono` + `style={{ fontVariant: ['tabular-nums'] }}`. Currency `$42.90`, `RM 89`, per-gram `$0.048` (3dp), en-dash ranges.
+- **Dark mode:** decision = **OS-seeded + manual toggle, persisted (AsyncStorage)**. Needs a small theme context + sun/moon toggle in the nav (~40 lines new code — the *only* new code; still no logic/data change). All tokens flip; no per-component hex.
+- **Surfaces:** page is `bg` (never pure white), `bgPanel` for bands/alt rows/inputs, `bgCard` only where a card lifts. Radii: 4px inputs, 8px cards, 24px pills. Shadows: 2-step (`s1` resting, `s2` hover/float), `s3` modals only.
+- **Tracking** is `em` in CSS; RN `letterSpacing` is px → convert.
+- **Re-apply Phase D a11y against new tokens:** WCAG AA contrast must hold in BOTH themes; re-verify focus ring visibility on sage/dark surfaces.
 
 ---
 
@@ -263,6 +295,30 @@ Ordered by launch-readiness. Effort: **L** = under 1 hr, **M** = 1-4 hr, **H** =
 
 ---
 
+## 9b. ⏳ v2 re-skin roadmap (ACTIVE — branch `redesign-v2`)
+
+The current priority. Visual re-skin only (see §7b for the hard scope boundary).
+Each phase is independently shippable and `npm run typecheck`-clean before moving on.
+
+| Phase | Task | Touches | Effort |
+|---|---|---|---|
+| 0 | Pull `tokens.ts` / `tokens.json` / `colors_and_type.css` into `milkwise/design-reference/` (read-only ref, gitignored from build) | new ref dir | L |
+| 1 | **Fonts** — `npx expo install @expo-google-fonts/inter @expo-google-fonts/inter-tight @expo-google-fonts/jetbrains-mono`; load in `_layout.tsx`; remove DM deps | `_layout.tsx`, `theme.ts`, `tailwind.config.js` | M |
+| 2 | **Token merge** — port `tokens.ts` (light+dark colors, spacing, radii, shadows, tracking, motion) into `src/config/theme.ts` + mirror in `tailwind.config.js` | `theme.ts`, `tailwind.config.js` | M |
+| 3 | **Dark-mode mechanism** — theme context (OS-seeded), sun/moon toggle in nav header, persist via AsyncStorage, drive NativeWind color scheme. ~40 lines new code (only new code in the whole re-skin) | new `ThemeContext`, `Header.tsx`, `_layout.tsx` | M |
+| 4 | **Full inline-hex sweep** — replace every hardcoded hex across ALL components with token refs (decision: full sweep) | every component with inline color | H |
+| 5 | **Mono-tabular numerals** — every price/ratio/per-unit/scoop/calculator number → `fonts.mono` + `fontVariant: ['tabular-nums']` | ProductCard, ProductListRow, CompareModal, calculator, detail, most-sold | M |
+| 6 | **Token application** — radii (4/8/24), 2-step shadows, spacing scale applied per §7b surface rules | shared components | M |
+| 7 | **A11y + dark-mode QA** — re-run Phase D checks against new tokens in BOTH themes (contrast AA, focus ring on sage/dark, tap targets), Puppeteer + Safari sweep | — | M |
+
+**Hard rules for this roadmap:**
+- Do NOT add/modify screens, components' structure, data, or logic. Re-skin = swap visual tokens on the existing tree.
+- `testingprod` (v1) must stay untouched and shippable. All v2 work lands on `redesign-v2`.
+- After each phase: `npm run typecheck` = 0, then visual-diff the touched screens against `../Milkwise-designrepo/design-reference/screens/*` (both light + dark, mobile width).
+- `../Milkwise-designrepo/INTEGRATION.md` §2-3 + `data-mapping.md` are the detailed spec. Reference them; don't re-derive token values.
+
+---
+
 ## 10. Notes for code-reviewing AI agents
 
 If you're a fresh AI agent (Claude in another session, ChatGPT, Gemini, etc.) brought in to vet this codebase before launch, focus your review on these areas. Each lists the files to read first.
@@ -320,6 +376,7 @@ If you're a fresh AI agent (Claude in another session, ChatGPT, Gemini, etc.) br
 ## 12. Session boundary protocol
 
 When the user says "save this convo" / "start a new chat" / "i want to start a new chat":
-1. Update sections **8** + **9** to reflect what shipped this session and what's still open.
-2. Don't preserve in-session task lists, React tutorials, or commentary.
-3. Confirm: *"CLAUDE.md updated. Start your new chat with: read CLAUDE.md and continue."*
+1. Update **§8** (built), **§9** (launch backlog), and **§9b** (v2 re-skin progress — tick off completed phases) to reflect what shipped this session and what's still open.
+2. Confirm the active branch is recorded (`redesign-v2` for v2 work) and `testingprod` is still clean.
+3. Don't preserve in-session task lists, tutorials, or commentary.
+4. Confirm: *"CLAUDE.md updated. Start your new chat with: read CLAUDE.md and continue."*
