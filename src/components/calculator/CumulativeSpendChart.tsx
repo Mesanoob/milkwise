@@ -9,6 +9,7 @@ import Svg, {
 } from 'react-native-svg';
 import type { MonthlyFormulaCost } from '../../utils/feedingCalculator';
 import { formatCurrency } from '../../utils/format';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const W = 340;
 const H = 158;
@@ -26,6 +27,8 @@ export function CumulativeSpendChart({
   monthlyData: MonthlyFormulaCost[];
   babyMonths: number;
 }) {
+  const { tokens } = useTheme();
+  const c = tokens.colors;
   let cumulative = 0;
   const points = monthlyData.map((item, index) => {
     cumulative += item.cost;
@@ -51,24 +54,24 @@ export function CumulativeSpendChart({
         const y = yP(value);
         return (
           <G key={pct}>
-            <Line x1={PL} x2={W - PR} y1={y} y2={y} stroke="#E0D9CC" strokeWidth={1} strokeDasharray="3,3" />
-            <SvgText x={PL - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">
+            <Line x1={PL} x2={W - PR} y1={y} y2={y} stroke={c.border} strokeWidth={1} strokeDasharray="3,3" />
+            <SvgText x={PL - 4} y={y + 3} textAnchor="end" fontSize={8} fill={c.textFaint}>
               ${Math.round(value)}
             </SvgText>
           </G>
         );
       })}
-      <Path d={line} fill="none" stroke="#D1D5DB" strokeWidth={2} strokeDasharray="5,3" />
-      <Path d={line} fill="none" stroke="#1B5E3B" strokeWidth={2.5} strokeLinecap="round" clipPath="url(#past-spend)" />
+      <Path d={line} fill="none" stroke={c.border} strokeWidth={2} strokeDasharray="5,3" />
+      <Path d={line} fill="none" stroke={c.accent} strokeWidth={2.5} strokeLinecap="round" clipPath="url(#past-spend)" />
       {points.map((point) => (
-        <SvgText key={point.index} x={xP(point.index)} y={H - 4} textAnchor="middle" fontSize={8} fill={point.index <= babyMonths ? '#1B5E3B' : '#9CA3AF'}>
+        <SvgText key={point.index} x={xP(point.index)} y={H - 4} textAnchor="middle" fontSize={8} fill={point.index <= babyMonths ? c.accent : c.textFaint}>
           {point.index}m
         </SvgText>
       ))}
-      <SvgText x={W - PR} y={Math.max(12, yP(maxValue) - 5)} textAnchor="end" fontSize={9} fill="#1B5E3B" fontWeight="700">
+      <SvgText x={W - PR} y={Math.max(12, yP(maxValue) - 5)} textAnchor="end" fontSize={9} fill={c.accent} fontWeight="700">
         Total: {formatCurrency(maxValue)}
       </SvgText>
-      <SvgText x={8} y={H / 2} fontSize={8} fill="#9CA3AF" textAnchor="middle" transform={`rotate(-90, 8, ${H / 2})`}>
+      <SvgText x={8} y={H / 2} fontSize={8} fill={c.textFaint} textAnchor="middle" transform={`rotate(-90, 8, ${H / 2})`}>
         Cumulative SGD
       </SvgText>
     </Svg>

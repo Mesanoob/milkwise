@@ -13,6 +13,7 @@ import Svg, {
   Text as SvgText,
 } from 'react-native-svg';
 import { SG_GUIDELINES } from '../../data/feedingGuidelines';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const W = 340, H = 160, PL = 40, PR = 10, PT = 12, PB = 28;
 const IW = W - PL - PR, IH = H - PT - PB, MAX_Y = 1400;
@@ -26,6 +27,8 @@ interface Props {
 }
 
 export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
+  const { tokens } = useTheme();
+  const c = tokens.colors;
   const bm = Math.min(babyMonths, 11);
   const gRef = SG_GUIDELINES[bm];
   const bx = xP(bm);
@@ -41,9 +44,9 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
   const userY = currentDailyMl > 0 ? yP(Math.min(currentDailyMl, MAX_Y)) : null;
   const userColor =
     !currentDailyMl ? null
-    : currentDailyMl < gRef.dMin ? '#DC2626'   // below → red
-    : currentDailyMl > gRef.dMax ? '#E07B39'   // above → amber
-    : '#2563EB';                                // in range → blue
+    : currentDailyMl < gRef.dMin ? c.danger    // below → danger
+    : currentDailyMl > gRef.dMax ? c.warnText  // above → warn (amber successor)
+    : c.info;                                   // in range → info
 
   const gridLines = [200, 400, 600, 800, 1000, 1200];
 
@@ -51,16 +54,16 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
     <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
       <Defs>
         <LinearGradient id="rg" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor="#1B5E3B" stopOpacity={0.18} />
-          <Stop offset="100%" stopColor="#1B5E3B" stopOpacity={0.03} />
+          <Stop offset="0%" stopColor={c.accent} stopOpacity={0.18} />
+          <Stop offset="100%" stopColor={c.accent} stopOpacity={0.03} />
         </LinearGradient>
       </Defs>
 
       {/* Grid lines + y-axis labels */}
       {gridLines.map((v) => (
         <G key={v}>
-          <Line x1={PL} x2={W - PR} y1={yP(v)} y2={yP(v)} stroke="#E0D9CC" strokeWidth={1} strokeDasharray="4,3" />
-          <SvgText x={PL - 3} y={yP(v) + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{v}</SvgText>
+          <Line x1={PL} x2={W - PR} y1={yP(v)} y2={yP(v)} stroke={c.border} strokeWidth={1} strokeDasharray="4,3" />
+          <SvgText x={PL - 3} y={yP(v) + 3} textAnchor="end" fontSize={8} fill={c.textFaint}>{v}</SvgText>
         </G>
       ))}
 
@@ -68,7 +71,7 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
       <Path d={rangeD} fill="url(#rg)" />
 
       {/* Midpoint line */}
-      <Path d={midD} fill="none" stroke="#1B5E3B" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d={midD} fill="none" stroke={c.accent} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
 
       {/* X-axis month labels */}
       {SG_GUIDELINES.map((g, i) => (
@@ -78,7 +81,7 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
           y={H - 4}
           textAnchor="middle"
           fontSize={8}
-          fill={i === bm ? '#1B5E3B' : '#9CA3AF'}
+          fill={i === bm ? c.accent : c.textFaint}
           fontWeight={i === bm ? '700' : '400'}
         >
           {i}m
@@ -86,16 +89,16 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
       ))}
 
       {/* Baby's current age marker */}
-      <Line x1={bx} x2={bx} y1={PT} y2={H - PB} stroke="#1B5E3B" strokeWidth={1.5} strokeDasharray="3,3" opacity={0.5} />
-      <Circle cx={bx} cy={benchY} r={4} fill="#1B5E3B" />
-      <SvgText x={bx + 5} y={benchY + 3} fontSize={8} fill="#1B5E3B" fontWeight="700">
+      <Line x1={bx} x2={bx} y1={PT} y2={H - PB} stroke={c.accent} strokeWidth={1.5} strokeDasharray="3,3" opacity={0.5} />
+      <Circle cx={bx} cy={benchY} r={4} fill={c.accent} />
+      <SvgText x={bx + 5} y={benchY + 3} fontSize={8} fill={c.accent} fontWeight="700">
         {Math.round((gRef.dMin + gRef.dMax) / 2)}ml
       </SvgText>
 
       {/* User's actual daily intake */}
       {userY !== null && userColor && (
         <G>
-          <Circle cx={bx} cy={userY} r={4} fill={userColor} stroke="#fff" strokeWidth={2} />
+          <Circle cx={bx} cy={userY} r={4} fill={userColor} stroke={c.bgCard} strokeWidth={2} />
           <SvgText x={bx + 5} y={userY - 4} fontSize={8} fill={userColor} fontWeight="700">
             {currentDailyMl}ml yours
           </SvgText>
@@ -107,7 +110,7 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
         x={8}
         y={H / 2}
         fontSize={8}
-        fill="#9CA3AF"
+        fill={c.textFaint}
         textAnchor="middle"
         transform={`rotate(-90, 8, ${H / 2})`}
       >

@@ -12,7 +12,7 @@
 import { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { colors } from '../../config/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface StepperProps {
   label: string;
@@ -29,6 +29,7 @@ function clamp(v: number, mn: number, mx: number) {
 }
 
 export function Stepper({ label, value, onChange, min, max, step, unit }: StepperProps) {
+  const { tokens } = useTheme();
   // Local raw string so typing "15" doesn't commit after "1"
   const [raw, setRaw] = useState(String(value));
 
@@ -58,8 +59,8 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
 
   return (
     <View className="flex-1">
-      <Text className="text-[10px] font-sans-bold text-muted uppercase tracking-wider mb-1">
-        {label} — <Text style={{ color: colors.green }}>{value}{unit}</Text>
+      <Text className="text-[10px] font-sans-bold text-mw-text-muted uppercase tracking-wider mb-1">
+        {label} — <Text style={{ color: tokens.colors.accent }}>{value}{unit}</Text>
       </Text>
 
       <Slider
@@ -68,29 +69,29 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
         step={step}
         value={clamp(value, min, max)}
         onValueChange={(n) => { onChange(Math.round(n)); setRaw(String(Math.round(n))); }}
-        minimumTrackTintColor={colors.green}
-        maximumTrackTintColor="#E0D9CC"
-        thumbTintColor={colors.green}
+        minimumTrackTintColor={tokens.colors.accent}
+        maximumTrackTintColor={tokens.colors.border}
+        thumbTintColor={tokens.colors.accent}
         style={{ marginVertical: 4 }}
       />
 
       <View className="flex-row justify-between mb-2">
-        <Text className="text-[10px] text-muted">{min}{unit}</Text>
-        <Text className="text-[10px] font-sans-semibold" style={{ color: colors.green }}>{mid}{unit}</Text>
-        <Text className="text-[10px] text-muted">{max}{unit}</Text>
+        <Text className="text-[10px] text-mw-text-muted">{min}{unit}</Text>
+        <Text className="text-[10px] font-sans-semibold" style={{ color: tokens.colors.accent }}>{mid}{unit}</Text>
+        <Text className="text-[10px] text-mw-text-muted">{max}{unit}</Text>
       </View>
 
       {/* +/− stepper row */}
       <View className="flex-row items-center gap-2">
         <Pressable
           onPress={dec}
-          className="w-9 h-9 rounded-lg border border-border bg-surface2 items-center justify-center"
+          className="w-9 h-9 rounded-lg border border-mw-border bg-mw-bg-panel items-center justify-center"
         >
-          <Text className="text-lg font-sans-bold text-text">−</Text>
+          <Text className="text-lg font-sans-bold text-mw-text">−</Text>
         </Pressable>
 
         <TextInput
-          className="flex-1 text-center py-2 text-lg font-sans-bold rounded-lg border border-border bg-surface2 text-text"
+          className="flex-1 text-center py-2 text-lg font-sans-bold rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text"
           keyboardType="numeric"
           value={raw}
           onChangeText={setRaw}
@@ -102,12 +103,12 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
 
         <Pressable
           onPress={inc}
-          className="w-9 h-9 rounded-lg border border-border bg-surface2 items-center justify-center"
+          className="w-9 h-9 rounded-lg border border-mw-border bg-mw-bg-panel items-center justify-center"
         >
-          <Text className="text-lg font-sans-bold text-text">+</Text>
+          <Text className="text-lg font-sans-bold text-mw-text">+</Text>
         </Pressable>
 
-        <Text className="text-sm font-sans-semibold text-muted">{unit}</Text>
+        <Text className="text-sm font-sans-semibold text-mw-text-muted">{unit}</Text>
       </View>
     </View>
   );
