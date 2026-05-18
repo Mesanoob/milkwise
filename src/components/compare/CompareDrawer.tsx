@@ -18,6 +18,7 @@ import { View, Text, Pressable, Image, ScrollView } from 'react-native';
 import type { Product } from '../../types/product';
 import { getProductImage } from '../../data/imageMap';
 import { MAX_COMPARE_SELECTION } from '../../types/filters';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export interface CompareDrawerProps {
   selected: Product[];
@@ -32,6 +33,9 @@ export const CompareDrawer = ({
   onCompare,
   onRemove,
 }: CompareDrawerProps) => {
+  // Hook must run before any early return (Rules of Hooks).
+  const { tokens } = useTheme();
+
   // Hidden by default — only mount when the user has selected something.
   if (selected.length === 0) return null;
 
@@ -47,7 +51,11 @@ export const CompareDrawer = ({
         position: 'fixed' as never,
         bottom: 0, left: 0, right: 0,
         zIndex: 100,
-        backgroundColor: '#1B5E3B',
+        // Accent bar. `textInverse` rides on top — in light it's the cream
+        // that reads on medium sage; in dark it's near-black on light sage.
+        // White text would fail contrast on the dark-scheme light sage, so
+        // every label below uses `textInverse`, not literal white.
+        backgroundColor: tokens.colors.accent,
         paddingHorizontal: 16,
         paddingTop: 10,
         paddingBottom: 14,
@@ -58,7 +66,7 @@ export const CompareDrawer = ({
       }}
     >
       <View className="flex-row items-center gap-3 flex-wrap">
-        <Text className="text-white font-sans-bold text-[13px]">
+        <Text className="text-mw-text-inverse font-sans-bold text-[13px]">
           {selected.length}/{MAX_COMPARE_SELECTION} selected
         </Text>
 
@@ -95,7 +103,7 @@ export const CompareDrawer = ({
                 accessibilityElementsHidden
               />
               <Text
-                className="text-white font-sans text-[12px]"
+                className="text-mw-text-inverse font-sans text-[12px]"
                 numberOfLines={1}
                 style={{ maxWidth: 140 }}
               >
@@ -109,7 +117,7 @@ export const CompareDrawer = ({
                 // touch target close to WCAG's 44 px minimum.
                 hitSlop={14}
               >
-                <Text className="text-white" style={{ fontSize: 15, lineHeight: 15 }}>
+                <Text className="text-mw-text-inverse" style={{ fontSize: 15, lineHeight: 15 }}>
                   ×
                 </Text>
               </Pressable>
@@ -132,7 +140,7 @@ export const CompareDrawer = ({
               backgroundColor: 'rgba(255,255,255,0.15)',
             }}
           >
-            <Text className="text-white font-sans-semibold text-[13px]">Clear</Text>
+            <Text className="text-mw-text-inverse font-sans-semibold text-[13px]">Clear</Text>
           </Pressable>
           <Pressable
             onPress={onCompare}
@@ -149,12 +157,15 @@ export const CompareDrawer = ({
               paddingHorizontal: 18,
               paddingVertical: 7,
               borderRadius: 8,
-              backgroundColor: canCompare ? '#FFFFFF' : 'rgba(255,255,255,0.3)',
+              // Enabled = a lifted surface on the accent bar (card bg +
+              // accent text, contrasts in both schemes). Disabled stays a
+              // translucent white wash relative to the accent surface.
+              backgroundColor: canCompare ? tokens.colors.bgCard : 'rgba(255,255,255,0.3)',
             }}
           >
             <Text
               className="font-sans-bold text-[13px]"
-              style={{ color: canCompare ? '#1B5E3B' : 'rgba(255,255,255,0.5)' }}
+              style={{ color: canCompare ? tokens.colors.accent : 'rgba(255,255,255,0.5)' }}
             >
               Compare ({selected.length})
             </Text>

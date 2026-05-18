@@ -40,6 +40,7 @@ export const Header = () => {
   const router      = useRouter();
   const isCompact   = width < TABLET_BREAKPOINT;
   const { filters, setSearch } = useProductsContext();
+  const { tokens } = useTheme();
 
   // When the user types in the nav search while on a non-Compare screen,
   // route them back to "/" so they immediately see the filtered results.
@@ -57,7 +58,7 @@ export const Header = () => {
       // `position: 'sticky'` is web-only — RN ignores it on native. The
       // `as never` cast satisfies RN's type narrowing.
       style={{ position: 'sticky' as never, top: 0, zIndex: 60 }}
-      className="bg-surface border-b border-border"
+      className="bg-mw-bg-card border-b border-mw-border"
     >
       <View
         className="flex-row items-center"
@@ -85,7 +86,7 @@ export const Header = () => {
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                backgroundColor: '#1B5E3B',
+                backgroundColor: tokens.colors.accent,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
@@ -93,10 +94,10 @@ export const Header = () => {
               <Text style={{ fontSize: 17, lineHeight: 20 }}>🍼</Text>
             </View>
             <Text
-              className="font-serif text-text"
+              className="font-serif text-mw-text"
               style={{ fontSize: 20 }}
             >
-              MilkWise <Text style={{ color: '#1B5E3B' }}>SG</Text>
+              MilkWise <Text style={{ color: tokens.colors.accent }}>SG</Text>
             </Text>
           </Pressable>
         </Link>
@@ -121,14 +122,14 @@ export const Header = () => {
                       paddingHorizontal: 14,
                       paddingVertical: 6,
                       borderRadius: 8,
-                      backgroundColor: isActive ? '#EBF5EE' : 'transparent',
+                      backgroundColor: isActive ? tokens.colors.accentTint : 'transparent',
                     }}
                   >
                     <Text
                       className={isActive ? 'font-sans-semibold' : 'font-sans-medium'}
                       style={{
                         fontSize: 13.5,
-                        color: isActive ? '#1B5E3B' : '#6B7280',
+                        color: isActive ? tokens.colors.accent : tokens.colors.textMuted,
                       }}
                     >
                       {link.label}
@@ -207,7 +208,9 @@ const SearchField = ({
   onChange: (next: string) => void;
   onClear: () => void;
   style?: object;
-}) => (
+}) => {
+  const { tokens } = useTheme();
+  return (
   <View
     style={{
       flexDirection: 'row',
@@ -217,23 +220,23 @@ const SearchField = ({
       paddingVertical: 7,
       borderRadius: 8,
       borderWidth: 1.5,
-      borderColor: '#E0D9CC',
-      backgroundColor: '#F9F7F2',
+      borderColor: tokens.colors.border,
+      backgroundColor: tokens.colors.bgPanel,
       ...style,
     }}
   >
-    <Text style={{ color: '#6B7280', fontSize: 14 }}>⌕</Text>
+    <Text style={{ color: tokens.colors.textMuted, fontSize: 14 }}>⌕</Text>
     <TextInput
       value={value}
       onChangeText={onChange}
       placeholder="Search brand or product…"
-      placeholderTextColor="#6B7280"
+      placeholderTextColor={tokens.colors.textMuted}
       autoCorrect={false}
       autoCapitalize="none"
       accessibilityLabel="Search products"
       accessibilityHint="Filters the comparison by brand, name, or specialty"
       style={[
-        { flex: 1, color: '#1A1A1A', fontSize: 13 },
+        { flex: 1, color: tokens.colors.text, fontSize: 13 },
         Platform.OS === 'web' ? ({ outlineWidth: 0 } as TextStyle) : null,
       ]}
     />
@@ -244,11 +247,12 @@ const SearchField = ({
         accessibilityLabel="Clear search"
         hitSlop={6}
       >
-        <Text style={{ color: '#6B7280', fontSize: 14 }}>✕</Text>
+        <Text style={{ color: tokens.colors.textMuted, fontSize: 14 }}>✕</Text>
       </Pressable>
     )}
   </View>
-);
+  );
+};
 
 /**
  * `ThemeToggle` — the sun / moon / auto control. Cycles

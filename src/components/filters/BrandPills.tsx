@@ -8,20 +8,23 @@
 import { Pressable, Text, ScrollView, View } from 'react-native';
 import type { BrandFilter } from '../../types/filters';
 import { ALL_BRANDS } from '../../data/products';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export interface BrandPillsProps {
   value:    BrandFilter;
   onToggle: (brand: string) => void;
 }
 
-export const BrandPills = ({ value, onToggle }: BrandPillsProps) => (
+export const BrandPills = ({ value, onToggle }: BrandPillsProps) => {
+  const { tokens } = useTheme();
+  return (
   <View
-    className="bg-surface border-b border-border flex-row items-center"
+    className="bg-mw-bg-card border-b border-mw-border flex-row items-center"
     style={{ paddingHorizontal: 16, paddingVertical: 8 }}
   >
     {/* Section kicker — matches the design's "BRAND" caption. */}
     <Text
-      className="text-[11px] font-sans-bold uppercase tracking-wider text-muted"
+      className="text-[11px] font-sans-bold uppercase tracking-wider text-mw-text-muted"
       style={{ marginRight: 8 }}
     >
       Brand
@@ -48,13 +51,13 @@ export const BrandPills = ({ value, onToggle }: BrandPillsProps) => (
               paddingVertical: 5,
               borderRadius: 999,
               borderWidth: 1.5,
-              backgroundColor: isActive ? '#1B5E3B' : '#FFFFFF',
-              borderColor:     isActive ? '#1B5E3B' : '#E0D9CC',
+              backgroundColor: isActive ? tokens.colors.accent : tokens.colors.bgCard,
+              borderColor:     isActive ? tokens.colors.accent : tokens.colors.border,
             }}
           >
             <Text
               className="text-[12px] font-sans-semibold"
-              style={{ color: isActive ? '#FFFFFF' : '#1A1A1A' }}
+              style={{ color: isActive ? tokens.colors.textInverse : tokens.colors.text }}
             >
               {brand}
             </Text>
@@ -63,4 +66,5 @@ export const BrandPills = ({ value, onToggle }: BrandPillsProps) => (
       })}
     </ScrollView>
   </View>
-);
+  );
+};

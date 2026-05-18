@@ -14,6 +14,7 @@ import { Pressable, Text, ScrollView, View } from 'react-native';
 import type { Stage } from '../../types/product';
 import type { StageFilter } from '../../types/filters';
 import { ALL_STAGES } from '../../data/products';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export interface StageTabsProps {
   value:       StageFilter;
@@ -23,9 +24,10 @@ export interface StageTabsProps {
 
 export const StageTabs = ({ value, onToggle, onClearAll }: StageTabsProps) => {
   const noneSelected = value.length === 0;
+  const { tokens } = useTheme();
 
   return (
-    <View className="bg-surface border-b border-border">
+    <View className="bg-mw-bg-card border-b border-mw-border">
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -46,12 +48,12 @@ export const StageTabs = ({ value, onToggle, onClearAll }: StageTabsProps) => {
             paddingVertical: 12,
             paddingHorizontal: 20,
             borderBottomWidth: 2,
-            borderBottomColor: noneSelected ? '#1B5E3B' : 'transparent',
+            borderBottomColor: noneSelected ? tokens.colors.accent : 'transparent',
           }}
         >
           <Text
             className="text-[13.5px] font-sans-semibold"
-            style={{ color: noneSelected ? '#1B5E3B' : '#6B7280' }}
+            style={{ color: noneSelected ? tokens.colors.accent : tokens.colors.textMuted }}
           >
             All Stages
           </Text>
@@ -70,13 +72,13 @@ export const StageTabs = ({ value, onToggle, onClearAll }: StageTabsProps) => {
                 paddingVertical: 12,
                 paddingHorizontal: 20,
                 borderBottomWidth: 2,
-                borderBottomColor: isActive ? '#1B5E3B' : 'transparent',
+                borderBottomColor: isActive ? tokens.colors.accent : 'transparent',
                 position: 'relative',
               }}
             >
               <Text
                 className="text-[13.5px] font-sans-semibold"
-                style={{ color: isActive ? '#1B5E3B' : '#6B7280' }}
+                style={{ color: isActive ? tokens.colors.accent : tokens.colors.textMuted }}
               >
                 {stage}
               </Text>
@@ -92,7 +94,7 @@ export const StageTabs = ({ value, onToggle, onClearAll }: StageTabsProps) => {
                     width: 6,
                     height: 6,
                     borderRadius: 3,
-                    backgroundColor: '#1B5E3B',
+                    backgroundColor: tokens.colors.accent,
                   }}
                 />
               )}

@@ -36,6 +36,7 @@ import type { Product } from '../../types/product';
 import { getProductImage } from '../../data/imageMap';
 import { getMilkTypeIcon } from '../../utils/icons';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useTheme } from '../../contexts/ThemeContext';
 
 /* -------------------------------------------------------------------------- */
 /* Platform shell                                                              */
@@ -191,6 +192,7 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
   // Focus trap + Esc handler. Returns a ref we spread onto the sheet container
   // so keyboard users can't tab back into the page behind the modal.
   const sheetRef = useFocusTrap<HTMLDivElement>({ active: true, onEscape: onClose });
+  const { tokens } = useTheme();
 
   // Lock background scroll while the modal is open so the page underneath
   // doesn't jiggle when the user scrolls inside the modal. Web-only; native
@@ -238,7 +240,7 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
             } as never)
           : {})}
         style={{
-          backgroundColor: '#FFFFFF',
+          backgroundColor: tokens.colors.bgCard,
           borderTopLeftRadius: 20,
           borderTopRightRadius: 20,
           width: '100%',
@@ -249,19 +251,19 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
       >
         {/* ── Header ──────────────────────────────────────────────────── */}
         <View
-          className="flex-row items-center justify-between border-b border-border"
+          className="flex-row items-center justify-between border-b border-mw-border"
           style={{ paddingHorizontal: 24, paddingVertical: 18 }}
         >
           <View>
             <Text
-              className="text-[22px] font-serif text-text"
+              className="text-[22px] font-serif text-mw-text"
               // Stable id so `aria-labelledby` on the dialog container
               // can point at this heading for screen-reader announcement.
               nativeID="compare-modal-title"
             >
               Side-by-Side Comparison
             </Text>
-            <Text className="text-[12px] text-muted font-sans mt-0.5">
+            <Text className="text-[12px] text-mw-text-muted font-sans mt-0.5">
               Singapore Prices · ✓ best value highlighted
             </Text>
           </View>
@@ -277,12 +279,12 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
             style={{
               width: 36, height: 36,
               borderRadius: 18,
-              backgroundColor: '#F9F7F2',
+              backgroundColor: tokens.colors.bgPanel,
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <Text className="text-muted" style={{ fontSize: 18, lineHeight: 18 }}>✕</Text>
+            <Text className="text-mw-text-muted" style={{ fontSize: 18, lineHeight: 18 }}>✕</Text>
           </Pressable>
         </View>
 
@@ -298,9 +300,9 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
               <View
                 className="flex-row"
                 style={{
-                  backgroundColor: '#F9F7F2',
+                  backgroundColor: tokens.colors.bgPanel,
                   borderBottomWidth: 1,
-                  borderBottomColor: '#E0D9CC',
+                  borderBottomColor: tokens.colors.border,
                   position: 'sticky' as never,
                   top: 0,
                   zIndex: 2,
@@ -322,21 +324,23 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
                       resizeMode="contain"
                       style={{
                         width: 56, height: 56,
+                        // Product-image backdrop: stays white in both
+                        // themes (the tin photos are light artwork).
                         backgroundColor: '#fff',
                         borderRadius: 8,
                         borderWidth: 1,
-                        borderColor: '#E0D9CC',
+                        borderColor: tokens.colors.border,
                       }}
                       accessibilityLabel=""
                       accessibilityElementsHidden
                     />
                     <Text
-                      className="text-[12.5px] font-sans-bold text-text"
+                      className="text-[12.5px] font-sans-bold text-mw-text"
                       numberOfLines={2}
                     >
                       {p.name}
                     </Text>
-                    <Text className="text-[10.5px] text-muted font-sans">
+                    <Text className="text-[10.5px] text-mw-text-muted font-sans">
                       {p.brand}
                     </Text>
                   </View>
@@ -352,7 +356,7 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
                     className="flex-row"
                     style={{
                       borderBottomWidth: rowIdx < ROWS.length - 1 ? 1 : 0,
-                      borderBottomColor: '#E0D9CC',
+                      borderBottomColor: tokens.colors.border,
                     }}
                   >
                     <HeaderCell label={row.label} sticky width={140} secondary />
@@ -375,14 +379,14 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
                           <Text
                             className="font-sans"
                             style={{
-                              color: isBest ? '#1B5E3B' : '#1A1A1A',
+                              color: isBest ? tokens.colors.accent : tokens.colors.text,
                               fontWeight: isBest ? '700' : row.bold ? '600' : '400',
                               fontSize: row.bold ? 15 : 13.5,
                             }}
                           >
                             {formatted}
                             {isBest && (
-                              <Text className="text-green" style={{ fontSize: 10, opacity: 0.8 }}>
+                              <Text className="text-mw-accent" style={{ fontSize: 10, opacity: 0.8 }}>
                                 {'  ✓'}
                               </Text>
                             )}
@@ -399,14 +403,14 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
 
         {/* ── Footer note ─────────────────────────────────────────────── */}
         <View
-          className="border-t border-border"
+          className="border-t border-mw-border"
           style={{
             paddingHorizontal: 24,
             paddingVertical: 10,
-            backgroundColor: '#F9F7F2',
+            backgroundColor: tokens.colors.bgPanel,
           }}
         >
-          <Text className="text-[11px] text-muted font-sans">
+          <Text className="text-[11px] text-mw-text-muted font-sans">
             💡 Prices are Singapore retail. Always verify before purchasing.
           </Text>
         </View>
@@ -429,29 +433,32 @@ const HeaderCell = ({
   width: number;
   sticky?: boolean;
   secondary?: boolean;
-}) => (
-  <View
-    style={{
-      width,
-      paddingHorizontal: 14,
-      paddingVertical: 11,
-      backgroundColor: '#F9F7F2',
-      borderRightWidth: 1,
-      borderRightColor: '#E0D9CC',
-      ...(sticky ? { position: 'sticky' as never, left: 0, zIndex: 1 } : {}),
-    }}
-  >
-    <Text
-      className="font-sans-bold uppercase tracking-wider"
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <View
       style={{
-        fontSize: 10.5,
-        color: '#6B7280',
-        letterSpacing: 0.7,
-        fontWeight: secondary ? '500' : '700',
-        textTransform: secondary ? 'none' : 'uppercase',
+        width,
+        paddingHorizontal: 14,
+        paddingVertical: 11,
+        backgroundColor: tokens.colors.bgPanel,
+        borderRightWidth: 1,
+        borderRightColor: tokens.colors.border,
+        ...(sticky ? { position: 'sticky' as never, left: 0, zIndex: 1 } : {}),
       }}
     >
-      {label}
-    </Text>
-  </View>
-);
+      <Text
+        className="font-sans-bold uppercase tracking-wider"
+        style={{
+          fontSize: 10.5,
+          color: tokens.colors.textMuted,
+          letterSpacing: 0.7,
+          fontWeight: secondary ? '500' : '700',
+          textTransform: secondary ? 'none' : 'uppercase',
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+};

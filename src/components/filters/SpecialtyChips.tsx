@@ -14,6 +14,7 @@ import type { Specialty } from '../../types/product';
 import type { SpecialtyFilter } from '../../types/filters';
 import { ALL_SPECIALTIES } from '../../data/products';
 import { labelForSpecialty } from '../../utils/strings';
+import { useTheme } from '../../contexts/ThemeContext';
 
 type SpecialtyKey = Exclude<Specialty, null>;
 
@@ -24,11 +25,11 @@ export interface SpecialtyChipsProps {
 
 export const SpecialtyChips = ({ value, onToggle }: SpecialtyChipsProps) => (
   <View
-    className="bg-surface border-b border-border flex-row items-center"
+    className="bg-mw-bg-card border-b border-mw-border flex-row items-center"
     style={{ paddingHorizontal: 16, paddingVertical: 8 }}
   >
     <Text
-      className="text-[11px] font-sans-bold uppercase tracking-wider text-muted"
+      className="text-[11px] font-sans-bold uppercase tracking-wider text-mw-text-muted"
       style={{ marginRight: 8 }}
     >
       Type
@@ -63,26 +64,29 @@ interface ChipProps {
   onPress: () => void;
 }
 
-const Chip = ({ label, active, onPress }: ChipProps) => (
-  <Pressable
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityState={{ selected: active }}
-    accessibilityLabel={`Toggle filter ${label}`}
-    style={{
-      paddingHorizontal: 13,
-      paddingVertical: 6,
-      borderRadius: 999,
-      borderWidth: 1.5,
-      backgroundColor: active ? '#1B5E3B' : '#FFFFFF',
-      borderColor:     active ? '#1B5E3B' : '#E0D9CC',
-    }}
-  >
-    <Text
-      className="text-[12.5px] font-sans-medium"
-      style={{ color: active ? '#FFFFFF' : '#1A1A1A' }}
+const Chip = ({ label, active, onPress }: ChipProps) => {
+  const { tokens } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`Toggle filter ${label}`}
+      style={{
+        paddingHorizontal: 13,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1.5,
+        backgroundColor: active ? tokens.colors.accent : tokens.colors.bgCard,
+        borderColor:     active ? tokens.colors.accent : tokens.colors.border,
+      }}
     >
-      {label}
-    </Text>
-  </Pressable>
-);
+      <Text
+        className="text-[12.5px] font-sans-medium"
+        style={{ color: active ? tokens.colors.textInverse : tokens.colors.text }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+};

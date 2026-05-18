@@ -33,6 +33,7 @@ import { formatWeight } from '../../utils/format';
 import { labelForSpecialty } from '../../utils/strings';
 import { getOriginFlag, getMilkTypeIcon } from '../../utils/icons';
 import { Tag } from '../Tag';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Matches the design handoff's `@media(max-width:768px)` rule.
 const MOBILE_BREAKPOINT = 768;
@@ -51,6 +52,7 @@ export const ProductListRow = ({
   onToggleSelect,
 }: ProductListRowProps) => {
   const router = useRouter();
+  const { tokens } = useTheme();
   const { width } = useWindowDimensions();
   // `useWindowDimensions` re-renders the component when the window
   // resizes or the device rotates — the layout reflows live across the
@@ -70,7 +72,7 @@ export const ProductListRow = ({
   return (
     <View
       style={{
-        backgroundColor: '#FFFFFF',
+        backgroundColor: tokens.colors.bgCard,
         borderRadius: 14,
         // Mobile: stack the header strip and the metrics column.
         // Desktop: dense single row across.
@@ -85,7 +87,7 @@ export const ProductListRow = ({
         elevation: 1,
         outlineStyle: 'solid' as never,
         outlineWidth: selected ? 2 : 0,
-        outlineColor: '#1B5E3B',
+        outlineColor: tokens.colors.accent,
         outlineOffset: 2,
       }}
     >
@@ -127,8 +129,8 @@ export const ProductListRow = ({
             height: 22,
             borderRadius: 11,
             borderWidth: 2,
-            borderColor: '#E0D9CC',
-            backgroundColor: selected ? '#1B5E3B' : 'transparent',
+            borderColor: tokens.colors.border,
+            backgroundColor: selected ? tokens.colors.accent : 'transparent',
             alignItems: 'center',
             justifyContent: 'center',
             marginTop: 4,
@@ -136,7 +138,7 @@ export const ProductListRow = ({
           }}
         >
           {selected && (
-            <Text className="text-white font-sans-bold" style={{ fontSize: 11, lineHeight: 13 }}>
+            <Text className="text-mw-text-inverse font-sans-bold" style={{ fontSize: 11, lineHeight: 13 }}>
               ✓
             </Text>
           )}
@@ -150,10 +152,10 @@ export const ProductListRow = ({
           style={{
             width: isMobile ? 64 : 72,
             height: isMobile ? 64 : 72,
-            backgroundColor: '#FFFFFF',
+            backgroundColor: tokens.colors.bgCard,
             borderRadius: 10,
             borderWidth: 1,
-            borderColor: '#E0D9CC',
+            borderColor: tokens.colors.border,
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
@@ -183,10 +185,10 @@ export const ProductListRow = ({
         >
           <View className="flex-row items-center gap-1.5 flex-wrap">
             <View
-              className="rounded px-1.5 py-0.5 border border-border"
-              style={{ backgroundColor: '#F9F7F2' }}
+              className="rounded px-1.5 py-0.5 border border-mw-border"
+              style={{ backgroundColor: tokens.colors.bgPanel }}
             >
-              <Text className="text-[9.5px] font-sans-bold uppercase tracking-wider text-muted">
+              <Text className="text-[9.5px] font-sans-bold uppercase tracking-wider text-mw-text-muted">
                 {product.stage}
               </Text>
             </View>
@@ -211,17 +213,17 @@ export const ProductListRow = ({
             )}
           </View>
 
-          <Text className="text-[10.5px] text-muted font-sans-semibold uppercase tracking-wider mt-1">
+          <Text className="text-[10.5px] text-mw-text-muted font-sans-semibold uppercase tracking-wider mt-1">
             {product.brand}
           </Text>
           <Text
-            className="text-[13.5px] font-sans-bold text-text leading-tight mt-0.5"
+            className="text-[13.5px] font-sans-bold text-mw-text leading-tight mt-0.5"
             numberOfLines={2}
           >
             {product.name}
           </Text>
           {product.bestFor ? (
-            <Text className="text-[11px] text-green font-sans-semibold mt-1" numberOfLines={1}>
+            <Text className="text-[11px] text-mw-accent font-sans-semibold mt-1" numberOfLines={1}>
               ✓ {product.bestFor}
             </Text>
           ) : null}
@@ -242,10 +244,10 @@ export const ProductListRow = ({
               paddingHorizontal: 10,
               paddingVertical: 6,
               borderRadius: 8,
-              backgroundColor: '#EBF5EE',
+              backgroundColor: tokens.colors.accentTint,
             }}
           >
-            <Text className="text-[11px] font-sans-bold" style={{ color: '#1B5E3B' }}>
+            <Text className="text-[11px] font-sans-bold" style={{ color: tokens.colors.accent }}>
               Details →
             </Text>
           </Pressable>
@@ -280,14 +282,14 @@ export const ProductListRow = ({
                   hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                   className="rounded-md px-2 py-0.5"
                   style={{
-                    backgroundColor: isActive ? '#1B5E3B' : '#F9F7F2',
-                    borderColor:     isActive ? '#1B5E3B' : '#E0D9CC',
+                    backgroundColor: isActive ? tokens.colors.accent : tokens.colors.bgPanel,
+                    borderColor:     isActive ? tokens.colors.accent : tokens.colors.border,
                     borderWidth: 1.5,
                   }}
                 >
                   <Text
                     className="text-[10.5px] font-sans-bold"
-                    style={{ color: isActive ? '#FFFFFF' : '#6B7280' }}
+                    style={{ color: isActive ? tokens.colors.textInverse : tokens.colors.textMuted }}
                   >
                     {formatWeight(v.weightG)}
                   </Text>
@@ -344,7 +346,7 @@ export const ProductListRow = ({
               {product.organic && (
                 <FeatureChip label="ORGANIC" bg="#DCFCE7" fg="#166534" />
               )}
-              <Text className="text-[10px] text-muted font-sans">
+              <Text className="text-[10px] text-mw-text-muted font-sans">
                 {getMilkTypeIcon(product.milkType)} {product.milkType}
               </Text>
             </>
@@ -359,9 +361,9 @@ export const ProductListRow = ({
           accessibilityRole="button"
           accessibilityLabel={`View full details for ${product.name}`}
           className="rounded-lg px-3.5 py-2 self-center"
-          style={{ backgroundColor: '#EBF5EE' }}
+          style={{ backgroundColor: tokens.colors.accentTint }}
         >
-          <Text className="text-xs font-sans-bold" style={{ color: '#1B5E3B' }}>
+          <Text className="text-xs font-sans-bold" style={{ color: tokens.colors.accent }}>
             Details →
           </Text>
         </Pressable>
@@ -394,11 +396,13 @@ const MetricTile = ({
   value: string;
   accent?: boolean;
   grow?: boolean;
-}) => (
+}) => {
+  const { tokens } = useTheme();
+  return (
   <View
     className="rounded-lg items-center px-2 py-1.5"
     style={{
-      backgroundColor: accent ? '#EBF5EE' : '#F9F7F2',
+      backgroundColor: accent ? tokens.colors.accentTint : tokens.colors.bgPanel,
       minWidth: 58,
       // `flex: 1` lets the tile fill its share of the parent's main-axis
       // width. We also set `flexBasis: 0` implicitly via `flex: 1`, which
@@ -408,18 +412,19 @@ const MetricTile = ({
   >
     <Text
       className="text-[9px] font-sans-bold uppercase tracking-wider"
-      style={{ color: accent ? '#1B5E3B' : '#6B7280' }}
+      style={{ color: accent ? tokens.colors.accent : tokens.colors.textMuted }}
     >
       {label}
     </Text>
     <Text
       className="text-[12.5px] font-sans-bold mt-0.5"
-      style={{ color: accent ? '#1B5E3B' : '#1A1A1A' }}
+      style={{ color: accent ? tokens.colors.accent : tokens.colors.text }}
     >
       {value}
     </Text>
   </View>
-);
+  );
+};
 
 const FeatureChip = ({
   label,

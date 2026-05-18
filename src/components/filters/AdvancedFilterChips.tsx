@@ -17,6 +17,7 @@ import type { FilterState } from '../../types/filters';
 import { ALL_MILK_TYPES, ALL_ORIGINS, ALL_SPECIALTIES } from '../../data/products';
 import { getMilkTypeIcon, getOriginFlag } from '../../utils/icons';
 import { labelForSpecialty } from '../../utils/strings';
+import { useTheme } from '../../contexts/ThemeContext';
 
 type SpecialtyKey = Exclude<Specialty, null>;
 
@@ -56,6 +57,7 @@ export const AdvancedFilterChipsTrigger = ({
   onClear,
 }: AdvancedFilterChipsTriggerProps) => {
   const activeCount = advancedFilterCount(filters);
+  const { tokens } = useTheme();
   return (
     <View className="flex-row items-center" style={{ gap: 8 }}>
       <Pressable
@@ -72,20 +74,20 @@ export const AdvancedFilterChipsTrigger = ({
           paddingVertical: 7,
           borderRadius: 999,
           borderWidth: 1.5,
-          backgroundColor: expanded ? '#1B5E3B' : '#FFFFFF',
-          borderColor: expanded ? '#1B5E3B' : '#E0D9CC',
+          backgroundColor: expanded ? tokens.colors.accent : tokens.colors.bgCard,
+          borderColor: expanded ? tokens.colors.accent : tokens.colors.border,
         }}
       >
         {/* Three-line "filters" glyph — `#` rotated. Cheap, no SVG. */}
         <Text
           className="font-sans-bold"
-          style={{ fontSize: 12, color: expanded ? '#FFFFFF' : '#1A1A1A' }}
+          style={{ fontSize: 12, color: expanded ? tokens.colors.textInverse : tokens.colors.text }}
         >
           ☰
         </Text>
         <Text
           className="font-sans-semibold"
-          style={{ fontSize: 12.5, color: expanded ? '#FFFFFF' : '#1A1A1A' }}
+          style={{ fontSize: 12.5, color: expanded ? tokens.colors.textInverse : tokens.colors.text }}
         >
           Filters
         </Text>
@@ -97,11 +99,13 @@ export const AdvancedFilterChipsTrigger = ({
               borderRadius: 8.5,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: '#E07B39',
+              // v2 has no amber; the count badge is an emphasis/interactive
+              // indicator → accent (the brand's interactive colour).
+              backgroundColor: tokens.colors.accent,
               marginLeft: 2,
             }}
           >
-            <Text className="text-[9px] font-sans-bold text-white">{activeCount}</Text>
+            <Text className="text-[9px] font-sans-bold text-mw-text-inverse">{activeCount}</Text>
           </View>
         )}
       </Pressable>
@@ -119,11 +123,11 @@ export const AdvancedFilterChipsTrigger = ({
             paddingVertical: 7,
             borderRadius: 999,
             borderWidth: 1.5,
-            borderColor: '#E0D9CC',
-            backgroundColor: '#FFFFFF',
+            borderColor: tokens.colors.border,
+            backgroundColor: tokens.colors.bgCard,
           }}
         >
-          <Text className="text-[12px] font-sans-semibold" style={{ color: '#E07B39' }}>
+          <Text className="text-[12px] font-sans-semibold" style={{ color: tokens.colors.accent }}>
             ✕ Clear
           </Text>
         </Pressable>
@@ -156,7 +160,7 @@ export const AdvancedFilterChipsDrawer = ({
   onToggleExtHydro,
 }: AdvancedFilterChipsDrawerProps) => (
   <View
-    className="bg-surface border-b border-border"
+    className="bg-mw-bg-card border-b border-mw-border"
     style={{ paddingHorizontal: 16, paddingVertical: 8 }}
   >
     <ScrollView
@@ -208,16 +212,19 @@ export const AdvancedFilterChipsDrawer = ({
 /* Internal helpers                                                            */
 /* -------------------------------------------------------------------------- */
 
-const SectionLabel = ({ children }: { children: string }) => (
-  <View style={{ paddingHorizontal: 6 }}>
-    <Text
-      className="font-sans-bold uppercase"
-      style={{ fontSize: 10.5, color: '#6B7280', letterSpacing: 0.6 }}
-    >
-      {children}
-    </Text>
-  </View>
-);
+const SectionLabel = ({ children }: { children: string }) => {
+  const { tokens } = useTheme();
+  return (
+    <View style={{ paddingHorizontal: 6 }}>
+      <Text
+        className="font-sans-bold uppercase"
+        style={{ fontSize: 10.5, color: tokens.colors.textMuted, letterSpacing: 0.6 }}
+      >
+        {children}
+      </Text>
+    </View>
+  );
+};
 
 const Chip = ({
   label,
@@ -229,33 +236,36 @@ const Chip = ({
   active: boolean;
   onPress: () => void;
   capitalize?: boolean;
-}) => (
-  <Pressable
-    onPress={onPress}
-    accessibilityRole="button"
-    accessibilityState={{ selected: active }}
-    accessibilityLabel={`Toggle filter ${label}`}
-    hitSlop={{ top: 9, bottom: 9, left: 4, right: 4 }}
-    style={{
-      paddingHorizontal: 13,
-      paddingVertical: 6,
-      borderRadius: 999,
-      borderWidth: 1.5,
-      backgroundColor: active ? '#1B5E3B' : '#FFFFFF',
-      borderColor: active ? '#1B5E3B' : '#E0D9CC',
-    }}
-  >
-    <Text
-      className="text-[12.5px] font-sans-medium"
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`Toggle filter ${label}`}
+      hitSlop={{ top: 9, bottom: 9, left: 4, right: 4 }}
       style={{
-        color: active ? '#FFFFFF' : '#1A1A1A',
-        textTransform: capitalize ? 'capitalize' : 'none',
+        paddingHorizontal: 13,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1.5,
+        backgroundColor: active ? tokens.colors.accent : tokens.colors.bgCard,
+        borderColor: active ? tokens.colors.accent : tokens.colors.border,
       }}
     >
-      {label}
-    </Text>
-  </Pressable>
-);
+      <Text
+        className="text-[12.5px] font-sans-medium"
+        style={{
+          color: active ? tokens.colors.textInverse : tokens.colors.text,
+          textTransform: capitalize ? 'capitalize' : 'none',
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+};
 
 /* -------------------------------------------------------------------------- */
 /* Backwards-compat wrapper                                                    */
@@ -281,7 +291,7 @@ export const AdvancedFilterChips = (props: AdvancedFilterChipsProps) => {
   return (
     <View>
       <View
-        className="bg-surface border-b border-border"
+        className="bg-mw-bg-card border-b border-mw-border"
         style={{ paddingHorizontal: 16, paddingVertical: 8 }}
       >
         <AdvancedFilterChipsTrigger

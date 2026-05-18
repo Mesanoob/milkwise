@@ -49,6 +49,7 @@ import { formatWeight } from '../../utils/format';
 import { labelForSpecialty } from '../../utils/strings';
 import { getOriginFlag, getMilkTypeIcon } from '../../utils/icons';
 import { Tag } from '../Tag';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export interface ProductCardProps {
   product:    Product;
@@ -64,6 +65,9 @@ export const ProductCard = ({
   onToggleSelect,
 }: ProductCardProps) => {
   const router = useRouter();
+  // Inline styles can't take Tailwind classes; theme-reactive colour
+  // values come from the context (CSS-var classes for the rest).
+  const { tokens } = useTheme();
 
   // Variant index lives on the card — design spec swaps the price metrics
   // in-place when the user taps a pack size. Critically, this state is
@@ -82,7 +86,7 @@ export const ProductCard = ({
   return (
     <View
       accessibilityLabel={`${product.brand} ${product.name}, ${product.stage}`}
-      className="bg-surface overflow-hidden flex-1 min-w-[200px]"
+      className="bg-mw-bg-card overflow-hidden flex-1 min-w-[200px]"
       // 14px corner radius matches the design's `--radius` token. Tailwind's
       // `rounded-lg` is only 8px, so we set it inline. `overflow-hidden`
       // above clips the image at the rounded corner.
@@ -98,7 +102,7 @@ export const ProductCard = ({
         // Green outline when this card is in the compare selection.
         outlineStyle: 'solid' as never,
         outlineWidth: selected ? 2.5 : 0,
-        outlineColor: '#1B5E3B',
+        outlineColor: tokens.colors.accent,
         outlineOffset: 2,
       }}
     >
@@ -107,7 +111,7 @@ export const ProductCard = ({
         onPress={goToDetail}
         accessibilityRole="button"
         accessibilityLabel={`Open details for ${product.name}`}
-        className="w-full bg-surface relative"
+        className="w-full bg-mw-bg-card relative"
         style={{ aspectRatio: 100 / 72 }}
       >
         <Image
@@ -122,13 +126,20 @@ export const ProductCard = ({
           accessibilityElementsHidden
         />
 
-        {/* Stage pill — top-left overlay, subtle muted-on-white. */}
+        {/* Stage pill — top-left overlay. Scrim AND text are intentionally
+            theme-independent: the chip floats over the (always-light)
+            product photo, so a flipping token would turn the text light
+            on a white scrim in dark mode. Fixed dark-grey on fixed white
+            keeps it legible in both themes — same rationale as the scrim. */}
         <View
           pointerEvents="none"
           className="absolute top-2 left-2 rounded px-1.5 py-0.5"
           style={{ backgroundColor: 'rgba(255,255,255,0.9)' }}
         >
-          <Text className="text-[10px] font-sans-semibold text-muted">
+          <Text
+            className="text-[10px] font-sans-semibold"
+            style={{ color: '#6E6A60' }}
+          >
             {product.stage}
           </Text>
         </View>
@@ -161,10 +172,12 @@ export const ProductCard = ({
           height: 24,
           borderRadius: 12,
           borderWidth: 2,
-          borderColor: selected
-            ? '#1B5E3B'
-            : (!canSelect ? '#E0D9CC' : '#E0D9CC'),
-          backgroundColor: selected ? '#1B5E3B' : 'rgba(255,255,255,0.9)',
+          // Unselected fill stays a translucent white (it's a checkbox
+          // floating over the product photo — theme-independent, like the
+          // stage scrim). Selected fill/outline + the border use accent /
+          // border tokens so they flip with the theme.
+          borderColor: selected ? tokens.colors.accent : tokens.colors.border,
+          backgroundColor: selected ? tokens.colors.accent : 'rgba(255,255,255,0.9)',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 2,
@@ -172,7 +185,7 @@ export const ProductCard = ({
         }}
       >
         {selected && (
-          <Text className="text-white font-sans-bold" style={{ fontSize: 12, lineHeight: 14 }}>
+          <Text className="text-mw-text-inverse font-sans-bold" style={{ fontSize: 12, lineHeight: 14 }}>
             ✓
           </Text>
         )}
@@ -192,7 +205,7 @@ export const ProductCard = ({
                 specialty={product.specialty}
               />
             )}
-            <Text className="text-[10px] text-muted font-sans-medium">
+            <Text className="text-[10px] text-mw-text-muted font-sans-medium">
               {getOriginFlag(product.origin)} {getMilkTypeIcon(product.milkType)}
             </Text>
             {product.halal && (
@@ -211,13 +224,13 @@ export const ProductCard = ({
           </View>
 
           <Text
-            className="text-[10px] text-muted font-sans-semibold uppercase tracking-wider mt-1.5"
+            className="text-[10px] text-mw-text-muted font-sans-semibold uppercase tracking-wider mt-1.5"
             numberOfLines={1}
           >
             {product.brand}
           </Text>
           <Text
-            className="text-[13px] font-sans-bold text-text leading-tight mt-0.5"
+            className="text-[13px] font-sans-bold text-mw-text leading-tight mt-0.5"
             numberOfLines={2}
           >
             {product.name}
@@ -249,14 +262,14 @@ export const ProductCard = ({
                   hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                   className="rounded-md px-2 py-0.5"
                   style={{
-                    backgroundColor: isActive ? '#1B5E3B' : '#F9F7F2',
-                    borderColor:     isActive ? '#1B5E3B' : '#E0D9CC',
+                    backgroundColor: isActive ? tokens.colors.accent : tokens.colors.bgPanel,
+                    borderColor:     isActive ? tokens.colors.accent : tokens.colors.border,
                     borderWidth: 1.5,
                   }}
                 >
                   <Text
                     className="text-[10.5px] font-sans-bold"
-                    style={{ color: isActive ? '#FFFFFF' : '#6B7280' }}
+                    style={{ color: isActive ? tokens.colors.textInverse : tokens.colors.textMuted }}
                   >
                     {formatWeight(v.weightG)}
                   </Text>
@@ -276,13 +289,13 @@ export const ProductCard = ({
           </View>
 
           {/* Size + scoop dose */}
-          <Text className="text-[11px] text-muted font-sans" numberOfLines={1}>
+          <Text className="text-[11px] text-mw-text-muted font-sans" numberOfLines={1}>
             {formatWeight(variant?.weightG ?? 0)} · {variant?.scoopG ?? 0}g scoop + {variant?.waterMl ?? 0}mL water
           </Text>
 
           {/* Best-for line */}
           {product.bestFor ? (
-            <Text className="text-[11px] text-green font-sans-semibold" numberOfLines={1}>
+            <Text className="text-[11px] text-mw-accent font-sans-semibold" numberOfLines={1}>
               ✓ {product.bestFor}
             </Text>
           ) : null}
@@ -310,13 +323,13 @@ export const ProductCard = ({
         onPress={goToDetail}
         accessibilityRole="button"
         accessibilityLabel={`View full details for ${product.name}`}
-        className="px-3.5 py-2 flex-row items-center justify-between border-t border-border"
-        style={{ backgroundColor: '#F9F7F2' }}
+        className="px-3.5 py-2 flex-row items-center justify-between border-t border-mw-border"
+        style={{ backgroundColor: tokens.colors.bgPanel }}
       >
-        <Text className="text-[11.5px] text-green font-sans-semibold">
+        <Text className="text-[11.5px] text-mw-accent font-sans-semibold">
           View full details
         </Text>
-        <Text className="text-sm text-green font-sans-bold">→</Text>
+        <Text className="text-sm text-mw-accent font-sans-bold">→</Text>
       </Pressable>
     </View>
   );
@@ -334,25 +347,28 @@ const MetricTile = ({
   label: string;
   value: string;
   accent?: boolean;
-}) => (
-  <View
-    className="flex-1 rounded-lg items-center py-1.5"
-    style={{ backgroundColor: accent ? '#EBF5EE' : '#F9F7F2' }}
-  >
-    <Text
-      className="text-[9.5px] font-sans-bold uppercase tracking-wider"
-      style={{ color: accent ? '#1B5E3B' : '#6B7280' }}
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <View
+      className="flex-1 rounded-lg items-center py-1.5"
+      style={{ backgroundColor: accent ? tokens.colors.accentTint : tokens.colors.bgPanel }}
     >
-      {label}
-    </Text>
-    <Text
-      className="text-[13px] font-sans-bold mt-0.5"
-      style={{ color: accent ? '#1B5E3B' : '#1A1A1A' }}
-    >
-      {value}
-    </Text>
-  </View>
-);
+      <Text
+        className="text-[9.5px] font-sans-bold uppercase tracking-wider"
+        style={{ color: accent ? tokens.colors.accent : tokens.colors.textMuted }}
+      >
+        {label}
+      </Text>
+      <Text
+        className="text-[13px] font-sans-bold mt-0.5"
+        style={{ color: accent ? tokens.colors.accent : tokens.colors.text }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+};
 
 const FeatureChip = ({
   label,
