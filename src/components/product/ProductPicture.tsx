@@ -28,10 +28,13 @@ export const ProductPicture = ({ product }: ProductPictureProps) => {
         style={{ borderRadius: 14 }}
       >
         <View className="w-full aspect-square bg-mw-bg-panel items-center justify-center">
+          {/* `mw-packshot` (global.css): dark-theme sticker halo + float.
+              Padding keeps the halo inside the well's overflow-hidden clip. */}
           <Image
+            className="mw-packshot"
             source={getProductImage(defaultVariant?.img ?? product.img)}
             resizeMode="contain"
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: '100%', height: '100%', padding: 14 }}
             accessibilityLabel={product.name}
           />
         </View>

@@ -114,13 +114,19 @@ export const ProductCard = ({
         className="w-full bg-mw-bg-card relative"
         style={{ aspectRatio: 100 / 72 }}
       >
+        {/* `mw-packshot` (global.css) adds the dark-theme die-cut sticker
+            halo + ambient float. Padding is 16 (not 8) so the silhouette
+            shrinks enough for the halo to live inside the card's
+            `overflow-hidden` clip — the well is short, the can would
+            otherwise touch top/bottom and the halo would be cut. */}
         <Image
+          className="mw-packshot"
           source={getProductImage(variant?.img ?? product.img)}
           resizeMode="contain"
           style={{
             position: 'absolute',
             top: 0, left: 0, right: 0, bottom: 0,
-            width: '100%', height: '100%', padding: 8,
+            width: '100%', height: '100%', padding: 16,
           }}
           accessibilityLabel=""
           accessibilityElementsHidden

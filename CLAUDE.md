@@ -2,7 +2,7 @@
 
 Single source of truth for this project. Read top-to-bottom on first session, then jump back to sections 8, 9, and 9b as work progresses. Last updated 2026-05-19.
 
-> **ACTIVE WORK: v2 design re-skin (Phases 0–4c ✅, Phase 5 next).** New design system (sage/cream, Inter/Inter Tight/JetBrains Mono, OS-seeded dark mode) on branch `redesign-v2`. **Visual re-skin only** — no screen/data/logic changes. The full v1 token layer is now deleted; `themeFor`/`palette` + `mw-*`/`font-*` classes are the sole token source. **Resume point:** Phase 5 — mono-tabular numerals: every price / $/g / $/scoop / $/mL / scoop count / calculator output → `font-mono` (class) or `fonts.mono` + `style={{ fontVariant: ['tabular-nums'] }}`, per §7b numeral rules. Then Phase 6 (radii/shadows/spacing application) + Phase 7 (a11y + Safari sweep, both themes). Exact conventions + commit trail in §9b. `testingprod` remains the shippable v1; all v2 work is committed locally on `redesign-v2` (not pushed).
+> **ACTIVE WORK: v2 design re-skin (Phases 0–4c ✅, Phase 5 next).** New design system (sage/cream, Inter/Inter Tight/JetBrains Mono, OS-seeded dark mode) on branch `redesign-v2`. **Visual re-skin only** — no screen/data/logic changes. The full v1 token layer is now deleted; `themeFor`/`palette` + `mw-*`/`font-*` classes are the sole token source. **Resume point:** Phase 5 — mono-tabular numerals: every price / $/g / $/scoop / $/mL / scoop count / calculator output → `font-mono` (class) or `fonts.mono` + `style={{ fontVariant: ['tabular-nums'] }}`, per §7b numeral rules. Then Phase 6 (radii/shadows/spacing application) + Phase 7 (a11y + Safari sweep, both themes). Exact conventions + commit trail in §9b. `testingprod` remains the shippable v1; all v2 work is committed locally on `redesign-v2` (not pushed). **Side-track done this session (uncommitted on `redesign-v2`):** product imagery migrated to transparent-background WebP, scale-normalised, and given a dark-theme CSS "sticker halo" — see §7c.
 
 ---
 
@@ -100,7 +100,9 @@ src/
   types/          product.ts, filters.ts
   utils/          format.ts, strings.ts, icons.ts
 
-assets/products/  72 product tin images
+assets/products/  72 transparent WebP packshots (1200² @84% — see §7c)
+assets/products-original/    71 archived original JPGs (untracked backup)
+assets/_webp_prenormalize/   72 pre-normalisation WebPs (untracked backup)
 scripts/          generate-image-map.mjs
 ```
 
@@ -149,6 +151,27 @@ The v2 work is a **visual re-skin ONLY**. Hard scope boundary:
 - **Surfaces:** page is `bg` (never pure white), `bgPanel` for bands/alt rows/inputs, `bgCard` only where a card lifts. Radii: 4px inputs, 8px cards, 24px pills. Shadows: 2-step (`s1` resting, `s2` hover/float), `s3` modals only.
 - **Tracking** is `em` in CSS; RN `letterSpacing` is px → convert.
 - **Re-apply Phase D a11y against new tokens:** WCAG AA contrast must hold in BOTH themes; re-verify focus ring visibility on sage/dark surfaces.
+
+---
+
+## 7c. Product imagery pipeline — read before touching `assets/products/`
+
+Done this session (uncommitted on `redesign-v2`). Non-obvious; a fresh agent **will** break things without this.
+
+**State:** `assets/products/` is now **72 transparent-background WebP** packshots, **0 JPG**. Every file is a **1200×1200 square** canvas with the product **alpha-trimmed and re-padded to exactly 84% content height** → all cans render at identical scale under `resizeMode="contain"`.
+
+**Why each piece exists:**
+- **JPG → WebP + `products.json` `.jpg`→`.webp` (135 refs) is a USER-DIRECTED EXCEPTION to the §7b "no data changes" fence.** Do **not** "fix"/revert it as a scope violation. `productDetails.json` has no image refs. `imageMap.ts` is regenerated (`npm run generate:images`) — keys are filename+ext, lookup is exact-match, so data ext and disk ext must agree.
+- **Scale normalisation** fixed the real bug: the background-removal tool left wildly different transparent margins (content height 63–92% of canvas; FairPrice Gold Stage 3 was a 1024×1536 portrait at 60%). CSS cannot fix this — `contain`/`object-fit` work on the canvas, not the alpha content. Normalisation is the only correct fix and makes the cheap CSS uniform for free.
+- **Dark "sticker halo"** = `.mw-packshot` / `.dark .mw-packshot` in `global.css` (drop-shadow stack: 1-pass ambient on light, 12-pass die-cut white edge + bloom + ambient on dark). Scoped via the existing `.dark` ancestor selector — light pays for 1 shadow, the heavy stack only runs in dark where the blend problem exists. `filter: drop-shadow()` traces the element's rendered alpha (incl. RN-Web's background-image) so it follows the can silhouette, not the box. Attached to the `<Image>` in `ProductCard` + `ProductPicture` only (Compare Cards/Photos — the reported surface); `padding` bumped (8→16 / +14) so the halo lives inside the card's `overflow-hidden` clip. List/modal thumbnails (tiny `overflow:hidden` wells) and the detail-hero white plate are deliberately **excluded**.
+
+**Reproduce / add a new image:** drop the WebP in `assets/products/`, then re-run the normalisation (Pillow ≥11, user-scoped `pip3 install --user Pillow`): alpha-trim at α>4 → centre on 1200² transparent canvas at 84% height (LANCZOS, quality 90, method 6, RGBA preserved), then `npm run generate:images`. An un-normalised image will visibly mis-scale next to the rest. The one-off script was run inline (not saved) — params above are the spec.
+
+**Backups (untracked, outside the generator's scan path → no side effects):**
+- `assets/products-original/` — 71 original JPGs (the `FairPrice_Gold_900g_Stage3.jpg` original was lost: the user's manual WebP conversion removed it before archival — 71/72, not recoverable from this repo).
+- `assets/_webp_prenormalize/` — the 72 pre-normalisation WebPs (delete once happy).
+
+**Known source-asset defect (out of scope, NOT a CSS/normalisation bug):** Nature One Standard, FairPrice Follow-On/Newborn have a circular *"Breastfeeding is best… IMPORTANT NOTICE"* watermark baked into the artwork. Cannot be removed without altering the product (user constraint) — needs clean source re-exports.
 
 ---
 

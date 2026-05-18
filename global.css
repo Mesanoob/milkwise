@@ -135,6 +135,69 @@ body {
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
 }
 
+/* ────────────────────────────────────────────────────────────────────────
+   Product packshot "sticker" treatment.
+
+   The product images are transparent-background WebPs. On the cream light
+   theme they read fine, but on the near-black dark surface a bare cut-out
+   floats with no separation and the background-removal matte's rough edge
+   shows. This adds an e-commerce die-cut sticker look — purely in CSS, the
+   source images are never touched.
+
+   WHY drop-shadow (not box-shadow / outline): `filter: drop-shadow()` is
+   applied to the element's *rendered alpha*, which for react-native-web's
+   <Image> includes the background-image. So the shadow traces the can
+   silhouette, not the element's rectangle. box-shadow/outline can only
+   shadow the box and would draw a rectangle around the whitespace.
+
+   WHY a stack: each drop-shadow operates on the *result* of the previous
+   one, so they compound. Eight hard 1px shadows in a ring build an even
+   die-cut edge; two soft white passes thicken it to a medium (~8-12px)
+   band; one low-alpha wide white pass is the outer bloom (low alpha =
+   smooth falloff, not neon); the final dark pass — applied LAST so it sits
+   behind the white — is the premium ambient float.
+
+   WHY scoped to `.dark`: the white halo is only meaningful on the dark
+   surface. Light mode pays for ONE cheap ambient shadow; the expensive
+   ~12-pass filter only runs in dark mode where the problem exists. (The
+   `.dark` class is toggled on <html> by ThemeContext, same mechanism that
+   flips every --mw-* var above — one ancestor selector, no JS, no
+   per-card re-render.)
+
+   Perf note: ~12 filter passes × the 61-card grid is non-trivial on
+   low-end mobile. It is dark-mode-only and static (no scroll animation),
+   which keeps it acceptable; revisit if the WebP optimisation pass
+   (backlog) lands and frees headroom. */
+.mw-packshot {
+  /* Light theme: clean premium float only — a soft, diffuse ambient
+     shadow. White edge/bloom would be invisible on the cream card and
+     are deliberately omitted. */
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.16));
+}
+
+.dark .mw-packshot {
+  filter:
+    /* 1. die-cut edge — 8-way, zero blur, builds an even hard outline */
+    drop-shadow( 1px  0    0 #fff)
+    drop-shadow(-1px  0    0 #fff)
+    drop-shadow( 0    1px  0 #fff)
+    drop-shadow( 0   -1px  0 #fff)
+    drop-shadow( 1px  1px  0 #fff)
+    drop-shadow(-1px -1px  0 #fff)
+    drop-shadow( 1px -1px  0 #fff)
+    drop-shadow(-1px  1px  0 #fff)
+    /* 2. thicken to a medium white band — soft, anti-aliased, masks any
+          residual matte fringe from the background removal */
+    drop-shadow(0 0 2px #fff)
+    drop-shadow(0 0 5px rgba(255, 255, 255, 0.85))
+    /* 3. subtle outer white bloom — low alpha + wide blur = smooth
+          falloff, premium (not a neon glow) */
+    drop-shadow(0 0 14px rgba(255, 255, 255, 0.22))
+    /* 4. premium ambient float — diffuse, slightly below/behind, last so
+          it renders behind the white silhouette */
+    drop-shadow(0 16px 22px rgba(0, 0, 0, 0.55));
+}
+
 /* Screen-reader-only utility — used to hide live regions and skip links
    visually while keeping them accessible to assistive tech. Standard
    "visually-hidden" recipe; safe for all modern browsers. */
