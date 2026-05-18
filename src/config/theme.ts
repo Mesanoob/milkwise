@@ -1,36 +1,19 @@
 /**
  * Design tokens — the single source of truth for brand colour, spacing,
- * typography, and elevation values used anywhere in the app.
+ * typography, and elevation used anywhere in the app.
  *
  * WHY this file exists separately from `tailwind.config.js`:
- *   Tailwind config drives `className="bg-green"` (NativeWind/web styling),
- *   but pieces of the app written in plain `StyleSheet` (e.g. native-only
- *   animation helpers, third-party components that demand a hex string)
- *   still need access to the same palette. Both files must stay in sync.
+ *   Tailwind config drives `className="bg-mw-bg"` (NativeWind/web styling),
+ *   but pieces of the app written in plain `StyleSheet` / RN `style` props
+ *   (which can't take a class) read the same values via
+ *   `useTheme().tokens` → `themeFor(scheme)`. Both files are mirrors and
+ *   must stay in sync.
  *
- * If you change a value here, also update the matching key in
- * `tailwind.config.js`. The two files are mirrors of each other by design.
+ * The v1 flat palette / t-shirt scales were removed in the v2 re-skin
+ * Phase 4c. Everything theme-reactive now flows through `palette` +
+ * `themeFor`; `specialtyColors` / `stageColors` are the only flat,
+ * spec-exact maps that deliberately survive (design-handoff contract).
  */
-
-// ── Brand palette ───────────────────────────────────────────────────────────
-// Hex values come straight from the MilkWise SG design system.
-// `as const` makes every value a literal type — autocomplete inside the app
-// will suggest `theme.colors.green` rather than `string`.
-export const colors = {
-  bg:            '#F5F2EB', // page background — warm off-white
-  surface:       '#FFFFFF', // primary card / sheet background
-  surface2:      '#F9F7F2', // alternate surface for subtle striping
-  green:         '#1B5E3B', // primary brand colour
-  greenMid:      '#2D7A52',
-  greenLight:    '#EBF5EE', // tint for active states and highlights
-  amber:         '#E07B39', // accent — used sparingly for value/best-in-class
-  amberLight:    '#FDF0E6',
-  text:          '#1A1A1A', // primary text
-  muted:         '#6B7280', // secondary text, captions, hints
-  border:        '#E0D9CC', // hairline dividers and field borders
-  danger:        '#DC2626', // destructive / error states
-  warning:       '#F59E0B',
-} as const;
 
 // ── Specialty colours ───────────────────────────────────────────────────────
 // One colour pair per specialty tag. Each entry has a `bg` (light tint used
@@ -95,83 +78,18 @@ export const fonts = {
   bodySemibold:    'Inter_600SemiBold',
   mono:            'JetBrainsMono_400Regular',
   monoMedium:      'JetBrainsMono_500Medium',
-
-  // ── Back-compat aliases (Phase 1 of the v2 re-skin) ───────────────────
-  // Existing components still reference the DM-era keys and the matching
-  // `font-serif`/`font-sans*` Tailwind classes. The re-skin is staged:
-  // Phase 4 migrates every call site to the semantic keys above, then
-  // these aliases (and the mirrored Tailwind classes) are deleted.
-  // Until then they remap the old names onto the new families so nothing
-  // falls back to a system font mid-migration.
-  serif:        'InterTight_700Bold', // DM Serif Display → display bold
-  sansLight:    'Inter_400Regular',   // DM Sans 300 retired; 400 is the floor
-  sans:         'Inter_400Regular',
-  sansMedium:   'Inter_500Medium',
-  sansSemibold: 'Inter_600SemiBold',
-  sansBold:     'Inter_600SemiBold',  // no Inter 700; 600 is the body ceiling
-} as const;
-
-export const fontSizes = {
-  xs:   11,
-  sm:   12,
-  base: 14,
-  md:   15,
-  lg:   18,
-  xl:   22,
-  '2xl': 28,
-  '3xl': 34,
-} as const;
-
-// ── Spacing ─────────────────────────────────────────────────────────────────
-// 4-pixel base unit. Use these instead of arbitrary numbers in StyleSheet
-// (in Tailwind classes you'd write `p-2`, `gap-4` etc.).
-export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
-  '2xl': 32,
-  '3xl': 48,
 } as const;
 
 // ── Shape ───────────────────────────────────────────────────────────────────
-// v1 t-shirt keys (sm/md/lg/xl/full) and v2 semantic keys (input/card/…)
-// coexist — their names don't collide. Phase 6 migrates card/input/pill
-// usages onto the v2 keys; the v1 keys are deleted with the v1 colour block.
+// v2 semantic radii (design-reference/tokens.ts — canonical). The v1
+// t-shirt keys (sm/md/lg/xl/full) were removed in Phase 4c. Phase 6
+// applies these per the §7b surface rules.
 export const radius = {
-  // v1 (deprecated — used by un-migrated components)
-  sm: 6,
-  md: 10,
-  lg: 14, // old brand default — used on cards
-  xl: 20,
-  full: 9999,
-  // v2 (design-reference/tokens.ts — canonical)
   input: 8,
   card: 12,
   cardLg: 18,
   pill: 999,
   circle: 9999,
-} as const;
-
-// ── Elevation ───────────────────────────────────────────────────────────────
-// Web/Android use `shadow*` keys; iOS reads the same keys but the values are
-// approximations of `box-shadow`. Always test on a real device after edits.
-export const shadow = {
-  sm: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 12,
-    elevation: 1,
-  },
-  lg: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.13,
-    shadowRadius: 32,
-    elevation: 4,
-  },
 } as const;
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -289,7 +207,7 @@ export const weight = {
   bold: '700',
 } as const;
 
-/** v2 type scale (px). Distinct from the v1 `fontSizes` t-shirt scale. */
+/** v2 type scale (px), from design-reference/tokens.ts. */
 export const fontSize = {
   displayXl: 72, displayL: 56, displayM: 40,
   h1: 36, h2: 28, h3: 22, h4: 18,
@@ -394,19 +312,3 @@ export const themeFor = (s: Scheme) => ({
   stageColors,
 });
 export type V2Theme = ReturnType<typeof themeFor>;
-
-// ── v1 aggregate (deprecated) ───────────────────────────────────────────────
-// Kept verbatim so un-migrated components keep importing `theme`. Phase 4
-// swaps these consumers onto `themeFor(scheme)` / `palette`, then this block
-// and every v1-only export above are removed.
-export const theme = {
-  colors,
-  specialtyColors,
-  stageColors,
-  fonts,
-  fontSizes,
-  spacing,
-  radius,
-  shadow,
-} as const;
-export type Theme = typeof theme;

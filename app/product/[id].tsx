@@ -108,7 +108,7 @@ export default function ProductDetailScreen() {
     return (
       <Screen>
         <View className="px-4 py-12 items-center">
-          <Text className="text-mw-text-muted text-sm font-sans">Loading product…</Text>
+          <Text className="text-mw-text-muted text-sm font-body">Loading product…</Text>
         </View>
       </Screen>
     );
@@ -155,15 +155,15 @@ export default function ProductDetailScreen() {
           <View className="flex-row items-center flex-wrap gap-1.5 mb-5">
             <Link href="/" asChild>
               <Pressable accessibilityRole="link">
-                <Text className="text-[12.5px] text-mw-accent font-sans-bold">
+                <Text className="text-[12.5px] text-mw-accent font-body-semibold">
                   ← All Products
                 </Text>
               </Pressable>
             </Link>
-            <Text className="text-[12.5px] text-mw-text-muted font-sans">/</Text>
-            <Text className="text-[12.5px] text-mw-text-muted font-sans">{product.stage}</Text>
-            <Text className="text-[12.5px] text-mw-text-muted font-sans">/</Text>
-            <Text className="text-[12.5px] text-mw-text font-sans-medium">{product.name}</Text>
+            <Text className="text-[12.5px] text-mw-text-muted font-body">/</Text>
+            <Text className="text-[12.5px] text-mw-text-muted font-body">{product.stage}</Text>
+            <Text className="text-[12.5px] text-mw-text-muted font-body">/</Text>
+            <Text className="text-[12.5px] text-mw-text font-body-medium">{product.name}</Text>
           </View>
 
           {/* ── Hero card ──────────────────────────────────────────────── */}
@@ -192,7 +192,7 @@ export default function ProductDetailScreen() {
 
                 {product.variants.length > 1 && (
                   <View>
-                    <Text className="text-[11px] font-sans-bold text-mw-text-muted uppercase tracking-wider mb-2.5">
+                    <Text className="text-[11px] font-body-semibold text-mw-text-muted uppercase tracking-wider mb-2.5">
                       Available Sizes
                     </Text>
                     <View className="flex-row flex-wrap gap-2">
@@ -237,19 +237,19 @@ export default function ProductDetailScreen() {
                               />
                             </View>
                             <Text
-                              className="font-sans-bold text-[12px]"
+                              className="font-body-semibold text-[12px]"
                               style={{ color: isActive ? tokens.colors.accent : tokens.colors.text }}
                             >
                               {formatWeight(vt.weightG)}
                             </Text>
                             <Text
-                              className="font-sans-semibold text-[11px] mt-0.5"
+                              className="font-body-semibold text-[11px] mt-0.5"
                               style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted }}
                             >
                               ${vt.price.toFixed(2)}
                             </Text>
                             <Text
-                              className="font-sans text-[10px] mt-0.5"
+                              className="font-body text-[10px] mt-0.5"
                               style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted }}
                             >
                               ${(vt.pricePerGram ?? 0).toFixed(4)}/g
@@ -280,11 +280,11 @@ export default function ProductDetailScreen() {
 
                 {/* Brand kicker + name */}
                 <View>
-                  <Text className="text-[12px] font-sans-bold text-mw-text-muted uppercase tracking-wider mb-1.5">
+                  <Text className="text-[12px] font-body-semibold text-mw-text-muted uppercase tracking-wider mb-1.5">
                     {product.brand}
                   </Text>
                   <Text
-                    className="font-serif text-mw-text leading-tight"
+                    className="font-display-bold text-mw-text leading-tight"
                     style={{ fontSize: 28 }}
                   >
                     {product.fullName}
@@ -292,7 +292,7 @@ export default function ProductDetailScreen() {
                 </View>
 
                 {/* Description */}
-                <Text className="text-[14.5px] text-mw-text-muted font-sans" style={{ lineHeight: 24 }}>
+                <Text className="text-[14.5px] text-mw-text-muted font-body" style={{ lineHeight: 24 }}>
                   {product.desc}
                 </Text>
 
@@ -308,8 +308,8 @@ export default function ProductDetailScreen() {
                       borderColor: tokens.colors.accentSoft,
                     }}
                   >
-                    <Text className="text-[13px] font-sans">
-                      <Text className="font-sans-bold" style={{ color: tokens.colors.accent }}>✓ Best for: </Text>
+                    <Text className="text-[13px] font-body">
+                      <Text className="font-body-semibold" style={{ color: tokens.colors.accent }}>✓ Best for: </Text>
                       <Text style={{ color: tokens.colors.accentHover }}>{product.bestFor}</Text>
                     </Text>
                   </View>
@@ -317,7 +317,7 @@ export default function ProductDetailScreen() {
 
                 {/* Pricing grid */}
                 <View>
-                  <Text className="text-[11px] font-sans-bold text-mw-text-muted uppercase tracking-wider mb-2.5">
+                  <Text className="text-[11px] font-body-semibold text-mw-text-muted uppercase tracking-wider mb-2.5">
                     Pricing — {formatWeight(variant?.weightG ?? 0)} tin
                   </Text>
                   <View className="flex-row flex-wrap gap-2.5">
@@ -362,7 +362,7 @@ export default function ProductDetailScreen() {
           {/* ── Price comparison in stage ──────────────────────────────── */}
           <Card style={{ marginTop: 24 }}>
             <SectionHead icon="💰" title={`Price comparison — ${product.stage} ($ per gram, low to high)`} />
-            <Text className="text-[12px] text-mw-text-muted font-sans mb-4">
+            <Text className="text-[12px] text-mw-text-muted font-body mb-4">
               Ranked #{rankInStage} of {stageProducts.length} products by $/gram · Default size shown
             </Text>
             <View className="gap-2">
@@ -396,7 +396,7 @@ export default function ProductDetailScreen() {
                       }}
                     >
                       <Text
-                        className="font-sans-bold text-[10px]"
+                        className="font-body-semibold text-[10px]"
                         style={{ color: isThis ? tokens.colors.textInverse : tokens.colors.textMuted }}
                       >
                         {i + 1}
@@ -423,7 +423,7 @@ export default function ProductDetailScreen() {
                     </View>
                     <View className="flex-1 min-w-0 gap-1">
                       <Text
-                        className="font-sans text-[12.5px]"
+                        className="font-body text-[12.5px]"
                         numberOfLines={1}
                         style={{
                           fontWeight: isThis ? '700' : '500',
@@ -442,7 +442,7 @@ export default function ProductDetailScreen() {
                       />
                     </View>
                     <Text
-                      className="font-sans-bold text-[13px]"
+                      className="font-body-semibold text-[13px]"
                       style={{ color: isThis ? tokens.colors.accent : tokens.colors.text }}
                     >
                       ${ppg.toFixed(4)}/g
@@ -495,12 +495,12 @@ export default function ProductDetailScreen() {
                         }}
                       >
                         <Text
-                          className="font-sans-semibold text-[12px] text-mw-text-muted uppercase tracking-wider"
+                          className="font-body-semibold text-[12px] text-mw-text-muted uppercase tracking-wider"
                           style={{ minWidth: 130 }}
                         >
                           {s.l}
                         </Text>
-                        <Text className="font-sans-medium text-[13.5px] text-mw-text flex-1">
+                        <Text className="font-body-medium text-[13.5px] text-mw-text flex-1">
                           {s.v}
                         </Text>
                       </View>
@@ -524,7 +524,7 @@ export default function ProductDetailScreen() {
                   >
                     {['Size', 'Tin Price', '$ / gram', '$ / scoop', '$ / mL', 'Scoops', 'Scoop', 'Water'].map((h) => (
                       <View key={h} style={{ width: 96, paddingHorizontal: 14, paddingVertical: 10 }}>
-                        <Text className="font-sans-bold text-[10.5px] uppercase tracking-wider text-mw-text-muted">{h}</Text>
+                        <Text className="font-body-semibold text-[10.5px] uppercase tracking-wider text-mw-text-muted">{h}</Text>
                       </View>
                     ))}
                   </View>
@@ -551,7 +551,7 @@ export default function ProductDetailScreen() {
                           <Cell width={96} bold color={isSelected ? tokens.colors.accent : tokens.colors.text}>
                             {formatWeight(vt.weightG)}
                             {isSelected && (
-                              <Text className="font-sans-bold text-[10px]" style={{ color: tokens.colors.textInverse, backgroundColor: tokens.colors.accent, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 6 }}>
+                              <Text className="font-body-semibold text-[10px]" style={{ color: tokens.colors.textInverse, backgroundColor: tokens.colors.accent, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 6 }}>
                                 {' selected'}
                               </Text>
                             )}
@@ -562,7 +562,7 @@ export default function ProductDetailScreen() {
                           <Cell width={96} bold color={isBest ? tokens.colors.accent : tokens.colors.text}>
                             ${ppg.toFixed(4)}
                             {isBest && (
-                              <Text className="font-sans-bold text-[10px]" style={{ color: '#065F46', backgroundColor: '#D1FAE5', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 5 }}>
+                              <Text className="font-body-semibold text-[10px]" style={{ color: '#065F46', backgroundColor: '#D1FAE5', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 5 }}>
                                 {' ✓ best'}
                               </Text>
                             )}
@@ -578,7 +578,7 @@ export default function ProductDetailScreen() {
                   })()}
                 </View>
               </ScrollView>
-              <Text className="text-[12px] text-mw-text-muted font-sans mt-3">
+              <Text className="text-[12px] text-mw-text-muted font-body mt-3">
                 💡 Tap a row to view that size. "Best" = lowest price per gram across all sizes of this product.
               </Text>
             </Card>
@@ -608,7 +608,7 @@ export default function ProductDetailScreen() {
                     }}
                   >
                     <Text style={{ fontSize: 22 }}>{f.icon}</Text>
-                    <Text className="font-sans-semibold text-[13px]" style={{ color: tokens.colors.accent }}>
+                    <Text className="font-body-semibold text-[13px]" style={{ color: tokens.colors.accent }}>
                       {f.label}
                     </Text>
                   </View>
@@ -674,7 +674,7 @@ export default function ProductDetailScreen() {
                     borderColor: tokens.colors.border,
                   }}
                 >
-                  <Text className="font-sans-semibold text-[12.5px]" style={{ color: tokens.colors.warnText }}>
+                  <Text className="font-body-semibold text-[12.5px]" style={{ color: tokens.colors.warnText }}>
                     ⚠️ {detail.allergen}
                   </Text>
                 </View>
@@ -689,7 +689,7 @@ export default function ProductDetailScreen() {
                   paddingVertical: 16,
                 }}
               >
-                <Text className="text-[13.5px] text-mw-text font-sans" style={{ lineHeight: 25 }}>
+                <Text className="text-[13.5px] text-mw-text font-body" style={{ lineHeight: 25 }}>
                   {detail.ingredients.split(',').map((item, i, arr) => (
                     <Text key={i}>
                       <Text
@@ -707,7 +707,7 @@ export default function ProductDetailScreen() {
                   ))}
                 </Text>
               </View>
-              <Text className="text-[11.5px] text-mw-text-muted font-sans mt-2.5">
+              <Text className="text-[11.5px] text-mw-text-muted font-body mt-2.5">
                 Ingredients listed in descending order by weight as declared on product label.
               </Text>
             </Card>
@@ -718,7 +718,7 @@ export default function ProductDetailScreen() {
             <Card style={{ marginTop: 24 }}>
               <SectionHead icon="📊" title="Nutritional Information (per 100g powder)" />
               <NutritionTable rows={detail.fullNutrition} />
-              <Text className="text-[11.5px] text-mw-text-muted font-sans mt-2.5">
+              <Text className="text-[11.5px] text-mw-text-muted font-body mt-2.5">
                 💡 Values per 100g of powder unless stated. Source: product label.
               </Text>
             </Card>
@@ -770,13 +770,13 @@ export default function ProductDetailScreen() {
                       />
                     </View>
                     <View className="flex-1 min-w-0">
-                      <Text className="text-[10px] font-sans-bold text-mw-text-muted uppercase tracking-wider">
+                      <Text className="text-[10px] font-body-semibold text-mw-text-muted uppercase tracking-wider">
                         {q.brand}
                       </Text>
-                      <Text className="text-[12.5px] font-sans-bold text-mw-text mt-0.5" numberOfLines={2}>
+                      <Text className="text-[12.5px] font-body-semibold text-mw-text mt-0.5" numberOfLines={2}>
                         {q.name}
                       </Text>
-                      <Text className="text-[11.5px] font-sans-bold text-mw-accent mt-1">
+                      <Text className="text-[11.5px] font-body-semibold text-mw-accent mt-1">
                         ${(q.pricePerGram ?? 0).toFixed(4)}/g
                       </Text>
                     </View>
@@ -795,8 +795,8 @@ export default function ProductDetailScreen() {
               paddingVertical: 16,
             }}
           >
-            <Text className="text-[11.5px] text-mw-text-muted font-sans" style={{ lineHeight: 18 }}>
-              <Text className="font-sans-bold text-mw-text">Disclaimer: </Text>
+            <Text className="text-[11.5px] text-mw-text-muted font-body" style={{ lineHeight: 18 }}>
+              <Text className="font-body-semibold text-mw-text">Disclaimer: </Text>
               All product data, prices, and nutritional information are sourced
               from Singapore retail channels and product labels. Always check
               the actual product label and consult your paediatrician before
@@ -847,7 +847,7 @@ const Card = ({
 const SectionHead = ({ icon, title }: { icon: string; title: string }) => (
   <View className="flex-row items-center gap-2.5 mb-4">
     <Text style={{ fontSize: 20 }}>{icon}</Text>
-    <Text className="font-serif text-mw-text" style={{ fontSize: 20 }}>{title}</Text>
+    <Text className="font-display-bold text-mw-text" style={{ fontSize: 20 }}>{title}</Text>
   </View>
 );
 
@@ -866,7 +866,7 @@ const Badge = ({ bg, fg, label }: { bg: string; fg: string; label: string }) => 
     }}
   >
     <Text
-      className="font-sans-bold text-[12px] uppercase tracking-wider"
+      className="font-body-semibold text-[12px] uppercase tracking-wider"
       style={{ color: fg }}
     >
       {label}
@@ -887,7 +887,7 @@ const SpecialtyBadge = ({ specialty }: { specialty: SpecialtyKey }) => {
       }}
     >
       <Text
-        className="font-sans-bold text-[12px] uppercase tracking-wider"
+        className="font-body-semibold text-[12px] uppercase tracking-wider"
         style={{ color: fg }}
       >
         {labelForSpecialty(specialty)}
@@ -923,12 +923,12 @@ const StatBox = ({
       }}
     >
       <Text
-        className="font-serif"
+        className="font-display-bold"
         style={{ fontSize: 20, color: highlight ? tokens.colors.accent : tokens.colors.text, lineHeight: 22 }}
       >
         {value}
       </Text>
-      <Text className="font-sans-medium text-[11px] text-mw-text-muted mt-1.5">{label}</Text>
+      <Text className="font-body-medium text-[11px] text-mw-text-muted mt-1.5">{label}</Text>
     </View>
   );
 };
@@ -936,10 +936,10 @@ const StatBox = ({
 /** Scoop info fact — small label/value pair used in the scoop strip. */
 const ScoopFact = ({ label, value }: { label: string; value: string }) => (
   <View className="items-center">
-    <Text className="font-sans-bold text-[10px] uppercase tracking-wider text-mw-text-muted mb-0.5">
+    <Text className="font-body-semibold text-[10px] uppercase tracking-wider text-mw-text-muted mb-0.5">
       {label}
     </Text>
-    <Text className="font-sans-bold text-mw-text" style={{ fontSize: 16 }}>
+    <Text className="font-body-semibold text-mw-text" style={{ fontSize: 16 }}>
       {value}
     </Text>
   </View>
@@ -963,7 +963,7 @@ const InfoPill = ({ icon, label }: { icon: string; label: string }) => {
       }}
     >
       <Text className="text-[14px]">{icon}</Text>
-      <Text className="font-sans-semibold text-[12px]" style={{ color: tokens.colors.accent }}>
+      <Text className="font-body-semibold text-[12px]" style={{ color: tokens.colors.accent }}>
         {label}
       </Text>
     </View>
@@ -999,13 +999,13 @@ const FeatureBlock = ({
     <Text style={{ fontSize: 22 }}>{icon}</Text>
     <View className="flex-1">
       <Text
-        className="font-sans-bold text-[12px] uppercase tracking-wider"
+        className="font-body-semibold text-[12px] uppercase tracking-wider"
         style={{ color: labelColor }}
       >
         {label}
       </Text>
       <Text
-        className="font-sans-semibold text-[13.5px] mt-1"
+        className="font-body-semibold text-[13.5px] mt-1"
         style={{ color: valueColor }}
       >
         {value}
@@ -1035,11 +1035,11 @@ const NutBlock = ({
       alignItems: 'center',
     }}
   >
-    <Text className="font-sans-bold" style={{ fontSize: 20, color: fg }}>
+    <Text className="font-body-semibold" style={{ fontSize: 20, color: fg }}>
       {value}
     </Text>
     <Text
-      className="font-sans-bold text-[11px] uppercase tracking-wider mt-1"
+      className="font-body-semibold text-[11px] uppercase tracking-wider mt-1"
       style={{ color: fg }}
     >
       {label}
@@ -1073,7 +1073,7 @@ const Cell = ({
       }}
     >
       <Text
-        className="font-sans"
+        className="font-body"
         style={{
           fontSize: size ?? 13.5,
           fontWeight: bold ? '700' : '400',
@@ -1154,7 +1154,7 @@ const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
             >
               <View style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
                 <Text
-                  className="font-sans-bold text-[11px] uppercase tracking-wider"
+                  className="font-body-semibold text-[11px] uppercase tracking-wider"
                   style={{ color: tokens.colors.accent }}
                 >
                   {cat}
@@ -1198,7 +1198,7 @@ const TableHeader = ({
   return (
     <View style={{ width, paddingHorizontal: 14, paddingVertical: 9 }}>
       <Text
-        className="font-sans-bold text-[11px] uppercase tracking-wider"
+        className="font-body-semibold text-[11px] uppercase tracking-wider"
         style={{ color: tokens.colors.textInverse, textAlign: align ?? 'left' }}
       >
         {text}
@@ -1228,7 +1228,7 @@ const TableCell = ({
   return (
     <View style={{ width, paddingHorizontal: 14, paddingVertical: 9 }}>
       <Text
-        className="font-sans"
+        className="font-body"
         style={{
           fontSize: size ?? 13,
           fontWeight: bold ? '600' : '500',

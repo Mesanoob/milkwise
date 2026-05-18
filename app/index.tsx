@@ -111,7 +111,7 @@ export default function CompareScreen() {
       >
         <SortDropdown value={filters.sort} onChange={setSort} />
         {directionHint ? (
-          <Text className="text-[11.5px] text-mw-accent font-sans-semibold">
+          <Text className="text-[11.5px] text-mw-accent font-body-semibold">
             {directionHint}
           </Text>
         ) : null}
@@ -133,7 +133,7 @@ export default function CompareScreen() {
             `accessibilityLiveRegion="polite"` handles native; ARIA
             attributes spread for web (react-native-web passes them through). */}
         <Text
-          className="text-xs text-mw-text-muted font-sans-medium"
+          className="text-xs text-mw-text-muted font-body-medium"
           accessibilityLiveRegion="polite"
           accessibilityRole="text"
           {...(Platform.OS === 'web'
@@ -173,7 +173,7 @@ export default function CompareScreen() {
             paddingVertical: 8,
           }}
         >
-          <Text className="text-xs font-sans-bold" style={{ color: tokens.colors.danger }}>
+          <Text className="text-xs font-body-semibold" style={{ color: tokens.colors.danger }}>
             Couldn't load products: {error.message}
           </Text>
         </View>
@@ -203,8 +203,8 @@ export default function CompareScreen() {
               paddingVertical: 16,
             }}
           >
-            <Text className="text-[11.5px] text-mw-text-muted font-sans" style={{ lineHeight: 18 }}>
-              <Text className="text-mw-text font-sans-bold">Disclaimer: </Text>
+            <Text className="text-[11.5px] text-mw-text-muted font-body" style={{ lineHeight: 18 }}>
+              <Text className="text-mw-text font-body-semibold">Disclaimer: </Text>
               All prices are indicative retail data sourced from major
               Singapore retailers (FairPrice, Watsons, Shopee, Lazada).
               Always verify current prices before purchasing.

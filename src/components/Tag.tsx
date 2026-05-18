@@ -72,7 +72,7 @@ export const Tag = ({
         style={{ backgroundColor: bg }}
       >
         <Text
-          className={`font-sans-bold tracking-wider uppercase ${sizeClasses.text}`}
+          className={`font-body-semibold tracking-wider uppercase ${sizeClasses.text}`}
           style={{ color: fg }}
         >
           {label}
@@ -87,7 +87,7 @@ export const Tag = ({
   return (
     <View className={`${bgClass} rounded ${sizeClasses.wrap}`}>
       <Text
-        className={`${textClass} font-sans-bold tracking-wider uppercase ${sizeClasses.text}`}
+        className={`${textClass} font-body-semibold tracking-wider uppercase ${sizeClasses.text}`}
       >
         {label}
       </Text>

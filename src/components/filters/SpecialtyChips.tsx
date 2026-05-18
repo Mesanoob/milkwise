@@ -29,7 +29,7 @@ export const SpecialtyChips = ({ value, onToggle }: SpecialtyChipsProps) => (
     style={{ paddingHorizontal: 16, paddingVertical: 8 }}
   >
     <Text
-      className="text-[11px] font-sans-bold uppercase tracking-wider text-mw-text-muted"
+      className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted"
       style={{ marginRight: 8 }}
     >
       Type
@@ -82,7 +82,7 @@ const Chip = ({ label, active, onPress }: ChipProps) => {
       }}
     >
       <Text
-        className="text-[12.5px] font-sans-medium"
+        className="text-[12.5px] font-body-medium"
         style={{ color: active ? tokens.colors.textInverse : tokens.colors.text }}
       >
         {label}

@@ -36,7 +36,7 @@ export const ProductPicture = ({ product }: ProductPictureProps) => {
           />
         </View>
         <View className="px-2 py-1.5 items-center">
-          <Text className="text-xs font-sans-bold text-mw-text">
+          <Text className="text-xs font-body-semibold text-mw-text">
             {formatCurrency(defaultVariant?.price ?? product.price)}
           </Text>
         </View>

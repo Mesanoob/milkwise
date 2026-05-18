@@ -130,10 +130,9 @@ module.exports = {
       // for custom fonts. Use these utilities instead.
       //
       // v2 design system: Inter Tight (display) · Inter (body) ·
-      // JetBrains Mono (numerals). The `sans*`/`serif` keys are Phase-1
-      // back-compat aliases — removed after the Phase 4 sweep.
+      // JetBrains Mono (numerals). DM-era `sans*`/`serif` back-compat
+      // aliases were removed in Phase 4c once every call site migrated.
       fontFamily: {
-        // Semantic v2
         "display-semibold": ["InterTight_600SemiBold"],
         "display-bold":     ["InterTight_700Bold"],
         body:               ["Inter_400Regular"],
@@ -141,13 +140,6 @@ module.exports = {
         "body-semibold":    ["Inter_600SemiBold"],
         mono:               ["JetBrainsMono_400Regular"],
         "mono-medium":      ["JetBrainsMono_500Medium"],
-        // Back-compat aliases (remap DM-era classes onto v2 families)
-        serif:           ["InterTight_700Bold"],
-        "sans-light":    ["Inter_400Regular"],
-        sans:            ["Inter_400Regular"],
-        "sans-medium":   ["Inter_500Medium"],
-        "sans-semibold": ["Inter_600SemiBold"],
-        "sans-bold":     ["Inter_600SemiBold"],
       },
     },
   },

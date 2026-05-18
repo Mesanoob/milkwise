@@ -2,7 +2,7 @@
  * app/_layout.tsx — the root layout for the entire app.
  *
  * Every screen under `app/` renders inside this layout. Responsibilities:
- *   • Pull in NativeWind's compiled CSS so `className="bg-green"` paints
+ *   • Pull in NativeWind's compiled CSS so `className="bg-mw-bg"` paints
  *     pixels on web.
  *   • Load the brand font families (Inter Tight + Inter + JetBrains Mono)
  *     BEFORE rendering any screens — otherwise users see a flash of
@@ -41,7 +41,6 @@ import {
   JetBrainsMono_400Regular,
   JetBrainsMono_500Medium,
 } from '@expo-google-fonts/jetbrains-mono';
-import { colors } from '../src/config/theme';
 import { ProductsProvider } from '../src/contexts/ProductsContext';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 
@@ -59,7 +58,8 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 export default function RootLayout() {
   // `useFonts` returns [loaded, error]. We register every weight up-front
   // so any screen can pick one via the Tailwind `font-*` helpers
-  // (mapped in tailwind.config.js) or `theme.fonts.*`.
+  // (`font-body`, `font-display-bold`, `font-mono`, … — mapped in
+  // tailwind.config.js).
   //
   // Why every weight at once instead of lazy-loading per screen:
   //   - Total payload is modest; one-shot keeps code simple and avoids
@@ -124,11 +124,7 @@ export default function RootLayout() {
 /**
  * Inner shell that consumes the theme. Split out so it sits *below*
  * `ThemeProvider` and can call `useTheme()` — the status-bar icon colour
- * and the inter-screen background flip with the active scheme.
- *
- * Until Phase 4 migrates screens onto v2 tokens, the per-screen UI still
- * paints in the v1 palette; this only themes the chrome the navigator
- * itself draws, so the change is invisible on the default (light) scheme.
+ * and the inter-screen transition background flip with the active scheme.
  */
 function ThemedShell() {
   const { scheme, tokens } = useTheme();
@@ -140,12 +136,11 @@ function ThemedShell() {
           // We render our own header inside <Screen>, so hide the
           // navigator's default one. Cleaner cross-platform parity.
           headerShown: false,
-          // Background shown mid-transition between screens. v1 screens
-          // are still light, so keep v1 `colors.bg` on the light scheme
-          // and switch to the v2 dark page colour only when dark is on —
-          // no visible change in light mode, correct framing in dark.
+          // Background shown mid-transition between screens. `tokens` is
+          // already resolved for the active scheme, so this is the correct
+          // page colour in both light (#F7F3EA) and dark (#1A1916).
           contentStyle: {
-            backgroundColor: scheme === 'dark' ? tokens.colors.bg : colors.bg,
+            backgroundColor: tokens.colors.bg,
           },
           // Smooth fade between screens looks better than the platform
           // default slide on web; iOS/Android still get native gestures.

@@ -94,7 +94,7 @@ export const Header = () => {
               <Text style={{ fontSize: 17, lineHeight: 20 }}>🍼</Text>
             </View>
             <Text
-              className="font-serif text-mw-text"
+              className="font-display-bold text-mw-text"
               style={{ fontSize: 20 }}
             >
               MilkWise <Text style={{ color: tokens.colors.accent }}>SG</Text>
@@ -126,7 +126,7 @@ export const Header = () => {
                     }}
                   >
                     <Text
-                      className={isActive ? 'font-sans-semibold' : 'font-sans-medium'}
+                      className={isActive ? 'font-body-semibold' : 'font-body-medium'}
                       style={{
                         fontSize: 13.5,
                         color: isActive ? tokens.colors.accent : tokens.colors.textMuted,

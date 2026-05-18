@@ -59,7 +59,7 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
 
   return (
     <View className="flex-1">
-      <Text className="text-[10px] font-sans-bold text-mw-text-muted uppercase tracking-wider mb-1">
+      <Text className="text-[10px] font-body-semibold text-mw-text-muted uppercase tracking-wider mb-1">
         {label} — <Text style={{ color: tokens.colors.accent }}>{value}{unit}</Text>
       </Text>
 
@@ -77,7 +77,7 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
 
       <View className="flex-row justify-between mb-2">
         <Text className="text-[10px] text-mw-text-muted">{min}{unit}</Text>
-        <Text className="text-[10px] font-sans-semibold" style={{ color: tokens.colors.accent }}>{mid}{unit}</Text>
+        <Text className="text-[10px] font-body-semibold" style={{ color: tokens.colors.accent }}>{mid}{unit}</Text>
         <Text className="text-[10px] text-mw-text-muted">{max}{unit}</Text>
       </View>
 
@@ -87,11 +87,11 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
           onPress={dec}
           className="w-9 h-9 rounded-lg border border-mw-border bg-mw-bg-panel items-center justify-center"
         >
-          <Text className="text-lg font-sans-bold text-mw-text">−</Text>
+          <Text className="text-lg font-body-semibold text-mw-text">−</Text>
         </Pressable>
 
         <TextInput
-          className="flex-1 text-center py-2 text-lg font-sans-bold rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text"
+          className="flex-1 text-center py-2 text-lg font-body-semibold rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text"
           keyboardType="numeric"
           value={raw}
           onChangeText={setRaw}
@@ -105,10 +105,10 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
           onPress={inc}
           className="w-9 h-9 rounded-lg border border-mw-border bg-mw-bg-panel items-center justify-center"
         >
-          <Text className="text-lg font-sans-bold text-mw-text">+</Text>
+          <Text className="text-lg font-body-semibold text-mw-text">+</Text>
         </Pressable>
 
-        <Text className="text-sm font-sans-semibold text-mw-text-muted">{unit}</Text>
+        <Text className="text-sm font-body-semibold text-mw-text-muted">{unit}</Text>
       </View>
     </View>
   );

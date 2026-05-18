@@ -20,7 +20,7 @@ export const EmptyState = ({ title, description, actionLabel, onAction }: EmptyS
   return (
     <View className="items-center justify-center px-6 py-12 gap-3">
       <Text className="text-4xl">¬</Text>
-      <Text className="text-lg font-serif text-mw-text text-center">{title}</Text>
+      <Text className="text-lg font-display-bold text-mw-text text-center">{title}</Text>
       {description && (
         <Text className="text-sm text-mw-text-muted text-center max-w-[320px]">
           {description}
@@ -32,7 +32,7 @@ export const EmptyState = ({ title, description, actionLabel, onAction }: EmptyS
           accessibilityLabel={actionLabel}
           className="mt-2 bg-mw-accent px-4 py-2 rounded-lg"
         >
-          <Text className="text-mw-text-inverse text-sm font-sans-semibold">{actionLabel}</Text>
+          <Text className="text-mw-text-inverse text-sm font-body-semibold">{actionLabel}</Text>
         </Pressable>
       )}
     </View>

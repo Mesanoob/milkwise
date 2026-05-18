@@ -120,13 +120,13 @@ export default function MostSoldScreen() {
           }}
         >
           <Text
-            className="font-serif text-mw-text-inverse"
+            className="font-display-bold text-mw-text-inverse"
             style={{ fontSize: 32, lineHeight: 36, textAlign: 'center' }}
           >
             Most Sold Formula in Singapore
           </Text>
           <Text
-            className="font-sans"
+            className="font-body"
             style={{
               fontSize: 14,
               // textInverse (not translucent white): white would vanish on
@@ -151,7 +151,7 @@ export default function MostSoldScreen() {
           {top3.length === 3 && (
             <View>
               <Text
-                className="font-serif text-mw-text"
+                className="font-display-bold text-mw-text"
                 style={{ fontSize: 26, marginBottom: 24 }}
               >
                 🏆 Top 3 Best Sellers
@@ -177,7 +177,7 @@ export default function MostSoldScreen() {
           {rest.length > 0 && (
             <View>
               <Text
-                className="font-serif text-mw-text"
+                className="font-display-bold text-mw-text"
                 style={{ fontSize: 22, marginBottom: 16 }}
               >
                 📊 Rankings #4–{ranked.length}
@@ -204,13 +204,13 @@ export default function MostSoldScreen() {
             }}
           >
             <Text
-              className="font-serif text-mw-text"
+              className="font-display-bold text-mw-text"
               style={{ fontSize: 22, marginBottom: 6 }}
             >
               📈 Estimated Market Share
             </Text>
             <Text
-              className="font-sans"
+              className="font-body"
               style={{ fontSize: 12.5, color: tokens.colors.textMuted, marginBottom: 20, lineHeight: 18 }}
             >
               Stage 1 formula · Singapore retail · April 2026 · Indicative
@@ -238,8 +238,8 @@ export default function MostSoldScreen() {
               padding: 16,
             }}
           >
-            <Text className="text-[11.5px] text-mw-text-muted font-sans" style={{ lineHeight: 18 }}>
-              <Text className="font-sans-bold text-mw-text">Disclaimer: </Text>
+            <Text className="text-[11.5px] text-mw-text-muted font-body" style={{ lineHeight: 18 }}>
+              <Text className="font-body-semibold text-mw-text">Disclaimer: </Text>
               Market share estimates are indicative and based on publicly
               available retail data, paediatrician survey reports, and parent
               community forums as of April 2026. Actual market share figures
@@ -307,13 +307,13 @@ const PodiumCard = ({
           {MEDAL_ICON[product.rank] ?? '🏅'}
         </Text>
         <Text
-          className="font-sans-bold text-white"
+          className="font-body-semibold text-white"
           style={{ fontSize: big ? 15 : 13, marginTop: 6 }}
         >
           #{product.rank} Best Seller
         </Text>
         <Text
-          className="font-sans"
+          className="font-body"
           style={{ fontSize: big ? 11 : 10, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}
         >
           {product.share}% est. market share
@@ -343,13 +343,13 @@ const PodiumCard = ({
       <View style={{ paddingHorizontal: 16, paddingVertical: 14, gap: 10 }}>
         <View>
           <Text
-            className="font-sans-semibold text-mw-text-muted"
+            className="font-body-semibold text-mw-text-muted"
             style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 0.5 }}
           >
             {product.brand}
           </Text>
           <Text
-            className="font-sans-bold text-mw-text"
+            className="font-body-semibold text-mw-text"
             style={{ fontSize: big ? 15 : 13.5, marginTop: 2, lineHeight: big ? 18 : 16 }}
             numberOfLines={2}
           >
@@ -357,7 +357,7 @@ const PodiumCard = ({
           </Text>
           {product.desc ? (
             <Text
-              className="font-sans"
+              className="font-body"
               style={{ fontSize: 11.5, color: tokens.colors.textMuted, marginTop: 4, lineHeight: 17 }}
               numberOfLines={2}
             >
@@ -383,7 +383,7 @@ const PodiumCard = ({
           }}
         >
           <Text
-            className="font-sans-bold"
+            className="font-body-semibold"
             style={{
               fontSize: 10,
               color: tokens.colors.accent,
@@ -395,7 +395,7 @@ const PodiumCard = ({
             Why parents choose it
           </Text>
           <Text
-            className="font-sans"
+            className="font-body"
             style={{ fontSize: 11.5, color: tokens.colors.accentHover, lineHeight: 17 }}
           >
             {product.why}
@@ -412,7 +412,7 @@ const PodiumCard = ({
           }}
         >
           <Text
-            className="font-sans-semibold text-mw-text-inverse"
+            className="font-body-semibold text-mw-text-inverse"
             style={{ fontSize: 13 }}
           >
             View details →
@@ -474,7 +474,7 @@ const RankRow = ({
         }}
       >
         <Text
-          className="font-sans-bold text-mw-text-muted"
+          className="font-body-semibold text-mw-text-muted"
           style={{ fontSize: 15 }}
         >
           {product.rank}
@@ -508,13 +508,13 @@ const RankRow = ({
       {/* Identity column */}
       <View style={{ flexBasis: 220, flexGrow: 0, flexShrink: 1, minWidth: 160 }}>
         <Text
-          className="font-sans-semibold text-mw-text-muted"
+          className="font-body-semibold text-mw-text-muted"
           style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: 0.4 }}
         >
           {product.brand}
         </Text>
         <Text
-          className="font-sans-bold text-mw-text"
+          className="font-body-semibold text-mw-text"
           style={{ fontSize: 14, marginTop: 2, lineHeight: 17 }}
           numberOfLines={2}
         >
@@ -522,7 +522,7 @@ const RankRow = ({
         </Text>
         {product.bestFor ? (
           <Text
-            className="font-sans-semibold text-mw-accent"
+            className="font-body-semibold text-mw-accent"
             style={{ fontSize: 11.5, marginTop: 3 }}
             numberOfLines={1}
           >
@@ -540,10 +540,10 @@ const RankRow = ({
             marginBottom: 5,
           }}
         >
-          <Text className="font-sans" style={{ fontSize: 11, color: tokens.colors.textMuted }}>
+          <Text className="font-body" style={{ fontSize: 11, color: tokens.colors.textMuted }}>
             Est. market share
           </Text>
-          <Text className="font-sans-bold text-mw-text" style={{ fontSize: 11 }}>
+          <Text className="font-body-semibold text-mw-text" style={{ fontSize: 11 }}>
             {product.share}%
           </Text>
         </View>
@@ -569,7 +569,7 @@ const RankRow = ({
       {/* Why note */}
       <View style={{ flexBasis: 240, flexShrink: 1, minWidth: 0 }}>
         <Text
-          className="font-sans"
+          className="font-body"
           style={{ fontSize: 11.5, color: tokens.colors.textMuted, lineHeight: 17 }}
           numberOfLines={2}
         >
@@ -608,13 +608,13 @@ const ShareBar = ({
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <Text
-        className="font-sans-bold text-mw-text-muted"
+        className="font-body-semibold text-mw-text-muted"
         style={{ width: 26, fontSize: 12, textAlign: 'right' }}
       >
         #{rank}
       </Text>
       <Text
-        className="font-sans-semibold text-mw-text"
+        className="font-body-semibold text-mw-text"
         style={{ width: 160, fontSize: 12 }}
         numberOfLines={1}
       >
@@ -640,7 +640,7 @@ const ShareBar = ({
         />
       </View>
       <Text
-        className="font-sans-bold text-mw-accent"
+        className="font-body-semibold text-mw-accent"
         style={{ width: 40, fontSize: 12, textAlign: 'right' }}
       >
         {share}%
@@ -676,7 +676,7 @@ const MiniMetric = ({
       }}
     >
       <Text
-        className="font-sans-bold uppercase"
+        className="font-body-semibold uppercase"
         style={{
           fontSize: 9.5,
           color: accent ? tokens.colors.accent : tokens.colors.textMuted,
@@ -686,7 +686,7 @@ const MiniMetric = ({
         {label}
       </Text>
       <Text
-        className="font-sans-bold"
+        className="font-body-semibold"
         style={{
           fontSize: 12.5,
           color: accent ? tokens.colors.accent : tokens.colors.text,

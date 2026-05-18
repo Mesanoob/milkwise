@@ -178,10 +178,10 @@ export default function CalculatorScreen() {
   return (
     <Screen>
       <View style={{ backgroundColor: colors.green, paddingHorizontal: 24, paddingVertical: 36, alignItems: 'center' }}>
-        <Text className="font-serif text-mw-text-inverse text-center" style={{ fontSize: 38, lineHeight: 42 }} selectable>
+        <Text className="font-display-bold text-mw-text-inverse text-center" style={{ fontSize: 38, lineHeight: 42 }} selectable>
           Baby Feeding Calculator
         </Text>
-        <Text className="text-mw-text-inverse text-center font-sans mt-3 max-w-[560px]" style={{ lineHeight: 22 }} selectable>
+        <Text className="text-mw-text-inverse text-center font-body mt-3 max-w-[560px]" style={{ lineHeight: 22 }} selectable>
           Based on Singapore HPB and KKH-style feeding benchmarks. Estimate intake, formula use, and cost from birth to 12 months.
         </Text>
       </View>
@@ -189,7 +189,7 @@ export default function CalculatorScreen() {
       <View style={{ maxWidth: 960, width: '100%', marginHorizontal: 'auto', paddingHorizontal: 20, paddingVertical: 28, gap: 24 }}>
         <Card>
           <SectionTitle title="Baby Info" icon="1" />
-          <Text className="text-sm text-mw-text-muted font-sans mb-5" selectable>
+          <Text className="text-sm text-mw-text-muted font-body mb-5" selectable>
             Enter birth date and feeding details to personalise the benchmark and cost estimate.
           </Text>
 
@@ -204,7 +204,7 @@ export default function CalculatorScreen() {
                 <DobPart label="YYYY" value={year} onChange={setYear} maxLength={4} width={86} />
               </View>
               {dobError ? (
-                <Text className="text-xs mt-2 font-sans" style={{ color: colors.danger }} selectable>
+                <Text className="text-xs mt-2 font-body" style={{ color: colors.danger }} selectable>
                   {dobError}
                 </Text>
               ) : null}
@@ -227,13 +227,13 @@ export default function CalculatorScreen() {
           {age && guideline ? (
             <View className="mt-5 rounded-xl flex-row flex-wrap items-center gap-4" style={{ backgroundColor: colors.greenLight, padding: 18 }}>
               <View style={{ flex: 1, minWidth: 240 }}>
-                <Text className="text-[11px] font-sans-bold uppercase tracking-wider" style={{ color: colors.green }}>
+                <Text className="text-[11px] font-body-semibold uppercase tracking-wider" style={{ color: colors.green }}>
                   Your baby is
                 </Text>
-                <Text className="font-serif mt-1" style={{ fontSize: 30, color: colors.green }} selectable>
+                <Text className="font-display-bold mt-1" style={{ fontSize: 30, color: colors.green }} selectable>
                   {age.months} month{age.months === 1 ? '' : 's'}, {age.days} day{age.days === 1 ? '' : 's'}
                 </Text>
-                <Text className="text-xs font-sans mt-1" style={{ color: colors.greenMid }} selectable>
+                <Text className="text-xs font-body mt-1" style={{ color: colors.greenMid }} selectable>
                   Born {dob!.toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })} · Stage 1 formula {age.months < 12 ? 'still applicable' : 'transitioning to Stage 2+'}
                 </Text>
               </View>
@@ -247,7 +247,7 @@ export default function CalculatorScreen() {
 
           {age && guideline ? (
             <View className="mt-3 rounded-lg" style={{ backgroundColor: colors.surface2, padding: 12 }}>
-              <Text className="text-xs text-mw-text-muted font-sans" style={{ lineHeight: 18 }} selectable>
+              <Text className="text-xs text-mw-text-muted font-body" style={{ lineHeight: 18 }} selectable>
                 At {age.months} months: {guideline.note}
               </Text>
             </View>
@@ -257,7 +257,7 @@ export default function CalculatorScreen() {
         {hasDob && ageMonths !== null ? (
           <Card>
             <SectionTitle title="Singapore Feeding Benchmark" icon="2" />
-            <Text className="text-sm text-mw-text-muted font-sans mb-4" selectable>
+            <Text className="text-sm text-mw-text-muted font-body mb-4" selectable>
               Recommended daily milk intake by month. Shaded band is the benchmark range.
             </Text>
             <BenchmarkChart babyMonths={ageMonths} currentDailyMl={estimate.dailyMl} />
@@ -273,7 +273,7 @@ export default function CalculatorScreen() {
         {hasDob ? (
           <Card>
             <SectionTitle title="Your Baby's Feeding" icon="3" />
-            <Text className="text-sm text-mw-text-muted font-sans mb-5" selectable>
+            <Text className="text-sm text-mw-text-muted font-body mb-5" selectable>
               Current feeding pattern drives powder usage and monthly formula cost.
             </Text>
 
@@ -306,7 +306,7 @@ export default function CalculatorScreen() {
                     trackColor={{ false: colors.border, true: colors.greenLight }}
                     thumbColor={useSupplement ? colors.green : colors.surface}
                   />
-                  <Text className="text-sm font-sans-semibold text-mw-text" selectable>
+                  <Text className="text-sm font-body-semibold text-mw-text" selectable>
                     {primaryIsBreastmilk ? 'Supplementing with formula' : 'Supplementing with a second formula'}
                   </Text>
                 </View>
@@ -343,15 +343,15 @@ export default function CalculatorScreen() {
               </View>
 
               <View className="rounded-lg flex-row flex-wrap items-center gap-2" style={{ backgroundColor: colors.surface2, padding: 12 }}>
-                <Text className="text-sm text-mw-text-muted font-sans">Total milk today:</Text>
-                <Text className="text-lg font-sans-bold" style={{ color: colors.green }} selectable>
+                <Text className="text-sm text-mw-text-muted font-body">Total milk today:</Text>
+                <Text className="text-lg font-body-semibold" style={{ color: colors.green }} selectable>
                   {estimate.dailyMl}ml
                 </Text>
-                <Text className="text-sm text-mw-text-muted font-sans" selectable>
+                <Text className="text-sm text-mw-text-muted font-body" selectable>
                   ({mlPerFeed}ml x {feedsPerDay} feeds)
                 </Text>
                 {estimate.formulaShare > 0 && estimate.formulaShare < 1 ? (
-                  <Text className="text-xs text-mw-text-muted font-sans" selectable>
+                  <Text className="text-xs text-mw-text-muted font-body" selectable>
                     Formula portion: {Math.round(estimate.formulaDailyMl)}ml
                   </Text>
                 ) : null}
@@ -366,7 +366,7 @@ export default function CalculatorScreen() {
                       trackColor={{ false: colors.border, true: colors.amber }}
                       thumbColor={hasSolids ? colors.amber : colors.surface}
                     />
-                    <Text className="text-sm font-sans-bold" style={{ color: colors.amber }} selectable>
+                    <Text className="text-sm font-body-semibold" style={{ color: colors.amber }} selectable>
                       My baby has started solids
                     </Text>
                   </View>
@@ -382,7 +382,7 @@ export default function CalculatorScreen() {
                         ]}
                         onChange={(next) => setSolidsLevel(next as SolidsLevel)}
                       />
-                      <Text className="text-xs font-sans mt-3" style={{ color: colors.amber, lineHeight: 18 }} selectable>
+                      <Text className="text-xs font-body mt-3" style={{ color: colors.amber, lineHeight: 18 }} selectable>
                         Milk remains the primary nutrition source until 12 months. Use this as a planning estimate, not medical advice.
                       </Text>
                     </View>
@@ -406,7 +406,7 @@ export default function CalculatorScreen() {
         {hasDob && showCost ? (
           <Card>
             <SectionTitle title="Formula Usage & Cost" icon="4" />
-            <Text className="text-sm text-mw-text-muted font-sans mb-5" selectable>
+            <Text className="text-sm text-mw-text-muted font-body mb-5" selectable>
               {primaryIsBreastmilk
                 ? `Breastmilk primary + ${supplementalLabel} supplement`
                 : `${primaryLabel}${useSupplement && supplementalLabel ? ` + ${supplementalLabel}` : ''}`} · {estimate.effectivePricePerGram ? `${formatCurrency(estimate.effectivePricePerGram)}/g effective` : 'No formula cost'}
@@ -420,10 +420,10 @@ export default function CalculatorScreen() {
               <StatCard value={formatCurrency((estimate.costPerMonth ?? 0) * 12)} label="Est. / year" />
             </View>
 
-            <Text className="text-base font-sans-bold text-mw-text mb-1" selectable>
+            <Text className="text-base font-body-semibold text-mw-text mb-1" selectable>
               Monthly formula cost, 0 to 12 months
             </Text>
-            <Text className="text-xs text-mw-text-muted font-sans mb-3" selectable>
+            <Text className="text-xs text-mw-text-muted font-body mb-3" selectable>
               Light green = past estimate, dark green = current month, grey = projected.
             </Text>
             <SpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths ?? 0} />
@@ -433,7 +433,7 @@ export default function CalculatorScreen() {
         {hasDob && showCost && ageMonths !== null && ageMonths > 0 ? (
           <Card>
             <SectionTitle title="Estimated Lifetime Formula Spend" icon="5" />
-            <Text className="text-sm text-mw-text-muted font-sans mb-5" selectable>
+            <Text className="text-sm text-mw-text-muted font-body mb-5" selectable>
               Past spend is estimated from benchmark intake. Projected spend uses your entered feeding rate.
             </Text>
             <View className="flex-row flex-wrap gap-3 mb-6">
@@ -441,10 +441,10 @@ export default function CalculatorScreen() {
               <SpendSummary tone="greenLight" value={formatCurrency(estimate.projectedSpend)} label={`Projected months ${ageMonths}-11`} />
               <SpendSummary tone="green" value={formatCurrency(estimate.totalSpend)} label="Stage 1 total birth to 12 months" />
             </View>
-            <Text className="text-base font-sans-bold text-mw-text mb-1" selectable>
+            <Text className="text-base font-body-semibold text-mw-text mb-1" selectable>
               Cumulative spend curve
             </Text>
-            <Text className="text-xs text-mw-text-muted font-sans mb-3" selectable>
+            <Text className="text-xs text-mw-text-muted font-body mb-3" selectable>
               Solid line is estimated actual spend. Dashed line is projected spend.
             </Text>
             <CumulativeSpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths} />
@@ -465,17 +465,17 @@ export default function CalculatorScreen() {
                 ))}
               </View>
             </ScrollView>
-            <Text className="text-[11.5px] text-mw-text-muted font-sans mt-3" style={{ lineHeight: 18 }} selectable>
+            <Text className="text-[11.5px] text-mw-text-muted font-body mt-3" style={{ lineHeight: 18 }} selectable>
               Source note: these are planning benchmarks adapted from the provided MilkWise design handoff. Always follow your paediatrician's specific advice.
             </Text>
           </Card>
         ) : (
           <View className="items-center py-12">
             <Text className="text-5xl mb-3 text-mw-text-muted">^</Text>
-            <Text className="text-xl font-serif text-mw-text mb-2" selectable>
+            <Text className="text-xl font-display-bold text-mw-text mb-2" selectable>
               Enter your baby's birthday above
             </Text>
-            <Text className="text-sm text-mw-text-muted font-sans text-center" selectable>
+            <Text className="text-sm text-mw-text-muted font-body text-center" selectable>
               The calculator will show personalised feeding benchmarks, usage, and cost estimates.
             </Text>
           </View>
@@ -506,15 +506,15 @@ const SectionTitle = ({ title, icon }: { title: string; icon: string }) => {
   return (
   <View className="flex-row items-center gap-2 mb-1">
     <View className="w-7 h-7 rounded-full items-center justify-center" style={{ backgroundColor: colors.greenLight }}>
-      <Text className="text-xs font-sans-bold" style={{ color: colors.green }}>{icon}</Text>
+      <Text className="text-xs font-body-semibold" style={{ color: colors.green }}>{icon}</Text>
     </View>
-    <Text className="font-serif text-mw-text" style={{ fontSize: 22 }} selectable>{title}</Text>
+    <Text className="font-display-bold text-mw-text" style={{ fontSize: 22 }} selectable>{title}</Text>
   </View>
   );
 };
 
 const Label = ({ children }: { children: React.ReactNode }) => (
-  <Text className="text-[11px] font-sans-bold uppercase tracking-wider text-mw-text-muted mb-2" selectable>
+  <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted mb-2" selectable>
     {children}
   </Text>
 );
@@ -533,14 +533,14 @@ const DobPart = ({
   width: number;
 }) => (
   <View>
-    <Text className="text-[10px] text-mw-text-muted font-sans-bold text-center mb-1">{label}</Text>
+    <Text className="text-[10px] text-mw-text-muted font-body-semibold text-center mb-1">{label}</Text>
     <TextInput
       value={value}
       onChangeText={(next) => onChange(next.replace(/\D/g, '').slice(0, maxLength))}
       keyboardType="numeric"
       maxLength={maxLength}
       placeholder={label}
-      className="rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text text-center font-sans-bold"
+      className="rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text text-center font-body-semibold"
       style={{ width, paddingVertical: 10, fontSize: 17 }}
     />
   </View>
@@ -569,7 +569,7 @@ const SegmentedControl = ({
           accessibilityRole="button"
           accessibilityState={{ selected: active }}
         >
-          <Text className="text-xs font-sans-semibold text-center" style={{ color: active ? colors.green : colors.muted }}>
+          <Text className="text-xs font-body-semibold text-center" style={{ color: active ? colors.green : colors.muted }}>
             {option.label}
           </Text>
         </Pressable>
@@ -583,8 +583,8 @@ const MiniStat = ({ value, label }: { value: string; label: string }) => {
   const colors = useV2Colors();
   return (
   <View className="rounded-lg bg-mw-bg-panel items-center" style={{ minWidth: 88, padding: 12 }}>
-    <Text className="font-serif" style={{ fontSize: 18, color: colors.green }} selectable>{value}</Text>
-    <Text className="text-[11px] text-mw-text-muted font-sans mt-1" selectable>{label}</Text>
+    <Text className="font-display-bold" style={{ fontSize: 18, color: colors.green }} selectable>{value}</Text>
+    <Text className="text-[11px] text-mw-text-muted font-body mt-1" selectable>{label}</Text>
   </View>
   );
 };
@@ -593,8 +593,8 @@ const StatCard = ({ value, label }: { value: string; label: string }) => {
   const colors = useV2Colors();
   return (
   <View className="rounded-lg bg-mw-bg-panel items-center" style={{ flex: 1, minWidth: 128, paddingHorizontal: 12, paddingVertical: 14 }}>
-    <Text className="font-serif text-center" style={{ fontSize: 21, color: colors.green }} selectable>{value}</Text>
-    <Text className="text-[11px] text-mw-text-muted font-sans mt-1 text-center" selectable>{label}</Text>
+    <Text className="font-display-bold text-center" style={{ fontSize: 21, color: colors.green }} selectable>{value}</Text>
+    <Text className="text-[11px] text-mw-text-muted font-body mt-1 text-center" selectable>{label}</Text>
   </View>
   );
 };
@@ -735,7 +735,7 @@ const SelectionChip = ({ label, active, onPress }: { label: string; active: bool
       borderColor: active ? colors.green : colors.border,
     }}
   >
-    <Text className="text-xs font-sans-semibold" style={{ color: active ? colors.textInverse : colors.text }} numberOfLines={1}>
+    <Text className="text-xs font-body-semibold" style={{ color: active ? colors.textInverse : colors.text }} numberOfLines={1}>
       {label}
     </Text>
   </Pressable>
@@ -761,9 +761,9 @@ const ProductInfoCard = ({ product, compact = false }: { product: Product; compa
       accessibilityElementsHidden
     />
     <View className="flex-1">
-      <Text className="text-[11px] text-mw-text-muted font-sans-bold uppercase" selectable>{product.brand}</Text>
-      <Text className="text-[13.5px] font-sans-bold text-mw-text" numberOfLines={2} selectable>{product.name}</Text>
-      <Text className="text-xs text-mw-text-muted font-sans mt-0.5" selectable>
+      <Text className="text-[11px] text-mw-text-muted font-body-semibold uppercase" selectable>{product.brand}</Text>
+      <Text className="text-[13.5px] font-body-semibold text-mw-text" numberOfLines={2} selectable>{product.name}</Text>
+      <Text className="text-xs text-mw-text-muted font-body mt-0.5" selectable>
         {formatWeight(product.weightG ?? 0)} · {formatCurrency(product.price)} · {formatCurrency(product.pricePerGram)}/g · {product.scoopG ?? '-'}g/scoop
       </Text>
     </View>
@@ -786,7 +786,7 @@ const RatioControl = ({ value, onChange }: { value: number; onChange: (value: nu
             borderColor: value === pct ? colors.green : colors.border,
           }}
         >
-          <Text className="text-xs font-sans-bold" style={{ color: value === pct ? colors.textInverse : colors.text }}>
+          <Text className="text-xs font-body-semibold" style={{ color: value === pct ? colors.textInverse : colors.text }}>
             {pct}/{100 - pct}
           </Text>
         </Pressable>
@@ -806,7 +806,7 @@ const InfoBox = ({ tone, children }: { tone: 'green' | 'amber' | 'blue' | 'muted
   }[tone];
   return (
     <View className="rounded-lg mt-4" style={{ backgroundColor: palette.bg, borderLeftWidth: 3, borderLeftColor: palette.border, padding: 12 }}>
-      <Text className="text-sm font-sans" style={{ color: palette.fg, lineHeight: 20 }} selectable>
+      <Text className="text-sm font-body" style={{ color: palette.fg, lineHeight: 20 }} selectable>
         {children}
       </Text>
     </View>
@@ -830,10 +830,10 @@ const SpendSummary = ({
   }[tone];
   return (
     <View className="rounded-xl items-center border" style={{ flex: 1, minWidth: 180, padding: 18, backgroundColor: styles.bg, borderColor: styles.border }}>
-      <Text className="text-[10px] font-sans-bold uppercase tracking-wider text-center" style={{ color: styles.fg, opacity: tone === 'green' ? 0.75 : 1 }} selectable>
+      <Text className="text-[10px] font-body-semibold uppercase tracking-wider text-center" style={{ color: styles.fg, opacity: tone === 'green' ? 0.75 : 1 }} selectable>
         {label}
       </Text>
-      <Text className="font-serif mt-2 text-center" style={{ fontSize: 27, color: styles.fg }} selectable>{value}</Text>
+      <Text className="font-display-bold mt-2 text-center" style={{ fontSize: 27, color: styles.fg }} selectable>{value}</Text>
     </View>
   );
 };
@@ -850,7 +850,7 @@ const LegendSwatch = ({ color, label, boxed = false }: { color: string; label: s
         borderColor: 'rgba(27,94,59,.3)',
       }}
     />
-    <Text className="text-xs text-mw-text-muted font-sans" selectable>{label}</Text>
+    <Text className="text-xs text-mw-text-muted font-body" selectable>{label}</Text>
   </View>
 );
 
@@ -859,7 +859,7 @@ const GuidelineHeader = () => (
     {['Age', 'ml / feed', 'Feeds / day', 'Daily total', 'Notes'].map((label, index) => (
       <Text
         key={label}
-        className="text-[10.5px] font-sans-bold uppercase tracking-wider text-mw-text-muted"
+        className="text-[10.5px] font-body-semibold uppercase tracking-wider text-mw-text-muted"
         style={{ width: index === 4 ? 260 : 90, paddingHorizontal: 10, paddingVertical: 9 }}
       >
         {label}
@@ -901,7 +901,7 @@ const GuidelineCell = ({
   const colors = useV2Colors();
   return (
   <Text
-    className="text-xs font-sans"
+    className="text-xs font-body"
     style={{
       width,
       paddingHorizontal: 10,

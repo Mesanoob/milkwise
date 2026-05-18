@@ -87,7 +87,7 @@ export default function AboutScreen() {
                 the design uses `<em>` which is italic but here we lean on
                 the off-white tint to read as visual emphasis. */}
             <Text
-              className="font-serif text-mw-text-inverse"
+              className="font-display-bold text-mw-text-inverse"
               style={{
                 fontSize: 38,
                 lineHeight: 42,
@@ -97,7 +97,7 @@ export default function AboutScreen() {
               Helping Singapore Mums
             </Text>
             <Text
-              className="font-serif"
+              className="font-display-bold"
               style={{
                 fontSize: 38,
                 lineHeight: 42,
@@ -110,7 +110,7 @@ export default function AboutScreen() {
             </Text>
 
             <Text
-              className="font-sans"
+              className="font-body"
               style={{
                 fontSize: 15,
                 color: tokens.colors.textInverse,
@@ -138,7 +138,7 @@ export default function AboutScreen() {
                 }}
               >
                 <Text
-                  className="font-sans-bold"
+                  className="font-body-semibold"
                   style={{ color: tokens.colors.accent, fontSize: 14 }}
                 >
                   Start Comparing →
@@ -162,13 +162,13 @@ export default function AboutScreen() {
           <View style={{ maxWidth: 860, width: '100%' }}>
             <View style={{ alignItems: 'center', marginBottom: 40 }}>
               <Text
-                className="font-serif text-mw-text"
+                className="font-display-bold text-mw-text"
                 style={{ fontSize: 30, textAlign: 'center' }}
               >
                 Why We Built This
               </Text>
               <Text
-                className="font-sans"
+                className="font-body"
                 style={{
                   fontSize: 14,
                   color: tokens.colors.textMuted,
@@ -227,13 +227,13 @@ export default function AboutScreen() {
         >
           <View style={{ maxWidth: 860, width: '100%' }}>
             <Text
-              className="font-serif text-mw-text"
+              className="font-display-bold text-mw-text"
               style={{ fontSize: 30, marginBottom: 10 }}
             >
               How We Compare Products
             </Text>
             <Text
-              className="font-sans"
+              className="font-body"
               style={{
                 fontSize: 14,
                 color: tokens.colors.textMuted,
@@ -292,13 +292,13 @@ export default function AboutScreen() {
               <Text style={{ fontSize: 28 }}>⚕️</Text>
               <View style={{ flex: 1 }}>
                 <Text
-                  className="font-serif"
+                  className="font-display-bold"
                   style={{ fontSize: 18, color: tokens.colors.warnText, marginBottom: 8 }}
                 >
                   Always Consult Your Paediatrician
                 </Text>
                 <Text
-                  className="font-sans"
+                  className="font-body"
                   style={{
                     fontSize: 13.5,
                     color: tokens.colors.warnText,
@@ -306,7 +306,7 @@ export default function AboutScreen() {
                   }}
                 >
                   <Text>{APP_NAME} is a </Text>
-                  <Text className="font-sans-bold">price and information tool</Text>
+                  <Text className="font-body-semibold">price and information tool</Text>
                   <Text>, not a medical guide. Every baby is different. Specialised formulas (hypoallergenic, anti-reflux, soy, premature) should only be used on medical advice. If your baby has feeding difficulties, colic, allergies or poor weight gain — please consult a paediatrician or lactation consultant before switching formula.</Text>
                 </Text>
               </View>
@@ -327,13 +327,13 @@ export default function AboutScreen() {
         >
           <View style={{ maxWidth: 860, width: '100%' }}>
             <Text
-              className="font-serif text-mw-text"
+              className="font-display-bold text-mw-text"
               style={{ fontSize: 30, marginBottom: 10 }}
             >
               Frequently Asked Questions
             </Text>
             <Text
-              className="font-sans"
+              className="font-body"
               style={{
                 fontSize: 14,
                 color: tokens.colors.textMuted,
@@ -365,13 +365,13 @@ export default function AboutScreen() {
         >
           <View style={{ maxWidth: 860, width: '100%', alignItems: 'center' }}>
             <Text
-              className="font-serif text-mw-text"
+              className="font-display-bold text-mw-text"
               style={{ fontSize: 30, marginBottom: 12, textAlign: 'center' }}
             >
               Built by Parents, for Parents
             </Text>
             <Text
-              className="font-sans"
+              className="font-body"
               style={{
                 fontSize: 14,
                 color: tokens.colors.textMuted,
@@ -405,7 +405,7 @@ export default function AboutScreen() {
                     borderRadius: 999,
                   }}
                 >
-                  <Text className="font-sans-semibold" style={{ color: tokens.colors.textInverse, fontSize: 14 }}>
+                  <Text className="font-body-semibold" style={{ color: tokens.colors.textInverse, fontSize: 14 }}>
                     🍼 Start Comparing
                   </Text>
                 </Pressable>
@@ -425,7 +425,7 @@ export default function AboutScreen() {
                   borderColor: tokens.colors.border,
                 }}
               >
-                <Text className="font-sans-semibold" style={{ color: tokens.colors.text, fontSize: 14 }}>
+                <Text className="font-body-semibold" style={{ color: tokens.colors.text, fontSize: 14 }}>
                   ✉️ hello@milkwisesg.com
                 </Text>
               </Pressable>
@@ -467,13 +467,13 @@ export default function AboutScreen() {
           }}
         >
           <Text
-            className="font-serif"
+            className="font-display-bold"
             style={{ fontSize: 18, color: tokens.colors.textInverse, marginBottom: 6 }}
           >
             {APP_NAME}
           </Text>
           <Text
-            className="font-sans"
+            className="font-body"
             style={{
               fontSize: 12,
               color: tokens.colors.textInverse,
@@ -487,21 +487,21 @@ export default function AboutScreen() {
           <View style={{ flexDirection: 'row', gap: 16, marginTop: 14 }}>
             <Link href="/" asChild>
               <Pressable accessibilityRole="link" accessibilityLabel="Compare">
-                <Text className="font-sans" style={{ fontSize: 12.5, color: tokens.colors.textInverse }}>
+                <Text className="font-body" style={{ fontSize: 12.5, color: tokens.colors.textInverse }}>
                   Compare
                 </Text>
               </Pressable>
             </Link>
             <Link href="/most-sold" asChild>
               <Pressable accessibilityRole="link" accessibilityLabel="Most Sold">
-                <Text className="font-sans" style={{ fontSize: 12.5, color: tokens.colors.textInverse }}>
+                <Text className="font-body" style={{ fontSize: 12.5, color: tokens.colors.textInverse }}>
                   Most Sold
                 </Text>
               </Pressable>
             </Link>
             <Link href="/about" asChild>
               <Pressable accessibilityRole="link" accessibilityLabel="About">
-                <Text className="font-sans" style={{ fontSize: 12.5, color: tokens.colors.textInverse }}>
+                <Text className="font-body" style={{ fontSize: 12.5, color: tokens.colors.textInverse }}>
                   About
                 </Text>
               </Pressable>
@@ -542,13 +542,13 @@ const Pillar = ({
   >
     <Text style={{ fontSize: 36, marginBottom: 14 }}>{icon}</Text>
     <Text
-      className="font-serif text-mw-text"
+      className="font-display-bold text-mw-text"
       style={{ fontSize: 17, marginBottom: 8, lineHeight: 22 }}
     >
       {title}
     </Text>
     <Text
-      className="font-sans"
+      className="font-body"
       style={{ fontSize: 13.5, color: tokens.colors.textMuted, lineHeight: 22 }}
     >
       {body}
@@ -593,19 +593,19 @@ const Step = ({
         flexShrink: 0,
       }}
     >
-      <Text className="font-sans-bold text-mw-text-inverse" style={{ fontSize: 17 }}>
+      <Text className="font-body-semibold text-mw-text-inverse" style={{ fontSize: 17 }}>
         {number}
       </Text>
     </View>
     <View style={{ flex: 1 }}>
       <Text
-        className="font-serif text-mw-text"
+        className="font-display-bold text-mw-text"
         style={{ fontSize: 16, marginBottom: 6, lineHeight: 22 }}
       >
         {title}
       </Text>
       <Text
-        className="font-sans"
+        className="font-body"
         style={{ fontSize: 13.5, color: tokens.colors.textMuted, lineHeight: 22 }}
       >
         {body}
@@ -648,7 +648,7 @@ const FaqRow = ({ q, a }: { q: string; a: string }) => {
         }}
       >
         <Text
-          className="font-sans-semibold"
+          className="font-body-semibold"
           style={{ flex: 1, fontSize: 14, color: tokens.colors.text }}
         >
           {q}
@@ -657,7 +657,7 @@ const FaqRow = ({ q, a }: { q: string; a: string }) => {
             extra deps. The unicode arrow rotates via its container's
             rendered position. */}
         <Text
-          className="font-sans-bold"
+          className="font-body-semibold"
           style={{
             fontSize: 16,
             color: tokens.colors.textMuted,
@@ -670,7 +670,7 @@ const FaqRow = ({ q, a }: { q: string; a: string }) => {
       {open && (
         <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
           <Text
-            className="font-sans"
+            className="font-body"
             style={{ fontSize: 13.5, color: tokens.colors.textMuted, lineHeight: 24 }}
           >
             {a}
@@ -702,13 +702,13 @@ const StatCell = ({
     }}
   >
     <Text
-      className="font-serif"
+      className="font-display-bold"
       style={{ fontSize: 32, color: tokens.colors.accent, lineHeight: 36 }}
     >
       {value}
     </Text>
     <Text
-      className="font-sans"
+      className="font-body"
       style={{ fontSize: 12, color: tokens.colors.textMuted, marginTop: 4, textAlign: 'center' }}
     >
       {label}

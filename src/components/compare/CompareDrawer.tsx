@@ -66,7 +66,7 @@ export const CompareDrawer = ({
       }}
     >
       <View className="flex-row items-center gap-3 flex-wrap">
-        <Text className="text-mw-text-inverse font-sans-bold text-[13px]">
+        <Text className="text-mw-text-inverse font-body-semibold text-[13px]">
           {selected.length}/{MAX_COMPARE_SELECTION} selected
         </Text>
 
@@ -103,7 +103,7 @@ export const CompareDrawer = ({
                 accessibilityElementsHidden
               />
               <Text
-                className="text-mw-text-inverse font-sans text-[12px]"
+                className="text-mw-text-inverse font-body text-[12px]"
                 numberOfLines={1}
                 style={{ maxWidth: 140 }}
               >
@@ -140,7 +140,7 @@ export const CompareDrawer = ({
               backgroundColor: 'rgba(255,255,255,0.15)',
             }}
           >
-            <Text className="text-mw-text-inverse font-sans-semibold text-[13px]">Clear</Text>
+            <Text className="text-mw-text-inverse font-body-semibold text-[13px]">Clear</Text>
           </Pressable>
           <Pressable
             onPress={onCompare}
@@ -164,7 +164,7 @@ export const CompareDrawer = ({
             }}
           >
             <Text
-              className="font-sans-bold text-[13px]"
+              className="font-body-semibold text-[13px]"
               style={{ color: canCompare ? tokens.colors.accent : 'rgba(255,255,255,0.5)' }}
             >
               Compare ({selected.length})

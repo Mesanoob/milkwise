@@ -109,7 +109,7 @@ const NativeCycler = ({ value, onChange }: { value: SortField; onChange: (f: Sor
       accessibilityLabel={`Sort by ${currentLabel}, tap to change`}
       className="h-9 px-3 rounded-lg border border-mw-border bg-mw-bg-card flex-row items-center"
     >
-      <Text className="text-xs text-mw-text font-sans-medium">{currentLabel}</Text>
+      <Text className="text-xs text-mw-text font-body-medium">{currentLabel}</Text>
     </Pressable>
   );
 };

@@ -256,14 +256,14 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
         >
           <View>
             <Text
-              className="text-[22px] font-serif text-mw-text"
+              className="text-[22px] font-display-bold text-mw-text"
               // Stable id so `aria-labelledby` on the dialog container
               // can point at this heading for screen-reader announcement.
               nativeID="compare-modal-title"
             >
               Side-by-Side Comparison
             </Text>
-            <Text className="text-[12px] text-mw-text-muted font-sans mt-0.5">
+            <Text className="text-[12px] text-mw-text-muted font-body mt-0.5">
               Singapore Prices · ✓ best value highlighted
             </Text>
           </View>
@@ -335,12 +335,12 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
                       accessibilityElementsHidden
                     />
                     <Text
-                      className="text-[12.5px] font-sans-bold text-mw-text"
+                      className="text-[12.5px] font-body-semibold text-mw-text"
                       numberOfLines={2}
                     >
                       {p.name}
                     </Text>
-                    <Text className="text-[10.5px] text-mw-text-muted font-sans">
+                    <Text className="text-[10.5px] text-mw-text-muted font-body">
                       {p.brand}
                     </Text>
                   </View>
@@ -377,7 +377,7 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
                           }}
                         >
                           <Text
-                            className="font-sans"
+                            className="font-body"
                             style={{
                               color: isBest ? tokens.colors.accent : tokens.colors.text,
                               fontWeight: isBest ? '700' : row.bold ? '600' : '400',
@@ -410,7 +410,7 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
             backgroundColor: tokens.colors.bgPanel,
           }}
         >
-          <Text className="text-[11px] text-mw-text-muted font-sans">
+          <Text className="text-[11px] text-mw-text-muted font-body">
             💡 Prices are Singapore retail. Always verify before purchasing.
           </Text>
         </View>
@@ -448,7 +448,7 @@ const HeaderCell = ({
       }}
     >
       <Text
-        className="font-sans-bold uppercase tracking-wider"
+        className="font-body-semibold uppercase tracking-wider"
         style={{
           fontSize: 10.5,
           color: tokens.colors.textMuted,

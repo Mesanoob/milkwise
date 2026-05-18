@@ -137,7 +137,7 @@ export const ProductCard = ({
           style={{ backgroundColor: 'rgba(255,255,255,0.9)' }}
         >
           <Text
-            className="text-[10px] font-sans-semibold"
+            className="text-[10px] font-body-semibold"
             style={{ color: '#6E6A60' }}
           >
             {product.stage}
@@ -185,7 +185,7 @@ export const ProductCard = ({
         }}
       >
         {selected && (
-          <Text className="text-mw-text-inverse font-sans-bold" style={{ fontSize: 12, lineHeight: 14 }}>
+          <Text className="text-mw-text-inverse font-body-semibold" style={{ fontSize: 12, lineHeight: 14 }}>
             ✓
           </Text>
         )}
@@ -205,7 +205,7 @@ export const ProductCard = ({
                 specialty={product.specialty}
               />
             )}
-            <Text className="text-[10px] text-mw-text-muted font-sans-medium">
+            <Text className="text-[10px] text-mw-text-muted font-body-medium">
               {getOriginFlag(product.origin)} {getMilkTypeIcon(product.milkType)}
             </Text>
             {product.halal && (
@@ -214,7 +214,7 @@ export const ProductCard = ({
                 style={{ backgroundColor: '#D1FAE5' }}
               >
                 <Text
-                  className="text-[9px] font-sans-bold uppercase tracking-wider"
+                  className="text-[9px] font-body-semibold uppercase tracking-wider"
                   style={{ color: '#065F46' }}
                 >
                   Halal
@@ -224,13 +224,13 @@ export const ProductCard = ({
           </View>
 
           <Text
-            className="text-[10px] text-mw-text-muted font-sans-semibold uppercase tracking-wider mt-1.5"
+            className="text-[10px] text-mw-text-muted font-body-semibold uppercase tracking-wider mt-1.5"
             numberOfLines={1}
           >
             {product.brand}
           </Text>
           <Text
-            className="text-[13px] font-sans-bold text-mw-text leading-tight mt-0.5"
+            className="text-[13px] font-body-semibold text-mw-text leading-tight mt-0.5"
             numberOfLines={2}
           >
             {product.name}
@@ -268,7 +268,7 @@ export const ProductCard = ({
                   }}
                 >
                   <Text
-                    className="text-[10.5px] font-sans-bold"
+                    className="text-[10.5px] font-body-semibold"
                     style={{ color: isActive ? tokens.colors.textInverse : tokens.colors.textMuted }}
                   >
                     {formatWeight(v.weightG)}
@@ -289,13 +289,13 @@ export const ProductCard = ({
           </View>
 
           {/* Size + scoop dose */}
-          <Text className="text-[11px] text-mw-text-muted font-sans" numberOfLines={1}>
+          <Text className="text-[11px] text-mw-text-muted font-body" numberOfLines={1}>
             {formatWeight(variant?.weightG ?? 0)} · {variant?.scoopG ?? 0}g scoop + {variant?.waterMl ?? 0}mL water
           </Text>
 
           {/* Best-for line */}
           {product.bestFor ? (
-            <Text className="text-[11px] text-mw-accent font-sans-semibold" numberOfLines={1}>
+            <Text className="text-[11px] text-mw-accent font-body-semibold" numberOfLines={1}>
               ✓ {product.bestFor}
             </Text>
           ) : null}
@@ -326,10 +326,10 @@ export const ProductCard = ({
         className="px-3.5 py-2 flex-row items-center justify-between border-t border-mw-border"
         style={{ backgroundColor: tokens.colors.bgPanel }}
       >
-        <Text className="text-[11.5px] text-mw-accent font-sans-semibold">
+        <Text className="text-[11.5px] text-mw-accent font-body-semibold">
           View full details
         </Text>
-        <Text className="text-sm text-mw-accent font-sans-bold">→</Text>
+        <Text className="text-sm text-mw-accent font-body-semibold">→</Text>
       </Pressable>
     </View>
   );
@@ -355,13 +355,13 @@ const MetricTile = ({
       style={{ backgroundColor: accent ? tokens.colors.accentTint : tokens.colors.bgPanel }}
     >
       <Text
-        className="text-[9.5px] font-sans-bold uppercase tracking-wider"
+        className="text-[9.5px] font-body-semibold uppercase tracking-wider"
         style={{ color: accent ? tokens.colors.accent : tokens.colors.textMuted }}
       >
         {label}
       </Text>
       <Text
-        className="text-[13px] font-sans-bold mt-0.5"
+        className="text-[13px] font-body-semibold mt-0.5"
         style={{ color: accent ? tokens.colors.accent : tokens.colors.text }}
       >
         {value}
@@ -381,7 +381,7 @@ const FeatureChip = ({
 }) => (
   <View className="rounded px-1.5 py-0.5" style={{ backgroundColor: bg }}>
     <Text
-      className="text-[9px] font-sans-bold uppercase tracking-wider"
+      className="text-[9px] font-body-semibold uppercase tracking-wider"
       style={{ color: fg }}
     >
       {label}

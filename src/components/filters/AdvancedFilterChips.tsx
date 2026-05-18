@@ -80,13 +80,13 @@ export const AdvancedFilterChipsTrigger = ({
       >
         {/* Three-line "filters" glyph — `#` rotated. Cheap, no SVG. */}
         <Text
-          className="font-sans-bold"
+          className="font-body-semibold"
           style={{ fontSize: 12, color: expanded ? tokens.colors.textInverse : tokens.colors.text }}
         >
           ☰
         </Text>
         <Text
-          className="font-sans-semibold"
+          className="font-body-semibold"
           style={{ fontSize: 12.5, color: expanded ? tokens.colors.textInverse : tokens.colors.text }}
         >
           Filters
@@ -105,7 +105,7 @@ export const AdvancedFilterChipsTrigger = ({
               marginLeft: 2,
             }}
           >
-            <Text className="text-[9px] font-sans-bold text-mw-text-inverse">{activeCount}</Text>
+            <Text className="text-[9px] font-body-semibold text-mw-text-inverse">{activeCount}</Text>
           </View>
         )}
       </Pressable>
@@ -127,7 +127,7 @@ export const AdvancedFilterChipsTrigger = ({
             backgroundColor: tokens.colors.bgCard,
           }}
         >
-          <Text className="text-[12px] font-sans-semibold" style={{ color: tokens.colors.accent }}>
+          <Text className="text-[12px] font-body-semibold" style={{ color: tokens.colors.accent }}>
             ✕ Clear
           </Text>
         </Pressable>
@@ -217,7 +217,7 @@ const SectionLabel = ({ children }: { children: string }) => {
   return (
     <View style={{ paddingHorizontal: 6 }}>
       <Text
-        className="font-sans-bold uppercase"
+        className="font-body-semibold uppercase"
         style={{ fontSize: 10.5, color: tokens.colors.textMuted, letterSpacing: 0.6 }}
       >
         {children}
@@ -255,7 +255,7 @@ const Chip = ({
       }}
     >
       <Text
-        className="text-[12.5px] font-sans-medium"
+        className="text-[12.5px] font-body-medium"
         style={{
           color: active ? tokens.colors.textInverse : tokens.colors.text,
           textTransform: capitalize ? 'capitalize' : 'none',

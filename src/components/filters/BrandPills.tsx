@@ -24,7 +24,7 @@ export const BrandPills = ({ value, onToggle }: BrandPillsProps) => {
   >
     {/* Section kicker — matches the design's "BRAND" caption. */}
     <Text
-      className="text-[11px] font-sans-bold uppercase tracking-wider text-mw-text-muted"
+      className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted"
       style={{ marginRight: 8 }}
     >
       Brand
@@ -56,7 +56,7 @@ export const BrandPills = ({ value, onToggle }: BrandPillsProps) => {
             }}
           >
             <Text
-              className="text-[12px] font-sans-semibold"
+              className="text-[12px] font-body-semibold"
               style={{ color: isActive ? tokens.colors.textInverse : tokens.colors.text }}
             >
               {brand}
