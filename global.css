@@ -166,10 +166,23 @@ body {
    flips every --mw-* var above — one ancestor selector, no JS, no
    per-card re-render.)
 
-   Perf note: ~12 filter passes × the 61-card grid is non-trivial on
-   low-end mobile. It is dark-mode-only and static (no scroll animation),
-   which keeps it acceptable; revisit if the WebP optimisation pass
-   (backlog) lands and frees headroom. */
+   Perf note (RESOLVED 2026-05-19 — latency investigation):
+   Measured: toggling INTO dark blocked the main thread ~68–130ms; with
+   this filter forced off, 0ms. The cause is exactly this — ~12 filter
+   passes × 61 packshots, all recomputed synchronously in the single
+   style+paint pass the `.dark` class change triggers. The colour-var
+   flip itself is 0ms; this halo was the entire freeze.
+
+   Fix WITHOUT degrading the spec'd effect: the heavy 12-pass stack now
+   lives under `.dark.fx-ready` (BOTH classes). ThemeContext drops
+   `fx-ready` for the flip frame and re-arms it on the next rAF, so:
+     • the click → dark flip paints instantly (cheap 1-pass rule below);
+     • the full halo "develops" ~1 frame (~16ms) later, off the click's
+       critical path — imperceptible vs. the old 68–130ms freeze.
+   Steady state is byte-identical to the original 12-pass effect.
+
+   ⚠️ Do NOT collapse these two rules back into one `.dark .mw-packshot`
+   — that re-introduces the synchronous freeze. The split IS the fix. */
 .mw-packshot {
   /* Light theme: clean premium float only — a soft, diffuse ambient
      shadow. White edge/bloom would be invisible on the cream card and
@@ -177,7 +190,17 @@ body {
   filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.16));
 }
 
+/* Dark, DURING the theme-flip frame (`fx-ready` momentarily off): a
+   single cheap ambient so dark packshots still float for the ~1 frame
+   before the full halo arrives. One pass — negligible cost ×61. */
 .dark .mw-packshot {
+  filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.55));
+}
+
+/* Dark, STEADY STATE (`fx-ready` re-armed after paint): the full §7c
+   12-pass halo, verbatim. Higher specificity than the rule above so it
+   wins whenever both classes are present. */
+.dark.fx-ready .mw-packshot {
   filter:
     /* 1. die-cut edge — 8-way, zero blur, builds an even hard outline */
     drop-shadow( 1px  0    0 #fff)

@@ -16,6 +16,21 @@ export interface FormulaInputs {
   mlPerFeed: number;
   feedsPerDay: number;
   ageMonths: number | null;
+  /**
+   * Manual spec overrides. When a parent edits the scoop / tin-size /
+   * price fields (or they're auto-filled from a product and then tweaked),
+   * these take precedence over the values derived from the selected
+   * Product. `null`/absent ⇒ fall back to product-derived, so callers
+   * that don't expose manual entry are unaffected.
+   *
+   * `pricePerGramOverride` is intentionally per-GRAM, not per-tin: the
+   * screen knows the tin weight at edit time and the whole engine already
+   * costs in $/g, so converting once at the boundary keeps this file's
+   * math in a single unit.
+   */
+  scoopGOverride?: number | null;
+  tinWeightGOverride?: number | null;
+  pricePerGramOverride?: number | null;
 }
 
 export interface MonthlyFormulaCost {
@@ -87,13 +102,20 @@ export const calculateFeedingEstimate = ({
   mlPerFeed,
   feedsPerDay,
   ageMonths,
+  scoopGOverride = null,
+  tinWeightGOverride = null,
+  pricePerGramOverride = null,
 }: FormulaInputs): FeedingEstimate => {
   const primaryShare = primarySharePct / 100;
   const supplementalShare = 1 - primaryShare;
 
   const formulaShare = (() => {
     if (primaryIsBreastmilk) return useSupplement && supplemental ? supplementalShare : 0;
-    if (!primary) return 0;
+    // Manual-entry path: no product picked, but the parent typed a
+    // scoop/tin/price by hand. Treat it as 100% formula so the cost,
+    // monthly curve and spend totals compute off the manual spec — the
+    // "manual entry first" model from the design.
+    if (!primary) return pricePerGramOverride != null ? 1 : 0;
     return 1;
   })();
 
@@ -118,17 +140,27 @@ export const calculateFeedingEstimate = ({
     return primary.pricePerGram ?? null;
   })();
 
+  // Fold manual overrides over the product-derived values. Everything
+  // below costs from these three, so a single substitution point flows
+  // through monthlyData / retroSpend / projectedSpend with no parallel
+  // math path.
+  const scoopG = scoopGOverride ?? effectiveScoopG;
+  const pricePerGram = pricePerGramOverride ?? effectivePricePerGram;
+  const tinWeightG =
+    tinWeightGOverride ??
+    (primaryIsBreastmilk ? supplemental?.weightG : primary?.weightG) ??
+    null;
+
   const dailyMl = mlPerFeed * feedsPerDay;
   const formulaDailyMl = dailyMl * formulaShare;
-  const gramsPerMl = effectiveScoopG / 30;
+  const gramsPerMl = scoopG / 30;
   const powderDayG = formulaDailyMl * gramsPerMl;
   const powderMonthG = powderDayG * DAYS_PER_MONTH;
-  const activeTin = primaryIsBreastmilk ? supplemental : primary;
-  const tinsPerMonth = activeTin?.weightG && powderMonthG > 0
-    ? powderMonthG / activeTin.weightG
+  const tinsPerMonth = tinWeightG && powderMonthG > 0
+    ? powderMonthG / tinWeightG
     : null;
-  const costPerMonth = effectivePricePerGram && formulaShare > 0
-    ? effectivePricePerGram * powderMonthG
+  const costPerMonth = pricePerGram && formulaShare > 0
+    ? pricePerGram * powderMonthG
     : null;
 
   const monthlyData = SG_GUIDELINES.map((guideline, month) => {
@@ -136,7 +168,7 @@ export const calculateFeedingEstimate = ({
     const baselineMl = month === ageMonths ? dailyMl : benchmarkMidpoint;
     const adjustedMl = month >= 6 ? baselineMl * solidsFactor(month) : baselineMl;
     const monthPowderG = adjustedMl * formulaShare * gramsPerMl * DAYS_PER_MONTH;
-    const cost = effectivePricePerGram ? effectivePricePerGram * monthPowderG : 0;
+    const cost = pricePerGram ? pricePerGram * monthPowderG : 0;
     return {
       month,
       dailyMl: Math.round(adjustedMl),
@@ -146,14 +178,14 @@ export const calculateFeedingEstimate = ({
   });
 
   const retroSpend = (() => {
-    if (ageMonths === null || !effectivePricePerGram) return 0;
+    if (ageMonths === null || !pricePerGram) return 0;
     let total = 0;
     for (let month = 0; month < ageMonths; month += 1) {
       const guideline = SG_GUIDELINES[month];
       if (!guideline) continue;
       const midpointMl = (guideline.dMin + guideline.dMax) / 2;
       const adjustedMl = month >= 6 ? midpointMl * solidsFactor(month) : midpointMl;
-      total += adjustedMl * formulaShare * gramsPerMl * DAYS_PER_MONTH * effectivePricePerGram;
+      total += adjustedMl * formulaShare * gramsPerMl * DAYS_PER_MONTH * pricePerGram;
     }
     return total;
   })();
@@ -170,8 +202,10 @@ export const calculateFeedingEstimate = ({
     powderMonthG,
     tinsPerMonth,
     costPerMonth,
-    effectiveScoopG,
-    effectivePricePerGram,
+    // Expose the *effective* values (override folded in) so the UI shows
+    // what the math actually used, not the pre-override product spec.
+    effectiveScoopG: scoopG,
+    effectivePricePerGram: pricePerGram,
     monthlyData,
     retroSpend,
     projectedSpend,

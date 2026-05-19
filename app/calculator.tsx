@@ -15,6 +15,7 @@ import {
   Switch,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import type { Product } from '../src/types/product';
@@ -84,6 +85,9 @@ const makeProductSelectStyle = (c: ReturnType<typeof useV2Colors>) => ({
 
 export default function CalculatorScreen() {
   const colors = useV2Colors();
+  // 960px is the design's `.mw-calc` breakpoint (single-col below).
+  const { width } = useWindowDimensions();
+  const twoCol = width >= 960;
   const products = useMemo(
     () => getAllProducts().sort((a, b) => a.name.localeCompare(b.name)),
     [],
@@ -92,7 +96,15 @@ export default function CalculatorScreen() {
   const [day, setDay] = useState('');
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
-  const [gender, setGender] = useState<Gender>('');
+  // ─────────────────────────────────────────────────────────────────────
+  // GENDER SELECTION COMMENTED OUT (2026-05-19, design pass).
+  // It didn't feed the math (benchmarks here are gender-neutral) and only
+  // added vertical noise to the input panel. Kept (not deleted) so it can
+  // be restored verbatim if a gender-specific benchmark is added later:
+  //   const [gender, setGender] = useState<Gender>('');
+  // …and re-add the <Gender> SegmentedControl block in the input panel.
+  // ─────────────────────────────────────────────────────────────────────
+
 
   // `primaryId` and `supplementId` use a composite key: `productId#variantIdx`.
   // Example: `abbott-grow-s1#1` selects the 800g variant of Abbott Grow.
@@ -107,17 +119,32 @@ export default function CalculatorScreen() {
   const [useSupplement, setUseSupplement] = useState(false);
   const [supplementId, setSupplementId] = useState('');
   const [primarySharePct, setPrimarySharePct] = useState(70);
-  const [mlPerFeed, setMlPerFeed] = useState(150);
-  const [feedsPerDay, setFeedsPerDay] = useState(5);
+  // Start from a clean slate (0). The age effect fills feeds/ml from the
+  // benchmark only once a DOB is entered; until then nothing is assumed.
+  const [mlPerFeed, setMlPerFeed] = useState(0);
+  const [feedsPerDay, setFeedsPerDay] = useState(0);
   const [hasSolids, setHasSolids] = useState(false);
   const [solidsLevel, setSolidsLevel] = useState<SolidsLevel>('starting');
+
+  // Manual formula-spec entry. Stored as strings so the inputs can hold a
+  // transient empty / partial value while typing; parsed to numbers only
+  // at the calculation boundary. Auto-filled from the selected product
+  // (see effect below) and freely overridable thereafter — picking a
+  // different product/variant re-seeds them, matching the design's
+  // "auto-fill, then tweak" model.
+  // Clean slate: every spec field starts at 0. Picking a formula
+  // auto-fills them (effect below); otherwise the parent types real
+  // values — nothing is pre-assumed on a fresh page load.
+  const [scoopStr, setScoopStr] = useState('0');
+  const [tinStr, setTinStr] = useState('0');
+  const [priceStr, setPriceStr] = useState('0');
 
   const dob = useMemo(() => parseDobParts(day, month, year), [day, month, year]);
   const age = useMemo(() => (dob ? calcAge(dob) : null), [dob]);
   const ageMonths = age ? Math.min(age.months, 11) : null;
   const guideline = ageMonths !== null ? SG_GUIDELINES[ageMonths] : null;
   const dobError = year.length === 4 && !dob
-    ? 'Invalid date. Check DD / MM / YYYY.'
+    ? 'Pick a date on or after 1 Jan 2023 that is not in the future.'
     : '';
 
   const primaryIsBreastmilk = primaryId === 'breastmilk';
@@ -142,6 +169,33 @@ export default function CalculatorScreen() {
     if (ageMonths >= 6) setHasSolids(true);
   }, [ageMonths]);
 
+  // Auto-populate scoop / tin / price from the chosen formula+variant.
+  // Re-runs whenever the resolved product changes (incl. variant switch
+  // via the composite key), so the spec always starts from real product
+  // data; the parent can then override any field by hand.
+  useEffect(() => {
+    if (!primaryProduct) return;
+    setScoopStr(primaryProduct.scoopG != null ? String(primaryProduct.scoopG) : '');
+    setTinStr(primaryProduct.weightG != null ? String(primaryProduct.weightG) : '');
+    setPriceStr(primaryProduct.price != null ? String(primaryProduct.price) : '');
+  }, [primaryProduct]);
+
+  // Parse a spec field to a positive number, or null (blank / invalid /
+  // non-positive → fall back to product-derived in the engine).
+  const specNum = (s: string): number | null => {
+    const n = Number(s);
+    return s.trim() !== '' && Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const scoopGOverride = specNum(scoopStr);
+  const tinWeightGOverride = specNum(tinStr);
+  const pricePerTinNum = specNum(priceStr);
+  // Engine costs in $/g; convert the per-tin price once here (we know the
+  // tin weight at this point) so the calculator keeps a single unit.
+  const pricePerGramOverride =
+    pricePerTinNum !== null && tinWeightGOverride !== null
+      ? pricePerTinNum / tinWeightGOverride
+      : null;
+
   const estimate = useMemo(
     () =>
       calculateFeedingEstimate({
@@ -153,6 +207,9 @@ export default function CalculatorScreen() {
         mlPerFeed,
         feedsPerDay,
         ageMonths,
+        scoopGOverride,
+        tinWeightGOverride,
+        pricePerGramOverride,
       }),
     [
       primaryProduct,
@@ -163,11 +220,25 @@ export default function CalculatorScreen() {
       mlPerFeed,
       feedsPerDay,
       ageMonths,
+      scoopGOverride,
+      tinWeightGOverride,
+      pricePerGramOverride,
     ],
   );
 
-  const hasDob = dob !== null;
-  const showCost = (primaryProduct || supplementalProduct) && estimate.costPerMonth !== null;
+  // costPerMonth is non-null only when there's a price source — a picked
+  // product, a supplement, OR a manual price entry. Gating on it alone
+  // (instead of requiring a product) is what lets manual entry show cost.
+  const showCost = estimate.costPerMonth !== null;
+  // Yearly tin volume for the SG-vs-MY estimate. `tinsPerMonth` is
+  // null until a priced formula is chosen; keep the null so the section
+  // gate below stays type-safe (no `null * 12`).
+  const tinsPerYear =
+    estimate.tinsPerMonth != null ? estimate.tinsPerMonth * 12 : null;
+  // Representative SG tin price for the cross-border estimate: the chosen
+  // primary formula's variant price. `price` is optional on Product, so
+  // collapse to a non-null local the section gate can test cleanly.
+  const primaryTinPrice = primaryProduct?.price ?? null;
   const intakeStatus = guideline
     ? estimate.dailyMl < guideline.dMin
       ? 'low'
@@ -175,8 +246,6 @@ export default function CalculatorScreen() {
         ? 'high'
         : 'ok'
     : null;
-  const primaryLabel = primaryIsBreastmilk ? 'Breastmilk' : primaryProduct?.name ?? '';
-  const supplementalLabel = supplementalProduct?.name ?? '';
 
   return (
     <Screen>
@@ -189,30 +258,47 @@ export default function CalculatorScreen() {
         </Text>
       </View>
 
-      <View style={{ maxWidth: 960, width: '100%', marginHorizontal: 'auto', paddingHorizontal: 20, paddingVertical: 28, gap: 24 }}>
+      {/* Two-column calculator (design-reference `.mw-calc`): a fixed
+          420px feeding-inputs column on the left, fluid results on the
+          right. Collapses to a single stacked column below 960px. The
+          outer container is wider than the old 960 so the right column
+          (and its charts) get real room — the design's chart is large. */}
+      <View style={{ maxWidth: 1180, width: '100%', marginHorizontal: 'auto', paddingHorizontal: 20, paddingVertical: 28 }}>
+        <View
+          style={{
+            flexDirection: twoCol ? 'row' : 'column',
+            // align-start mirrors `.mw-calc-inputs { align-self: start }`
+            // so the left panel keeps its content height instead of
+            // stretching to the (taller) results column.
+            alignItems: twoCol ? 'flex-start' : 'stretch',
+            gap: twoCol ? 32 : 24,
+          }}
+        >
+          {/* ── LEFT: feeding inputs ───────────────────────────── */}
+          <View style={{ width: twoCol ? 420 : '100%', gap: 24 }}>
         <Card>
-          <SectionTitle title="Baby Info" icon="1" />
+          <SectionTitle title="Your baby & feeding" icon="1" />
           <Text className="text-sm text-mw-text-muted font-body mb-5" selectable>
-            Enter birth date and feeding details to personalise the benchmark and cost estimate.
+            Birth date and feeding details — everything updates live as you type.
           </Text>
 
-          <View className="flex-row flex-wrap gap-5">
-            <View style={{ flex: 1, minWidth: 260 }}>
-              <Label>Date of birth</Label>
-              <View className="flex-row items-end gap-2">
-                <DobPart label="DD" value={day} onChange={setDay} maxLength={2} width={60} />
-                <Text className="text-2xl text-mw-border pb-2">/</Text>
-                <DobPart label="MM" value={month} onChange={setMonth} maxLength={2} width={60} />
-                <Text className="text-2xl text-mw-border pb-2">/</Text>
-                <DobPart label="YYYY" value={year} onChange={setYear} maxLength={4} width={86} />
-              </View>
-              {dobError ? (
-                <Text className="text-xs mt-2 font-body" style={{ color: colors.danger }} selectable>
-                  {dobError}
-                </Text>
-              ) : null}
-            </View>
+          <View>
+            <Label>Baby&apos;s date of birth</Label>
+            <DobDateField
+              day={day}
+              month={month}
+              year={year}
+              setDay={setDay}
+              setMonth={setMonth}
+              setYear={setYear}
+            />
+            {dobError ? (
+              <Text className="text-xs mt-2 font-body" style={{ color: colors.danger }} selectable>
+                {dobError}
+              </Text>
+            ) : null}
 
+            {/* GENDER SELECTION COMMENTED OUT (see state note above):
             <View style={{ flex: 1, minWidth: 260 }}>
               <Label>Gender</Label>
               <SegmentedControl
@@ -225,6 +311,7 @@ export default function CalculatorScreen() {
                 onChange={(next) => setGender(next as Gender)}
               />
             </View>
+            */}
           </View>
 
           {age && guideline ? (
@@ -255,38 +342,21 @@ export default function CalculatorScreen() {
               </Text>
             </View>
           ) : null}
-        </Card>
-
-        {hasDob && ageMonths !== null ? (
-          <Card>
-            <SectionTitle title="Singapore Feeding Benchmark" icon="2" />
-            <Text className="text-sm text-mw-text-muted font-body mb-4" selectable>
-              Recommended daily milk intake by month. Shaded band is the benchmark range.
-            </Text>
-            <BenchmarkChart babyMonths={ageMonths} currentDailyMl={estimate.dailyMl} />
-            <View className="flex-row flex-wrap gap-3 mt-3">
-              <LegendSwatch color={colors.greenLight} label="Recommended range" boxed />
-              <LegendSwatch color={colors.green} label="Benchmark midpoint" />
-              <LegendSwatch color={colors.info} label="Your baby in range" />
-              <LegendSwatch color={colors.danger} label="Below range" />
-            </View>
-          </Card>
-        ) : null}
-
-        {hasDob ? (
-          <Card>
-            <SectionTitle title="Your Baby's Feeding" icon="3" />
-            <Text className="text-sm text-mw-text-muted font-body mb-5" selectable>
-              Current feeding pattern drives powder usage and monthly formula cost.
-            </Text>
-
-            <View style={{ gap: 20 }}>
+            <View
+              style={{
+                gap: 20,
+                marginTop: 22,
+                paddingTop: 22,
+                borderTopWidth: 1,
+                borderTopColor: colors.border,
+              }}
+            >
               <ProductSelect
-                label="Formula / breastmilk you are using"
+                label="Pick a formula"
                 value={primaryId}
                 products={products}
                 includeBreastmilk
-                placeholder="Select primary feeding"
+                placeholder="— Manual entry —"
                 onChange={(next) => {
                   setPrimaryId(next);
                   setUseSupplement(false);
@@ -345,6 +415,23 @@ export default function CalculatorScreen() {
                 </View>
               </View>
 
+              {/* Always-visible spec — manual entry first; picking a
+                  formula above auto-fills these (effect in the screen). */}
+              <View className="flex-row flex-wrap" style={{ gap: 20 }}>
+                <View style={{ flex: 1, minWidth: 150 }}>
+                  <Label hint="grams">Scoop size</Label>
+                  <SpecStepper value={scoopStr} onChange={setScoopStr} step={0.1} min={1} max={15} decimals />
+                </View>
+                <View style={{ flex: 1, minWidth: 150 }}>
+                  <Label hint="grams">Tin size</Label>
+                  <SpecSelect value={tinStr} onChange={setTinStr} />
+                </View>
+              </View>
+              <View>
+                <Label hint="SGD">Price per tin</Label>
+                <SpecField aria="Price per tin in SGD" value={priceStr} onChange={setPriceStr} prefix="$" decimals />
+              </View>
+
               <View className="rounded-lg flex-row flex-wrap items-center gap-2" style={{ backgroundColor: colors.surface2, padding: 12 }}>
                 <Text className="text-sm text-mw-text-muted font-body">Total milk today:</Text>
                 <Text className="text-lg font-mono-medium" style={{ color: colors.greenText, fontVariant: ['tabular-nums'] }} selectable>
@@ -393,93 +480,144 @@ export default function CalculatorScreen() {
                 </View>
               ) : null}
 
-              {guideline && intakeStatus ? (
-                <InfoBox tone={intakeStatus === 'ok' ? 'green' : 'amber'}>
-                  {intakeStatus === 'ok'
-                    ? `${estimate.dailyMl}ml/day is within the ${guideline.dMin}-${guideline.dMax}ml benchmark range for ${ageMonths} months.`
-                    : intakeStatus === 'low'
-                      ? `${estimate.dailyMl}ml/day is below the ${guideline.dMin}ml benchmark minimum. Check with a paediatrician if intake or weight gain is a concern.`
-                      : `${estimate.dailyMl}ml/day is above the ${guideline.dMax}ml benchmark maximum. This can happen, but discuss concerns with a paediatrician.`}
+            </View>
+        </Card>
+          </View>
+
+          {/* ── RIGHT: human-centric results ───────────────────────
+              The answer first: how old is my baby, is intake normal,
+              and what have I spent / will I spend. Detailed charts and
+              the reference table are pushed to the full-width bottom. */}
+          <View style={{ flex: twoCol ? 1 : undefined, width: twoCol ? undefined : '100%', gap: 16 }}>
+            {(
+              <>
+                {guideline ? (
+                  <BenchmarkStatusCard
+                    dailyMl={estimate.dailyMl}
+                    low={guideline.dMin}
+                    high={guideline.dMax}
+                    status={intakeStatus}
+                  />
+                ) : null}
+
+                {showCost ? (
+                  <>
+                    <View className="flex-row flex-wrap" style={{ gap: 14 }}>
+                      <ResultCard
+                        eyebrow="Daily formula cost"
+                        value={formatCurrency(estimate.costPerMonth != null ? estimate.costPerMonth / 30 : null)}
+                        caption={estimate.tinsPerMonth ? `~${estimate.tinsPerMonth.toFixed(1)} tins / month` : undefined}
+                      />
+                      <ResultCard
+                        eyebrow="Monthly cost (now)"
+                        value={formatCurrency(estimate.costPerMonth)}
+                        caption="at current feeding pattern"
+                      />
+                      <ResultCard
+                        eyebrow="Spent so far"
+                        value={formatCurrency(estimate.retroSpend)}
+                        caption={
+                          ageMonths !== null
+                            ? `retroactive · ${ageMonths} month${ageMonths === 1 ? '' : 's'}`
+                            : undefined
+                        }
+                        emphatic
+                      />
+                      <ResultCard
+                        eyebrow={`Projected (months ${ageMonths ?? 0}–11)`}
+                        value={formatCurrency(estimate.projectedSpend)}
+                        caption="factors in transition to solids"
+                        emphatic
+                      />
+                    </View>
+
+                    {primaryTinPrice !== null && tinsPerYear !== null ? (
+                      <Card>
+                        <Eyebrow>Singapore vs Malaysia (estimate)</Eyebrow>
+                        <Text className="text-sm text-mw-text-muted font-body mt-2 mb-4" selectable>
+                          The same tin is usually cheaper across the causeway — a planning figure, not a price guarantee.
+                        </Text>
+                        <MalaysiaCompare tinPriceSgd={primaryTinPrice} tinsPerYear={tinsPerYear} />
+                      </Card>
+                    ) : null}
+                  </>
+                ) : (
+                  <Card>
+                    <Eyebrow>Cost</Eyebrow>
+                    <Text className="font-display-bold text-mw-text" style={{ fontSize: 20, marginTop: 8 }} selectable>
+                      Pick a formula to see spend
+                    </Text>
+                    <Text className="text-sm text-mw-text-muted font-body mt-2" style={{ lineHeight: 20 }} selectable>
+                      Choose a formula (or breastmilk + a supplement) in the panel on the {twoCol ? 'left' : 'top'} — your spend so far and projected spend appear here.
+                    </Text>
+                  </Card>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* ── BOTTOM: charts + reference table, full container width ── */}
+        {(
+          <View style={{ marginTop: 28, gap: 24 }}>
+            {showCost ? (
+              <Card>
+                <SectionTitle title="Monthly formula spend" icon="2" />
+                <Text className="text-xs text-mw-text-muted font-body mb-4" selectable>
+                  Light = past estimate · solid = current month · muted = projected. Past months retroactive, then projected to month 11.
+                </Text>
+                <SpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths ?? 0} />
+              </Card>
+            ) : null}
+
+            {showCost && ageMonths !== null && ageMonths > 0 ? (
+              <Card>
+                <SectionTitle title="Cumulative spend curve" icon="3" />
+                <Text className="text-xs text-mw-text-muted font-body mb-4" selectable>
+                  Solid line is estimated actual spend so far · dashed line is projected spend to 12 months.
+                </Text>
+                <CumulativeSpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths} />
+                <InfoBox tone="muted">
+                  Methodology: past spend uses benchmark ml × formula price/g. Projected spend uses your entered feeds and age-based solids reduction from 6 months. Breastmilk cost is treated as S$0.
                 </InfoBox>
-              ) : null}
-            </View>
-          </Card>
-        ) : null}
+              </Card>
+            ) : null}
 
-        {hasDob && showCost ? (
-          <Card>
-            <SectionTitle title="Formula Usage & Cost" icon="4" />
-            <Text className="text-sm text-mw-text-muted font-body mb-5" selectable>
-              {primaryIsBreastmilk
-                ? `Breastmilk primary + ${supplementalLabel} supplement`
-                : `${primaryLabel}${useSupplement && supplementalLabel ? ` + ${supplementalLabel}` : ''}`} · {estimate.effectivePricePerGram ? `${formatCurrency(estimate.effectivePricePerGram)}/g effective` : 'No formula cost'}
-            </Text>
+            {ageMonths !== null ? (
+              <Card>
+                <SectionTitle title="Intake benchmark by month" icon="4" />
+                <Text className="text-xs text-mw-text-muted font-body mb-4" selectable>
+                  Recommended daily milk intake across the first year. Shaded band is the benchmark range; the dot is your baby.
+                </Text>
+                <BenchmarkChart babyMonths={ageMonths} currentDailyMl={estimate.dailyMl} />
+                <View className="flex-row flex-wrap gap-3 mt-3">
+                  <LegendSwatch color={colors.greenLight} label="Recommended range" boxed />
+                  <LegendSwatch color={colors.green} label="Benchmark midpoint" />
+                  <LegendSwatch color={colors.info} label="Your baby in range" />
+                  <LegendSwatch color={colors.danger} label="Below range" />
+                </View>
+              </Card>
+            ) : null}
 
-            <View className="flex-row flex-wrap gap-3 mb-6">
-              <StatCard value={`${Math.round(estimate.powderDayG)}g`} label="Powder / day" />
-              <StatCard value={`${Math.round(estimate.powderMonthG)}g`} label="Powder / month" />
-              <StatCard value={estimate.tinsPerMonth ? estimate.tinsPerMonth.toFixed(1) : '-'} label="Tins / month" />
-              <StatCard value={formatCurrency(estimate.costPerMonth)} label="Cost / month" />
-              <StatCard value={formatCurrency((estimate.costPerMonth ?? 0) * 12)} label="Est. / year" />
-            </View>
+            {/* Static reference — shows regardless of DOB. The current
+                row is highlighted only once an age is known (null → none). */}
+            <Card>
+              <SectionTitle title="Singapore infant feeding guidelines" icon="5" />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={{ minWidth: 620 }}>
+                  <GuidelineHeader />
+                  {SG_GUIDELINES.map((item) => (
+                    <GuidelineRow key={item.m} current={item.m === ageMonths} guideline={item} />
+                  ))}
+                </View>
+              </ScrollView>
+              <Text className="text-[11.5px] text-mw-text-muted font-body mt-3" style={{ lineHeight: 18 }} selectable>
+                Planning benchmarks adapted from the MilkWise design handoff. Always follow your paediatrician&apos;s specific advice.
+              </Text>
+            </Card>
 
-            <Text className="text-base font-body-semibold text-mw-text mb-1" selectable>
-              Monthly formula cost, 0 to 12 months
-            </Text>
-            <Text className="text-xs text-mw-text-muted font-body mb-3" selectable>
-              Light green = past estimate, dark green = current month, grey = projected.
-            </Text>
-            <SpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths ?? 0} />
-          </Card>
-        ) : null}
-
-        {hasDob && showCost && ageMonths !== null && ageMonths > 0 ? (
-          <Card>
-            <SectionTitle title="Estimated Lifetime Formula Spend" icon="5" />
-            <Text className="text-sm text-mw-text-muted font-body mb-5" selectable>
-              Past spend is estimated from benchmark intake. Projected spend uses your entered feeding rate.
-            </Text>
-            <View className="flex-row flex-wrap gap-3 mb-6">
-              <SpendSummary tone="amber" value={formatCurrency(estimate.retroSpend)} label={`Already spent months 0-${ageMonths - 1}`} />
-              <SpendSummary tone="greenLight" value={formatCurrency(estimate.projectedSpend)} label={`Projected months ${ageMonths}-11`} />
-              <SpendSummary tone="green" value={formatCurrency(estimate.totalSpend)} label="Stage 1 total birth to 12 months" />
-            </View>
-            <Text className="text-base font-body-semibold text-mw-text mb-1" selectable>
-              Cumulative spend curve
-            </Text>
-            <Text className="text-xs text-mw-text-muted font-body mb-3" selectable>
-              Solid line is estimated actual spend. Dashed line is projected spend.
-            </Text>
-            <CumulativeSpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths} />
-            <InfoBox tone="muted">
-              Methodology: past spend uses benchmark ml x formula price/g. Projected spend uses your entered feeds and age-based solids reduction from 6 months. Breastmilk cost is treated as S$0.
-            </InfoBox>
-          </Card>
-        ) : null}
-
-        {hasDob && ageMonths !== null ? (
-          <Card>
-            <SectionTitle title="Singapore Infant Feeding Guidelines" icon="6" />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={{ minWidth: 620 }}>
-                <GuidelineHeader />
-                {SG_GUIDELINES.map((item) => (
-                  <GuidelineRow key={item.m} current={item.m === ageMonths} guideline={item} />
-                ))}
-              </View>
-            </ScrollView>
-            <Text className="text-[11.5px] text-mw-text-muted font-body mt-3" style={{ lineHeight: 18 }} selectable>
-              Source note: these are planning benchmarks adapted from the provided MilkWise design handoff. Always follow your paediatrician's specific advice.
-            </Text>
-          </Card>
-        ) : (
-          <View className="items-center py-12">
-            <Text className="text-5xl mb-3 text-mw-text-muted">^</Text>
-            <Text className="text-xl font-display-bold text-mw-text mb-2" selectable>
-              Enter your baby's birthday above
-            </Text>
-            <Text className="text-sm text-mw-text-muted font-body text-center" selectable>
-              The calculator will show personalised feeding benchmarks, usage, and cost estimates.
+            <Text className="text-[11.5px] text-mw-text-muted font-body text-center" style={{ lineHeight: 18 }} selectable>
+              All calculations are estimates based on typical usage. Actual consumption varies by baby, growth spurts, and feeding schedules. This is a planning tool, not a prescription.
             </Text>
           </View>
         )}
@@ -506,6 +644,195 @@ const Card = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+/** Uppercase, letter-spaced micro-label — the design's `.mw-eyebrow`. */
+const Eyebrow = ({ children }: { children: React.ReactNode }) => (
+  <Text
+    className="font-body-semibold uppercase text-mw-text-muted"
+    style={{ fontSize: 11, letterSpacing: 1.3 }}
+    selectable
+  >
+    {children}
+  </Text>
+);
+
+/**
+ * One big-number result tile (design `.mw-result-card`): tracked eyebrow,
+ * oversized tabular-mono value, mono caption. This is the human-centric
+ * payload — "what am I spending" — so the number is the loudest thing on
+ * the card.
+ */
+const ResultCard = ({
+  eyebrow,
+  value,
+  caption,
+  emphatic = false,
+}: {
+  eyebrow: string;
+  value: string;
+  caption?: string;
+  /** Sage-tinted treatment for the headline figure (spent / projected). */
+  emphatic?: boolean;
+}) => {
+  const colors = useV2Colors();
+  return (
+    <View
+      className="rounded-xl"
+      style={{
+        // 2-up grid to match the reference (Daily | Monthly / Spent |
+        // Projected). flexBasis ~46% + grow means exactly two per row on
+        // the results column, collapsing to one when it gets narrow.
+        flexGrow: 1,
+        flexBasis: '46%',
+        minWidth: 200,
+        padding: 22,
+        backgroundColor: emphatic ? colors.greenLight : colors.surface,
+        borderWidth: 1,
+        borderColor: emphatic ? colors.greenLight : colors.border,
+      }}
+    >
+      <Text
+        className="font-body-semibold uppercase"
+        style={{ fontSize: 11, letterSpacing: 1.3, color: emphatic ? colors.greenText : colors.muted, marginBottom: 12 }}
+        selectable
+      >
+        {eyebrow}
+      </Text>
+      <Text
+        className="font-mono"
+        style={{
+          fontSize: 36,
+          lineHeight: 38,
+          letterSpacing: -0.6,
+          color: emphatic ? colors.greenText : colors.text,
+          fontVariant: ['tabular-nums'],
+        }}
+        selectable
+      >
+        {value}
+      </Text>
+      {caption ? (
+        <Text
+          className="font-mono"
+          style={{ fontSize: 12, color: emphatic ? colors.greenText : colors.muted, marginTop: 8, opacity: emphatic ? 0.85 : 1 }}
+          selectable
+        >
+          {caption}
+        </Text>
+      ) : null}
+    </View>
+  );
+};
+
+/**
+ * Intake-vs-benchmark status card (design `.mw-benchmark`): the at-a-glance
+ * "is my baby's milk intake normal" answer. Status text + a horizontal
+ * range bar with the recommended band shaded and a marker at today's
+ * intake. Pure layout off existing tokens — no chart dependency.
+ */
+const BenchmarkStatusCard = ({
+  dailyMl,
+  low,
+  high,
+  status,
+}: {
+  dailyMl: number;
+  low: number;
+  high: number;
+  status: 'low' | 'high' | 'ok' | null;
+}) => {
+  const colors = useV2Colors();
+  const noGuide = low === 0 && high === 0;
+  const tone = status === 'ok' ? colors.greenText : colors.danger;
+  const label = noGuide
+    ? 'No specific guideline'
+    : status === 'ok'
+      ? 'Within typical range'
+      : status === 'low'
+        ? 'Below typical range'
+        : 'Above typical range';
+  // Scale so the band sits comfortably mid-bar and a high reading still
+  // fits — mirrors the design's BenchmarkBar maths.
+  const maxScale = Math.max(high * 1.5, dailyMl * 1.1, 1500);
+  // Annotated as the RN percentage template type so it's assignable to
+  // style `left` (a bare `string` is not — DimensionValue is stricter).
+  const pct = (v: number): `${number}%` =>
+    `${Math.min(100, Math.max(0, (v / maxScale) * 100))}%`;
+  return (
+    <Card>
+      <View className="flex-row flex-wrap items-start justify-between" style={{ gap: 16, marginBottom: 18 }}>
+        <View style={{ flexShrink: 1 }}>
+          <Eyebrow>Intake benchmark</Eyebrow>
+          <Text
+            className="font-display-bold"
+            style={{ fontSize: 24, lineHeight: 28, color: tone, marginTop: 6 }}
+            selectable
+          >
+            {label}
+          </Text>
+          {!noGuide ? (
+            <Text className="font-mono" style={{ fontSize: 12, color: colors.muted, marginTop: 4 }} selectable>
+              {low}–{high} ml/day
+            </Text>
+          ) : null}
+        </View>
+        <View className="flex-row items-baseline" style={{ flexShrink: 0 }}>
+          <Text
+            className="font-mono"
+            style={{ fontSize: 40, lineHeight: 42, letterSpacing: -1, color: colors.text, fontVariant: ['tabular-nums'] }}
+            selectable
+          >
+            {Math.round(dailyMl).toLocaleString('en-SG')}
+          </Text>
+          <Text className="font-body" style={{ fontSize: 14, color: colors.muted, marginLeft: 5 }} selectable>
+            ml/day
+          </Text>
+        </View>
+      </View>
+
+      {/* Range bar: track → shaded recommended band → intake marker. */}
+      <View style={{ height: 10, borderRadius: 999, backgroundColor: colors.surface2, position: 'relative', overflow: 'hidden' }}>
+        {!noGuide ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              left: pct(low),
+              width: `${Math.max(0, Math.min(100, (high / maxScale) * 100) - Math.min(100, (low / maxScale) * 100))}%`,
+              backgroundColor: colors.greenLight,
+            }}
+          />
+        ) : null}
+        <View
+          style={{
+            position: 'absolute',
+            top: -2,
+            width: 12,
+            height: 14,
+            borderRadius: 4,
+            left: pct(dailyMl),
+            marginLeft: -6,
+            backgroundColor: tone,
+            borderWidth: 2,
+            borderColor: colors.surface,
+          }}
+        />
+      </View>
+      <View className="flex-row justify-between" style={{ marginTop: 8 }}>
+        <Text className="font-mono" style={{ fontSize: 11, color: colors.muted }} selectable>0</Text>
+        {!noGuide ? (
+          <Text className="font-body-semibold" style={{ fontSize: 11, color: colors.greenText }} selectable>
+            Typical {low}–{high} ml
+          </Text>
+        ) : null}
+        <Text className="font-mono" style={{ fontSize: 11, color: colors.muted }} selectable>
+          {Math.round(maxScale).toLocaleString('en-SG')}
+        </Text>
+      </View>
+    </Card>
+  );
+};
+
 const SectionTitle = ({ title, icon }: { title: string; icon: string }) => {
   const colors = useV2Colors();
   return (
@@ -518,11 +845,30 @@ const SectionTitle = ({ title, icon }: { title: string; icon: string }) => {
   );
 };
 
-const Label = ({ children }: { children: React.ReactNode }) => (
-  <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted mb-2" selectable>
-    {children}
-  </Text>
-);
+/**
+ * Field label. Optional right-aligned `hint` mirrors the design's
+ * `.mw-label` (label left, small mono helper right — e.g. "grams",
+ * "cannot be in the future", "auto-fills scoop, tin size, price").
+ */
+const Label = ({ children, hint }: { children: React.ReactNode; hint?: string }) => {
+  if (hint) {
+    return (
+      <View className="flex-row items-baseline justify-between mb-2" style={{ gap: 8 }}>
+        <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted" selectable>
+          {children}
+        </Text>
+        <Text className="text-[11px] font-mono text-mw-text-muted" selectable>
+          {hint}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted mb-2" selectable>
+      {children}
+    </Text>
+  );
+};
 
 const DobPart = ({
   label,
@@ -550,6 +896,90 @@ const DobPart = ({
     />
   </View>
 );
+
+/**
+ * Single date-of-birth field. On web it's the real `<input type="date">`
+ * — one tap, a calendar popover, locale formatting and keyboard a11y for
+ * free (matches the design screenshot). It writes back into the existing
+ * day/month/year string state (zero-padded) so `parseDobParts` and every
+ * downstream calc stay byte-for-byte unchanged. Native keeps the original
+ * three-box entry (no platform date control there).
+ */
+const pad2 = (s: string) => s.padStart(2, '0');
+
+const DobDateField = ({
+  day,
+  month,
+  year,
+  setDay,
+  setMonth,
+  setYear,
+}: {
+  day: string;
+  month: string;
+  year: string;
+  setDay: (v: string) => void;
+  setMonth: (v: string) => void;
+  setYear: (v: string) => void;
+}) => {
+  const colors = useV2Colors();
+  const { scheme } = useTheme();
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const isoValue =
+    year.length === 4 && month !== '' && day !== ''
+      ? `${year}-${pad2(month)}-${pad2(day)}`
+      : '';
+
+  if (Platform.OS === 'web') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Input: any = 'input';
+    return (
+      <Input
+        type="date"
+        value={isoValue}
+        max={todayIso}
+        onChange={(e: { target: { value: string } }) => {
+          const v = e.target.value; // 'YYYY-MM-DD' or '' when cleared
+          if (!v) {
+            setYear('');
+            setMonth('');
+            setDay('');
+            return;
+          }
+          const [y, m, d] = v.split('-');
+          setYear(y);
+          setMonth(m);
+          setDay(d);
+        }}
+        aria-label="Baby's date of birth"
+        style={{
+          width: '100%',
+          boxSizing: 'border-box',
+          padding: '13px 14px',
+          borderRadius: 10,
+          border: `1.5px solid ${colors.border}`,
+          background: colors.surface2,
+          color: colors.text,
+          fontSize: 15,
+          fontFamily: 'JetBrainsMono_400Regular',
+          // Themes the browser-drawn calendar glyph + popover.
+          colorScheme: scheme,
+          outline: 'none',
+        }}
+      />
+    );
+  }
+
+  return (
+    <View className="flex-row items-end gap-2">
+      <DobPart label="DD" value={day} onChange={setDay} maxLength={2} width={60} />
+      <Text className="text-2xl text-mw-border pb-2">/</Text>
+      <DobPart label="MM" value={month} onChange={setMonth} maxLength={2} width={60} />
+      <Text className="text-2xl text-mw-border pb-2">/</Text>
+      <DobPart label="YYYY" value={year} onChange={setYear} maxLength={4} width={86} />
+    </View>
+  );
+};
 
 const SegmentedControl = ({
   value,
@@ -594,15 +1024,6 @@ const MiniStat = ({ value, label }: { value: string; label: string }) => {
   );
 };
 
-const StatCard = ({ value, label }: { value: string; label: string }) => {
-  const colors = useV2Colors();
-  return (
-  <View className="rounded-lg bg-mw-bg-panel items-center" style={{ flex: 1, minWidth: 128, paddingHorizontal: 12, paddingVertical: 14 }}>
-    <Text className="font-mono-medium text-center" style={{ fontSize: 21, color: colors.greenText, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
-    <Text className="text-[11px] text-mw-text-muted font-body mt-1 text-center" selectable>{label}</Text>
-  </View>
-  );
-};
 
 /**
  * Parse a composite selection key `productId#variantIdx` into its parts.
@@ -650,6 +1071,7 @@ const resolveProductWithVariant = (
 
 const ProductSelect = ({
   label,
+  hint,
   value,
   products,
   placeholder,
@@ -657,6 +1079,7 @@ const ProductSelect = ({
   onChange,
 }: {
   label: string;
+  hint?: string;
   value: string;
   products: Product[];
   placeholder: string;
@@ -675,7 +1098,7 @@ const ProductSelect = ({
     const OptGroup: any = 'optgroup';
     return (
       <View>
-        <Label>{label}</Label>
+        <Label hint={hint}>{label}</Label>
         <Select
           value={value}
           onChange={(event: { target: { value: string } }) => onChange(event.target.value)}
@@ -776,6 +1199,177 @@ const ProductInfoCard = ({ product, compact = false }: { product: Product; compa
   );
 };
 
+/**
+ * Bordered numeric field (design: the "Price per tin" $-prefixed input).
+ * `label` is optional — when the caller already renders a <Label hint>
+ * above (the screenshot pattern), omit it and pass `aria` for a11y.
+ */
+const SpecField = ({
+  label,
+  aria,
+  value,
+  onChange,
+  prefix,
+  suffix,
+  decimals = false,
+}: {
+  label?: string;
+  aria?: string;
+  value: string;
+  onChange: (v: string) => void;
+  prefix?: string;
+  suffix?: string;
+  decimals?: boolean;
+}) => {
+  const colors = useV2Colors();
+  // Keep input numeric. For decimal fields allow one dot; collapse any
+  // extra dots so "4.3.1" → "4.31" rather than NaN at the parse boundary.
+  const sanitize = (raw: string): string => {
+    const cleaned = raw.replace(decimals ? /[^\d.]/g : /[^\d]/g, '');
+    if (!decimals) return cleaned;
+    const [head, ...tail] = cleaned.split('.');
+    return tail.length ? `${head}.${tail.join('')}` : cleaned;
+  };
+  return (
+    <View style={{ flex: 1, minWidth: 96 }}>
+      {label ? (
+        <Text className="text-[10px] text-mw-text-muted font-body-semibold mb-1" selectable>{label}</Text>
+      ) : null}
+      <View
+        className="flex-row items-center rounded-lg border border-mw-border bg-mw-bg-card"
+        style={{ paddingHorizontal: 12 }}
+      >
+        {prefix ? <Text className="font-mono" style={{ color: colors.muted, fontSize: 14 }}>{prefix}</Text> : null}
+        <TextInput
+          value={value}
+          onChangeText={(t) => onChange(sanitize(t))}
+          keyboardType={decimals ? 'decimal-pad' : 'numeric'}
+          placeholder="—"
+          placeholderTextColor={colors.muted}
+          accessibilityLabel={aria ?? label ?? 'Numeric value'}
+          className="flex-1 font-mono-medium text-mw-text"
+          style={{ paddingVertical: 13, fontSize: 15, fontVariant: ['tabular-nums'] }}
+        />
+        {suffix ? <Text className="font-mono ml-1" style={{ color: colors.muted, fontSize: 12 }}>{suffix}</Text> : null}
+      </View>
+    </View>
+  );
+};
+
+/**
+ * Compact −/＋ stepper for scoop size (design screenshot). Distinct from
+ * the slider-backed `Stepper` used for ml/feed & feeds/day — the spec
+ * fields read as a tight numeric trio, not sliders.
+ */
+const SpecStepper = ({
+  value,
+  onChange,
+  step,
+  min,
+  max,
+  decimals = false,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  step: number;
+  min: number;
+  max: number;
+  decimals?: boolean;
+}) => {
+  const colors = useV2Colors();
+  const fmt = (n: number) => (decimals ? String(Math.round(n * 10) / 10) : String(Math.round(n)));
+  const bump = (dir: 1 | -1) => {
+    const n = Number(value);
+    const base = Number.isFinite(n) ? n : min;
+    onChange(fmt(Math.min(max, Math.max(min, base + dir * step))));
+  };
+  const Btn = ({ label, dir }: { label: string; dir: 1 | -1 }) => (
+    <Pressable
+      onPress={() => bump(dir)}
+      accessibilityRole="button"
+      accessibilityLabel={dir === 1 ? 'Increase' : 'Decrease'}
+      hitSlop={8}
+      style={{ width: 42, paddingVertical: 12, alignItems: 'center' }}
+    >
+      <Text className="font-mono" style={{ fontSize: 18, color: colors.text }}>{label}</Text>
+    </Pressable>
+  );
+  return (
+    <View
+      className="flex-row items-center rounded-lg border border-mw-border bg-mw-bg-card"
+      style={{ alignSelf: 'flex-start' }}
+    >
+      <Btn label="−" dir={-1} />
+      <TextInput
+        value={value}
+        onChangeText={(t) => onChange(t.replace(decimals ? /[^\d.]/g : /[^\d]/g, ''))}
+        keyboardType={decimals ? 'decimal-pad' : 'numeric'}
+        accessibilityLabel="Scoop size in grams"
+        className="font-mono-medium text-mw-text text-center"
+        style={{
+          width: 64,
+          paddingVertical: 11,
+          fontSize: 15,
+          fontVariant: ['tabular-nums'],
+          borderLeftWidth: 1,
+          borderRightWidth: 1,
+          borderColor: colors.border,
+        }}
+      />
+      <Btn label="＋" dir={1} />
+    </View>
+  );
+};
+
+/**
+ * Tin-size picker. Web → native <select> of common SG pack sizes; the
+ * current value is always present (prepended if a product's weight isn't
+ * a standard size). Native → numeric fallback.
+ */
+const TIN_SIZES = [380, 400, 800, 820, 850, 900, 1650, 1700, 1800];
+
+const SpecSelect = ({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) => {
+  const colors = useV2Colors();
+  const opts = value && !TIN_SIZES.includes(Number(value))
+    ? [Number(value), ...TIN_SIZES]
+    : TIN_SIZES;
+  if (Platform.OS === 'web') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Select: any = 'select';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Option: any = 'option';
+    return (
+      <Select
+        value={value}
+        onChange={(e: { target: { value: string } }) => onChange(e.target.value)}
+        aria-label="Tin size in grams"
+        style={{
+          width: '100%',
+          boxSizing: 'border-box',
+          padding: '13px 12px',
+          borderRadius: 10,
+          border: `1px solid ${colors.border}`,
+          background: colors.surface,
+          color: colors.text,
+          fontSize: 15,
+          fontFamily: 'JetBrainsMono_400Regular',
+        }}
+      >
+        {opts.map((g) => (
+          <Option key={g} value={String(g)}>{g}g</Option>
+        ))}
+      </Select>
+    );
+  }
+  return <SpecField aria="Tin size in grams" value={value} onChange={onChange} suffix="g" />;
+};
+
 const RatioControl = ({ value, onChange }: { value: number; onChange: (value: number) => void }) => {
   const colors = useV2Colors();
   return (
@@ -818,27 +1412,75 @@ const InfoBox = ({ tone, children }: { tone: 'green' | 'amber' | 'blue' | 'muted
   );
 };
 
-const SpendSummary = ({
-  tone,
-  value,
-  label,
+/**
+ * Cross-border price estimate. Singapore parents routinely buy formula in
+ * Johor Bahru because the same tin is materially cheaper in Malaysia. This
+ * card turns the already-computed yearly tin volume into a concrete "what
+ * you'd save" figure — the highest-intent number on the page for a
+ * cost-driven user.
+ *
+ * Constants are deliberately rough and labelled "estimate" in the UI:
+ *   - SGD_TO_MYR: nominal exchange rate. Directional, not a live quote;
+ *     formula isn't a forex-sensitive purchase, so a fixed planning rate
+ *     is honest enough and avoids a network dependency on this screen.
+ *   - MY_DISCOUNT: typical SG→MY retail price gap for the same product
+ *     (~28%, matching the design handoff's MalaysiaCompare reference).
+ * Both are single-source named constants so a future correction is one
+ * edit, not a hunt through arithmetic.
+ */
+const SGD_TO_MYR = 3.05;
+const MY_DISCOUNT = 0.28;
+
+const MalaysiaCompare = ({
+  tinPriceSgd,
+  tinsPerYear,
 }: {
-  tone: 'amber' | 'greenLight' | 'green';
-  value: string;
-  label: string;
+  tinPriceSgd: number;
+  tinsPerYear: number;
 }) => {
   const colors = useV2Colors();
-  const styles = {
-    amber: { bg: colors.amberLight, fg: colors.amber, border: colors.amber },
-    greenLight: { bg: colors.greenLight, fg: colors.greenText, border: colors.green },
-    green: { bg: colors.greenText, fg: colors.textInverse, border: colors.green },
-  }[tone];
+  // MY price in SGD-equivalent, then converted to ringgit for display.
+  const myPriceSgd = tinPriceSgd * (1 - MY_DISCOUNT);
+  const myPriceMyr = Math.round(tinPriceSgd * SGD_TO_MYR * (1 - MY_DISCOUNT));
+  const savePerTin = tinPriceSgd - myPriceSgd;
+  const annualSavings = savePerTin * tinsPerYear;
+  const pctLess = Math.round(MY_DISCOUNT * 100);
+
   return (
-    <View className="rounded-xl items-center border" style={{ flex: 1, minWidth: 180, padding: 18, backgroundColor: styles.bg, borderColor: styles.border }}>
-      <Text className="text-[10px] font-body-semibold uppercase tracking-wider text-center" style={{ color: styles.fg, opacity: tone === 'green' ? 0.75 : 1 }} selectable>
-        {label}
-      </Text>
-      <Text className="font-mono-medium mt-2 text-center" style={{ fontSize: 27, color: styles.fg, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
+    <View style={{ gap: 16 }}>
+      <View className="flex-row flex-wrap" style={{ gap: 16 }}>
+        <View className="rounded-lg bg-mw-bg-panel" style={{ flex: 1, minWidth: 150, padding: 16 }}>
+          <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted" selectable>
+            SG / tin
+          </Text>
+          <Text className="font-mono-medium mt-1" style={{ fontSize: 24, color: colors.text, fontVariant: ['tabular-nums'] }} selectable>
+            {formatCurrency(tinPriceSgd)}
+          </Text>
+        </View>
+        <View className="rounded-lg bg-mw-bg-panel" style={{ flex: 1, minWidth: 150, padding: 16 }}>
+          <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted" selectable>
+            MY / tin (est.)
+          </Text>
+          <Text className="font-mono-medium mt-1" style={{ fontSize: 24, color: colors.text, fontVariant: ['tabular-nums'] }} selectable>
+            RM {myPriceMyr.toLocaleString('en-SG')}
+          </Text>
+        </View>
+      </View>
+
+      {/* Highlighted savings panel — the design's sage "what you'd save"
+          block. greenText (not green) for the label so small uppercase
+          text clears WCAG-AA on the tint (§9b Phase 7 a11y rule). */}
+      <View className="rounded-xl items-center" style={{ backgroundColor: colors.greenLight, padding: 20 }}>
+        <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-center" style={{ color: colors.greenText }} selectable>
+          Estimated annual savings
+        </Text>
+        <Text className="font-mono-medium mt-2 text-center" style={{ fontSize: 34, color: colors.greenText, fontVariant: ['tabular-nums'] }} selectable>
+          {formatCurrency(annualSavings)}
+        </Text>
+        <Text className="text-xs font-body mt-2 text-center" style={{ color: colors.greenText, lineHeight: 18 }} selectable>
+          ~{pctLess}% less in MY · based on {formatNumber(tinsPerYear, { maximumFractionDigits: 1 })} tins/year at your current feeding rate. Cross-border purchases for personal use are generally permitted but subject to SG customs allowances.
+        </Text>
+      </View>
     </View>
   );
 };

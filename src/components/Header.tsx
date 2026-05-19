@@ -39,6 +39,9 @@ export const Header = () => {
   const pathname    = usePathname();
   const router      = useRouter();
   const isCompact   = width < TABLET_BREAKPOINT;
+  // Search filters the Compare grid, so it only belongs on Compare ("/").
+  // On every other route it was dead UI typing into a hidden list.
+  const onCompare   = pathname === '/';
   const { filters, setSearch } = useProductsContext();
   const { tokens } = useTheme();
 
@@ -151,14 +154,19 @@ export const Header = () => {
             so logo + links + search read as one tight cluster.
             `flex: 1, maxWidth: 280` still lets the field grow on roomy
             viewports but caps it before it sprawls. */}
-        {!isCompact && (
-          <SearchField
-            value={filters.search}
-            onChange={handleSearchChange}
-            onClear={() => setSearch('')}
-            style={{ marginLeft: 16, flex: 1, maxWidth: 280 }}
-          />
-        )}
+        {!isCompact &&
+          (onCompare ? (
+            <SearchField
+              value={filters.search}
+              onChange={handleSearchChange}
+              onClear={() => setSearch('')}
+              style={{ marginLeft: 16, flex: 1, maxWidth: 280 }}
+            />
+          ) : (
+            // Off Compare there's no search — a flex spacer keeps the
+            // theme toggle pinned to the right edge of the bar.
+            <View style={{ flex: 1 }} />
+          ))}
 
         {/* Theme toggle sits at the far right of the nav cluster on
             desktop. The 8px container gap spaces it from the search. */}
@@ -177,15 +185,19 @@ export const Header = () => {
             gap: 8,
             paddingHorizontal: 14,
             paddingBottom: 10,
+            // No search off Compare → right-align the lone theme toggle.
+            justifyContent: onCompare ? 'flex-start' : 'flex-end',
           }}
         >
-          <View style={{ flex: 1 }}>
-            <SearchField
-              value={filters.search}
-              onChange={handleSearchChange}
-              onClear={() => setSearch('')}
-            />
-          </View>
+          {onCompare && (
+            <View style={{ flex: 1 }}>
+              <SearchField
+                value={filters.search}
+                onChange={handleSearchChange}
+                onClear={() => setSearch('')}
+              />
+            </View>
+          )}
           <ThemeToggle />
         </View>
       )}
@@ -264,15 +276,21 @@ const SearchField = ({
  * directly — and doing so makes it the one on-screen proof that the
  * dark-mode mechanism actually flips before Phase 4 migrates the rest.
  */
+// SYSTEM MODE DISABLED (latency investigation, 2026-05-19). The toggle is
+// binary light ↔ dark, so 'preference' is only ever 'light' | 'dark' at
+// runtime. The 'system' entries are kept ONLY to satisfy
+// Record<ThemePreference, …> and to make restoring the 3-way cycle a pure
+// revert. Original NEXT_LABEL was { system:'light', light:'dark',
+// dark:'system' } — adjusted so the a11y label matches the binary flip.
 const TOGGLE_GLYPH: Record<ThemePreference, string> = {
-  system: '◐', // half-filled = "auto / follow OS"
+  system: '◐', // half-filled = "auto / follow OS" (unreachable while disabled)
   light: '☀',
   dark: '☾',
 };
 const NEXT_LABEL: Record<ThemePreference, string> = {
-  system: 'light',
+  system: 'light', // unreachable while system mode is disabled
   light: 'dark',
-  dark: 'system',
+  dark: 'light',
 };
 
 const ThemeToggle = () => {

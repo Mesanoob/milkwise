@@ -15,8 +15,12 @@ import Svg, {
 import { SG_GUIDELINES } from '../../data/feedingGuidelines';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const W = 340, H = 160, PL = 40, PR = 10, PT = 12, PB = 28;
+// Enlarged to sit coherently beside the (now large) SpendChart in the
+// wide results column. Geometry is constant-derived, so the box bump
+// rescales the plot; `FS` scales every label off the old flat 8.
+const W = 580, H = 280, PL = 54, PR = 14, PT = 16, PB = 36;
 const IW = W - PL - PR, IH = H - PT - PB, MAX_Y = 1400;
+const FS = 12;
 
 const xP = (i: number) => PL + (i / 11) * IW;
 const yP = (v: number) => PT + IH - (v / MAX_Y) * IH;
@@ -63,7 +67,7 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
       {gridLines.map((v) => (
         <G key={v}>
           <Line x1={PL} x2={W - PR} y1={yP(v)} y2={yP(v)} stroke={c.border} strokeWidth={1} strokeDasharray="4,3" />
-          <SvgText x={PL - 3} y={yP(v) + 3} textAnchor="end" fontSize={8} fill={c.textFaint} fontFamily="JetBrainsMono_400Regular">{v}</SvgText>
+          <SvgText x={PL - 3} y={yP(v) + 3} textAnchor="end" fontSize={FS} fill={c.textFaint} fontFamily="JetBrainsMono_400Regular">{v}</SvgText>
         </G>
       ))}
 
@@ -80,7 +84,7 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
           x={xP(i)}
           y={H - 4}
           textAnchor="middle"
-          fontSize={8}
+          fontSize={FS}
           fill={i === bm ? c.accent : c.textFaint}
           fontFamily={i === bm ? 'JetBrainsMono_500Medium' : 'JetBrainsMono_400Regular'}
         >
@@ -91,7 +95,7 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
       {/* Baby's current age marker */}
       <Line x1={bx} x2={bx} y1={PT} y2={H - PB} stroke={c.accent} strokeWidth={1.5} strokeDasharray="3,3" opacity={0.5} />
       <Circle cx={bx} cy={benchY} r={4} fill={c.accent} />
-      <SvgText x={bx + 5} y={benchY + 3} fontSize={8} fill={c.accent} fontFamily="JetBrainsMono_500Medium">
+      <SvgText x={bx + 5} y={benchY + 3} fontSize={FS} fill={c.accent} fontFamily="JetBrainsMono_500Medium">
         {Math.round((gRef.dMin + gRef.dMax) / 2)}ml
       </SvgText>
 
@@ -99,7 +103,7 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
       {userY !== null && userColor && (
         <G>
           <Circle cx={bx} cy={userY} r={4} fill={userColor} stroke={c.bgCard} strokeWidth={2} />
-          <SvgText x={bx + 5} y={userY - 4} fontSize={8} fill={userColor} fontFamily="JetBrainsMono_500Medium">
+          <SvgText x={bx + 5} y={userY - 4} fontSize={FS} fill={userColor} fontFamily="JetBrainsMono_500Medium">
             {currentDailyMl}ml yours
           </SvgText>
         </G>
@@ -109,7 +113,7 @@ export function BenchmarkChart({ babyMonths, currentDailyMl }: Props) {
       <SvgText
         x={8}
         y={H / 2}
-        fontSize={8}
+        fontSize={FS}
         fill={c.textFaint}
         textAnchor="middle"
         transform={`rotate(-90, 8, ${H / 2})`}
