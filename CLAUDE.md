@@ -1,8 +1,10 @@
 # CLAUDE.md — MilkWise SG
 
-Single source of truth for this project. Read top-to-bottom on first session, then jump back to sections 8, 9, and 9b as work progresses. Last updated 2026-05-19.
+Single source of truth for this project. Read top-to-bottom on first session, then jump back to sections 8, 9, 9b, and **9c (latest session)** as work progresses. Last updated 2026-05-20.
 
-> **✅ v2 design re-skin COMPLETE (Phases 0–7).** Branch `redesign-v2`, all local (not pushed); `testingprod` (v1) untouched. Sage/cream + Inter/Inter Tight/JetBrains Mono + OS-seeded dark mode, tabular numerals, canonical radii/shadows, WCAG-AA accent (`accentText` role token). **Two known a11y residuals carried to the §9 launch backlog (items 13b/13c), need design input:** small text on the full-bleed sage hero/footer bands, and the spec-exact gold/silver/bronze medal strips (§7b-frozen). Safari visual sweep also still pending (all v2 QA was Chromium/Puppeteer). Next work is the §9 launch backlog (hosting, legal/medical disclaimer, SEO, Lighthouse, image `srcset`, the a11y residual, Safari). Old resume-pointer history + full phase trail in §9b.
+> **▶ START HERE (2026-05-20):** Active branch is **`FinalDesign`** (cut from `redesign-v2`, pushed to `origin/FinalDesign`). It contains the full v2 re-skin **plus** a post-Phase-7 calculator redesign + dark-mode switch-latency fixes — **see §9c**. ⚠️ **Run `npm install` first**: `node_modules` may hold `testingprod` (v1) deps, so `npm run typecheck` reports missing `@expo-google-fonts/inter-tight` / `jetbrains-mono` / `async-storage` until reinstalled. The code itself was verified 0 errors. `redesign-v2` and `testingprod` are preserved and synced with origin.
+
+> **✅ v2 design re-skin COMPLETE (Phases 0–7).** Now on `FinalDesign` (was `redesign-v2`); both pushed; `testingprod` (v1) untouched. Sage/cream + Inter/Inter Tight/JetBrains Mono + OS-seeded dark mode, tabular numerals, canonical radii/shadows, WCAG-AA accent (`accentText` role token). **Two known a11y residuals carried to the §9 launch backlog (items 13b/13c), need design input:** small text on the full-bleed sage hero/footer bands, and the spec-exact gold/silver/bronze medal strips (§7b-frozen). Safari visual sweep also still pending (all v2 QA was Chromium/Puppeteer). Next work is the §9 launch backlog (hosting, legal/medical disclaimer, SEO, Lighthouse, image `srcset`, the a11y residual, Safari). Old resume-pointer history + full phase trail in §9b.
 
 ---
 
@@ -52,8 +54,9 @@ Senior Tech Lead + Cybersecurity Expert posture. The earlier "Beginner Mentor / 
 **Branch model:**
 | Branch | Role |
 |---|---|
-| `testingprod` | **v1 — shippable.** Current design (forest green, DM fonts). Stays working/launchable. |
-| `redesign-v2` | **Active dev.** v2 visual re-skin (sage/cream, Inter/JetBrains, dark mode). Branched off clean `testingprod`. Do work here. |
+| `FinalDesign` | **★ ACTIVE (2026-05-20).** Cut from `redesign-v2`. Full v2 re-skin + post-Phase-7 calculator redesign + dark-mode latency fixes (§9c). Pushed to `origin/FinalDesign`. **Do work here.** |
+| `redesign-v2` | v2 re-skin through Phase 7 + session-3 work (commit `50e9151 save1`). Preserved; synced with origin. |
+| `testingprod` | **v1 — shippable.** Original design (forest green, DM fonts). Untouched; synced with origin. |
 | `main` | Do not touch. |
 
 - **v1 design source (current, on `testingprod`):** `/private/tmp/milkwise-design/milk-comparison-website/project/design_handoff_milkwise_sg/`
@@ -351,6 +354,27 @@ declares it canonical and says don't re-derive). Phase 2 merged the
 - `testingprod` (v1) must stay untouched and shippable. All v2 work lands on `redesign-v2`.
 - After each phase: `npm run typecheck` = 0, then visual-diff the touched screens against `../Milkwise-designrepo/design-reference/screens/*` (both light + dark, mobile width).
 - `../Milkwise-designrepo/INTEGRATION.md` §2-3 + `data-mapping.md` are the detailed spec. Reference them; don't re-derive token values.
+
+---
+
+## 9c. ✅ Session 3 (2026-05-20) — dark-mode latency + calculator redesign
+
+All committed on `redesign-v2` (`50e9151 save1`) and inherited by `FinalDesign`. Verified via `npm run typecheck`=0 (when v2 deps installed) + Puppeteer light **and** dark, two-column **and** mobile.
+
+**A. Dark-mode switch latency (`ThemeContext.tsx`, `Header.tsx`, `global.css`)**
+- **Diagnosis (measured, not guessed):** two parallel theming paths — instant CSS-var/`.dark` flip vs. a JS `useTheme().tokens` re-render. Perceived lag was a *dead first click* (system→light is a no-op when OS already light). Real freeze (~68–130ms, asymmetric, light→dark only) was isolated by probe to the **§7c 12-pass `.mw-packshot` drop-shadow × 61 images**, not React.
+- **Fix 1:** system mode commented out (recoverable block) → binary light↔dark cycle; `Header` glyph map binary. Kills the dead click.
+- **Fix 2:** the heavy halo is gated behind `.dark.fx-ready`; `ThemeContext` drops `fx-ready` for the flip frame (cheap 1-pass ambient) and re-arms it on a double-rAF, moving the irreducible 12-pass cost **off the click's critical path**. Steady-state visual byte-identical. ⚠️ Do NOT recombine the two `.mw-packshot` rules in `global.css` — the split IS the fix.
+
+**B. Calculator redesign (`app/calculator.tsx`, `feedingCalculator.ts`, 3 charts)** — net-new product UI the user directed via the frontend-design skill + reference screenshots. **This supersedes the Phase-1–7 calculator; do not treat calculator as "just re-skinned".**
+- **Layout:** screenshot-parity. Left = one always-visible input panel (single `<input type="date">` DOB on web + 3-box native fallback; gender **commented out** recoverably; `Pick a formula` defaulting to `— Manual entry —`; always-on Scoop stepper / Tin select / Price `$` field). Right = human-centric results: `BenchmarkStatusCard` (range bar) + 2×2 `ResultCard` grid (Daily / Monthly / **Spent so far** / **Projected**, last two emphatic sage) + SG-vs-MY savings. Bottom (full-width) = enlarged SpendChart + Cumulative + Benchmark-by-month SVG + guidelines table.
+- **Engine (`feedingCalculator.ts`):** added optional `scoopGOverride` / `tinWeightGOverride` / `pricePerGramOverride` folded over product-derived values at one point; `formulaShare=1` when no product but a manual price exists → **manual entry produces a full cost**. New `MalaysiaCompare` (SGD_TO_MYR 3.05, MY_DISCOUNT 0.28).
+- **Behaviour locked by latest user asks:** results are **NOT** gated on DOB (calculator shows immediately; guidelines table always shows; benchmark-by-month + cumulative stay age-gated by nature); **all inputs default to 0** on fresh load; DOB label has **no** "cannot be in the future" hint; formula picker has **no** "auto-fills…" hint (auto-fill behaviour kept).
+- Charts enlarged (SpendChart 580×300, Benchmark/Cumulative to match) with an `FS` font knob.
+
+**C. Header (`Header.tsx`)** — search bar **scoped to Compare (`/`) only** (`onCompare = pathname === '/'`); off-Compare a flex spacer (desktop) / right-aligned lone toggle (mobile) keeps the theme toggle pinned. It was dead UI typing into a hidden list elsewhere.
+
+**Open / next:** Safari sweep still pending (all QA Chromium/Puppeteer). The feeds/ml controls still use the slider-`Stepper` (screenshot shows plain steppers — deferred, not requested). §9 launch backlog otherwise unchanged. The two §9 a11y residuals (13b/13c) still stand.
 
 ---
 
