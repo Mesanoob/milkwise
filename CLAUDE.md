@@ -296,7 +296,7 @@ Ordered by launch-readiness. Effort: **L** = under 1 hr, **M** = 1-4 hr, **H** =
 | 4 | Real-device pass on iPhone Safari + Android Chrome | L |
 | 5 | SEO metadata — title, description, OG image, favicon, robots.txt, sitemap.xml | L |
 | 6 | Lighthouse audit on built bundle (target a11y ≥95, perf ≥85) | M |
-| 7 | Image optimization — WebP + responsive `srcset` (375 / 768 / 1280) | M |
+| 7 | Image optimization — WebP ✅ (transparent, normalised 1200², 9.6→8.2 MB; see §7c). **Remaining:** responsive `srcset` (375 / 768 / 1280) | M |
 | 8 | `npm audit` triage — 4 moderate vulnerabilities (do NOT `--force`) | L |
 
 ### Strongly recommended pre-launch
@@ -400,6 +400,8 @@ If you're a fresh AI agent (Claude in another session, ChatGPT, Gemini, etc.) br
 - **Variant pill triggers navigation** — don't wrap the card in `<Link>`. Use the click-target pattern.
 - **Font weight wrong on native** — use `font-sans-bold`, not `font-bold` (no synthesis).
 - **Image filename with `+`** — Metro mangles to space. Use `-`.
+- **New product image looks mis-scaled / no dark halo** — it wasn't run through the §7c normalisation (1200² @84%). Normalise it, then `npm run generate:images`. Don't try to fix scale in CSS — `contain` works on the canvas, not the alpha.
+- **`products.json` references `.webp` not `.jpg`** — intentional, user-directed (§7c). Not a §7b violation; don't revert.
 - **Tailwind arbitrary values missing** — confirm `content` includes `./src/**/*.{js,jsx,ts,tsx}`.
 - **Modal renders inline on web** — wrapped in `ModalShell`; on web that's `position: 'fixed'`.
 - **Specialty key missing** — `Specialty` union must match `products.json` raw strings (currently 11 keys).
