@@ -157,6 +157,11 @@ export const palette = {
     divider: '#E5DDC8',
 
     navBg: 'rgba(247,243,234,0.82)',
+    // --mw-shadow-focus colour (the 3px input-focus halo). Theme-split per
+    // colors_and_type.css: light 0.20, dark 0.25. Phase 4 form-porting
+    // renders this as the focus ring on .mw-input-equivalents. Additive —
+    // nothing consumes it before Phase 4.
+    focusRing: 'rgba(107,150,130,0.20)',
   },
   dark: {
     bg: '#1A1916',
@@ -204,6 +209,7 @@ export const palette = {
     divider: '#2F2D29',
 
     navBg: 'rgba(26,25,22,0.78)',
+    focusRing: 'rgba(156,196,171,0.25)',
   },
 } as const;
 
@@ -255,6 +261,7 @@ export const motion = {
 export const layout = {
   maxContent: 1200, // web/PWA only; native screens are full-width
   maxProse: 680,
+  sidebar: 280, // --mw-sidebar: design's desktop filter-column width
   navH: 64,
   bannerH: 36,
 } as const;
