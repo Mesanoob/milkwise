@@ -83,6 +83,7 @@ module.exports = {
           "accent-hover": "rgb(var(--mw-accent-hover) / <alpha-value>)",
           "accent-soft": "rgb(var(--mw-accent-soft) / <alpha-value>)",
           "accent-tint": "rgb(var(--mw-accent-tint) / <alpha-value>)",
+          "accent-text": "rgb(var(--mw-accent-text) / <alpha-value>)",
           cream: "rgb(var(--mw-cream) / <alpha-value>)",
           "cream-soft": "rgb(var(--mw-cream-soft) / <alpha-value>)",
           "cream-tint": "rgb(var(--mw-cream-tint) / <alpha-value>)",

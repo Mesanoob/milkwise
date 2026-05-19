@@ -37,7 +37,9 @@ export const DisplayToggle = ({ value, onChange }: DisplayToggleProps) => {
             hitSlop={{ top: 8, bottom: 8, left: 2, right: 2 }}
             className={
               'px-3 py-1.5 rounded-full flex-row items-center gap-1.5 ' +
-              (isActive ? 'bg-mw-accent' : '')
+              // accentText fill: the active pill carries textInverse label
+              // at 12px — cream-on-accent is only 3:1 (AA fail).
+              (isActive ? 'bg-mw-accent-text' : '')
             }
           >
             <Text className={isActive ? 'text-mw-text-inverse text-xs' : 'text-mw-text-muted text-xs'}>

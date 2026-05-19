@@ -379,7 +379,7 @@ const PodiumCard = ({
             className="font-body-semibold"
             style={{
               fontSize: 10,
-              color: tokens.colors.accent,
+              color: tokens.colors.accentText,
               textTransform: 'uppercase',
               letterSpacing: 0.6,
               marginBottom: 4,
@@ -389,7 +389,7 @@ const PodiumCard = ({
           </Text>
           <Text
             className="font-body"
-            style={{ fontSize: 11.5, color: tokens.colors.accentHover, lineHeight: 17 }}
+            style={{ fontSize: 11.5, color: tokens.colors.accentText, lineHeight: 17 }}
           >
             {product.why}
           </Text>
@@ -399,7 +399,9 @@ const PodiumCard = ({
         <View
           style={{
             paddingVertical: 8,
-            backgroundColor: tokens.colors.accent,
+            // accentText (not accent): this fill carries 13px text, so it
+            // needs the AA-safe darker sage (cream-on-accent is only 3:1).
+            backgroundColor: tokens.colors.accentText,
             borderRadius: 8,
             alignItems: 'center',
           }}
@@ -511,7 +513,7 @@ const RankRow = ({
         </Text>
         {product.bestFor ? (
           <Text
-            className="font-body-semibold text-mw-accent"
+            className="font-body-semibold text-mw-accent-text"
             style={{ fontSize: 11.5, marginTop: 3 }}
             numberOfLines={1}
           >
@@ -629,7 +631,7 @@ const ShareBar = ({
         />
       </View>
       <Text
-        className="font-mono-medium text-mw-accent"
+        className="font-mono-medium text-mw-accent-text"
         style={{ width: 40, fontSize: 12, textAlign: 'right', fontVariant: ['tabular-nums'] }}
       >
         {share}%
@@ -668,7 +670,7 @@ const MiniMetric = ({
         className="font-body-semibold uppercase"
         style={{
           fontSize: 9.5,
-          color: accent ? tokens.colors.accent : tokens.colors.textMuted,
+          color: accent ? tokens.colors.accentText : tokens.colors.textMuted,
           letterSpacing: 0.4,
         }}
       >
@@ -678,7 +680,7 @@ const MiniMetric = ({
         className="font-mono-medium"
         style={{
           fontSize: 12.5,
-          color: accent ? tokens.colors.accent : tokens.colors.text,
+          color: accent ? tokens.colors.accentText : tokens.colors.text,
           marginTop: 1,
           fontVariant: ['tabular-nums'],
         }}

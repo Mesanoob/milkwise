@@ -111,7 +111,7 @@ export default function CompareScreen() {
       >
         <SortDropdown value={filters.sort} onChange={setSort} />
         {directionHint ? (
-          <Text className="text-[11.5px] text-mw-accent font-body-semibold">
+          <Text className="text-[11.5px] text-mw-accent-text font-body-semibold">
             {directionHint}
           </Text>
         ) : null}

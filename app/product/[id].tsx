@@ -155,7 +155,7 @@ export default function ProductDetailScreen() {
           <View className="flex-row items-center flex-wrap gap-1.5 mb-5">
             <Link href="/" asChild>
               <Pressable accessibilityRole="link">
-                <Text className="text-[12.5px] text-mw-accent font-body-semibold">
+                <Text className="text-[12.5px] text-mw-accent-text font-body-semibold">
                   ← All Products
                 </Text>
               </Pressable>
@@ -238,19 +238,19 @@ export default function ProductDetailScreen() {
                             </View>
                             <Text
                               className="font-mono-medium text-[12px]"
-                              style={{ color: isActive ? tokens.colors.accent : tokens.colors.text, fontVariant: ['tabular-nums'] }}
+                              style={{ color: isActive ? tokens.colors.accentText : tokens.colors.text, fontVariant: ['tabular-nums'] }}
                             >
                               {formatWeight(vt.weightG)}
                             </Text>
                             <Text
                               className="font-mono-medium text-[11px] mt-0.5"
-                              style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
+                              style={{ color: isActive ? tokens.colors.accentText : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
                             >
                               ${vt.price.toFixed(2)}
                             </Text>
                             <Text
                               className="font-mono text-[10px] mt-0.5"
-                              style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
+                              style={{ color: isActive ? tokens.colors.accentText : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
                             >
                               ${(vt.pricePerGram ?? 0).toFixed(4)}/g
                             </Text>
@@ -266,7 +266,7 @@ export default function ProductDetailScreen() {
               <View className="flex-1 gap-5" style={{ minWidth: 280 }}>
                 {/* Badges row */}
                 <View className="flex-row flex-wrap items-center gap-2">
-                  <Badge bg={tokens.colors.accent} fg={tokens.colors.textInverse} label={product.stage} />
+                  <Badge bg={tokens.colors.accentText} fg={tokens.colors.textInverse} label={product.stage} />
                   {product.specialty && (
                     <SpecialtyBadge specialty={product.specialty as SpecialtyKey} />
                   )}
@@ -309,8 +309,8 @@ export default function ProductDetailScreen() {
                     }}
                   >
                     <Text className="text-[13px] font-body">
-                      <Text className="font-body-semibold" style={{ color: tokens.colors.accent }}>✓ Best for: </Text>
-                      <Text style={{ color: tokens.colors.accentHover }}>{product.bestFor}</Text>
+                      <Text className="font-body-semibold" style={{ color: tokens.colors.accentText }}>✓ Best for: </Text>
+                      <Text style={{ color: tokens.colors.accentText }}>{product.bestFor}</Text>
                     </Text>
                   </View>
                 )}
@@ -391,13 +391,16 @@ export default function ProductDetailScreen() {
                     <View
                       style={{
                         width: 22, height: 22, borderRadius: 11,
-                        backgroundColor: isThis ? tokens.colors.accent : tokens.colors.border,
+                        // accentText (not accent) so the 10px rank number
+                        // clears AA on the circle; non-this uses `text` on
+                        // the border-grey circle (textMuted was only 3.6:1).
+                        backgroundColor: isThis ? tokens.colors.accentText : tokens.colors.border,
                         alignItems: 'center', justifyContent: 'center',
                       }}
                     >
                       <Text
                         className="font-mono-medium text-[10px]"
-                        style={{ color: isThis ? tokens.colors.textInverse : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
+                        style={{ color: isThis ? tokens.colors.textInverse : tokens.colors.text, fontVariant: ['tabular-nums'] }}
                       >
                         {i + 1}
                       </Text>
@@ -427,7 +430,7 @@ export default function ProductDetailScreen() {
                         numberOfLines={1}
                         style={{
                           fontWeight: isThis ? '700' : '500',
-                          color: isThis ? tokens.colors.accent : tokens.colors.text,
+                          color: isThis ? tokens.colors.accentText : tokens.colors.text,
                         }}
                       >
                         {q.name}
@@ -443,7 +446,7 @@ export default function ProductDetailScreen() {
                     </View>
                     <Text
                       className="font-mono-medium text-[13px]"
-                      style={{ color: isThis ? tokens.colors.accent : tokens.colors.text, fontVariant: ['tabular-nums'] }}
+                      style={{ color: isThis ? tokens.colors.accentText : tokens.colors.text, fontVariant: ['tabular-nums'] }}
                     >
                       ${ppg.toFixed(4)}/g
                     </Text>
@@ -548,18 +551,18 @@ export default function ProductDetailScreen() {
                             backgroundColor: isSelected ? tokens.colors.accentTint : 'transparent',
                           }}
                         >
-                          <Cell width={96} bold color={isSelected ? tokens.colors.accent : tokens.colors.text}>
+                          <Cell width={96} bold color={isSelected ? tokens.colors.accentText : tokens.colors.text}>
                             {formatWeight(vt.weightG)}
                             {isSelected && (
-                              <Text className="font-body-semibold text-[10px]" style={{ color: tokens.colors.textInverse, backgroundColor: tokens.colors.accent, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 6 }}>
+                              <Text className="font-body-semibold text-[10px]" style={{ color: tokens.colors.textInverse, backgroundColor: tokens.colors.accentText, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 6 }}>
                                 {' selected'}
                               </Text>
                             )}
                           </Cell>
-                          <Cell width={96} bold size={15} color={isSelected ? tokens.colors.accent : tokens.colors.text}>
+                          <Cell width={96} bold size={15} color={isSelected ? tokens.colors.accentText : tokens.colors.text}>
                             ${vt.price.toFixed(2)}
                           </Cell>
-                          <Cell width={96} bold color={isBest ? tokens.colors.accent : tokens.colors.text}>
+                          <Cell width={96} bold color={isBest ? tokens.colors.accentText : tokens.colors.text}>
                             ${ppg.toFixed(4)}
                             {isBest && (
                               <Text className="font-body-semibold text-[10px]" style={{ color: '#065F46', backgroundColor: '#D1FAE5', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4, marginLeft: 5 }}>
@@ -608,7 +611,7 @@ export default function ProductDetailScreen() {
                     }}
                   >
                     <Text style={{ fontSize: 22 }}>{f.icon}</Text>
-                    <Text className="font-body-semibold text-[13px]" style={{ color: tokens.colors.accent }}>
+                    <Text className="font-body-semibold text-[13px]" style={{ color: tokens.colors.accentText }}>
                       {f.label}
                     </Text>
                   </View>
@@ -776,7 +779,7 @@ export default function ProductDetailScreen() {
                       <Text className="text-[12.5px] font-body-semibold text-mw-text mt-0.5" numberOfLines={2}>
                         {q.name}
                       </Text>
-                      <Text className="text-[11.5px] font-mono-medium text-mw-accent mt-1" style={{ fontVariant: ['tabular-nums'] }}>
+                      <Text className="text-[11.5px] font-mono-medium text-mw-accent-text mt-1" style={{ fontVariant: ['tabular-nums'] }}>
                         ${(q.pricePerGram ?? 0).toFixed(4)}/g
                       </Text>
                     </View>
@@ -920,7 +923,7 @@ const StatBox = ({
     >
       <Text
         className="font-mono-medium"
-        style={{ fontSize: 20, color: highlight ? tokens.colors.accent : tokens.colors.text, lineHeight: 22, fontVariant: ['tabular-nums'] }}
+        style={{ fontSize: 20, color: highlight ? tokens.colors.accentText : tokens.colors.text, lineHeight: 22, fontVariant: ['tabular-nums'] }}
       >
         {value}
       </Text>
@@ -959,7 +962,7 @@ const InfoPill = ({ icon, label }: { icon: string; label: string }) => {
       }}
     >
       <Text className="text-[14px]">{icon}</Text>
-      <Text className="font-body-semibold text-[12px]" style={{ color: tokens.colors.accent }}>
+      <Text className="font-body-semibold text-[12px]" style={{ color: tokens.colors.accentText }}>
         {label}
       </Text>
     </View>
@@ -1130,10 +1133,11 @@ const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator>
       <View style={{ minWidth: 540 }}>
-        {/* Header row */}
+        {/* Header row — accentText (carries 11px header cells; cream-on-
+            accent is only 3:1, fails AA at that size). */}
         <View
           className="flex-row"
-          style={{ backgroundColor: tokens.colors.accent }}
+          style={{ backgroundColor: tokens.colors.accentText }}
         >
           <TableHeader text="Nutrient" width={240} />
           <TableHeader text="Unit"     width={80} />
@@ -1151,7 +1155,7 @@ const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
               <View style={{ paddingHorizontal: 14, paddingVertical: 6 }}>
                 <Text
                   className="font-body-semibold text-[11px] uppercase tracking-wider"
-                  style={{ color: tokens.colors.accent }}
+                  style={{ color: tokens.colors.accentText }}
                 >
                   {cat}
                 </Text>
@@ -1171,7 +1175,7 @@ const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
                 <TableCell text={r.nutrient}                               width={240} />
                 <TableCell text={r.unit}                                   width={80} muted size={12} />
                 <TableCell text={r.per100g != null ? String(r.per100g) : '—'}   width={110} align="right" bold mono />
-                <TableCell text={r.per100ml != null ? String(r.per100ml) : '—'} width={110} align="right" bold mono color={tokens.colors.accent} />
+                <TableCell text={r.per100ml != null ? String(r.per100ml) : '—'} width={110} align="right" bold mono color={tokens.colors.accentText} />
               </View>
             ))}
           </View>

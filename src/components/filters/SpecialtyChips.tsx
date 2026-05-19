@@ -77,8 +77,8 @@ const Chip = ({ label, active, onPress }: ChipProps) => {
         paddingVertical: 6,
         borderRadius: 999,
         borderWidth: 1.5,
-        backgroundColor: active ? tokens.colors.accent : tokens.colors.bgCard,
-        borderColor:     active ? tokens.colors.accent : tokens.colors.border,
+        backgroundColor: active ? tokens.colors.accentText : tokens.colors.bgCard,
+        borderColor:     active ? tokens.colors.accentText : tokens.colors.border,
       }}
     >
       <Text

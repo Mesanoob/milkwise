@@ -53,6 +53,9 @@ const useV2Colors = () => {
     green: c.accent,
     greenMid: c.accentHover,
     greenLight: c.accentTint,
+    // a11y: AA-safe darker sage for SMALL green text on light surfaces
+    // (`green`/`greenMid` are only ~3:1 — see §7b/§9b Phase 7).
+    greenText: c.accentText,
     surface: c.bgCard,
     surface2: c.bgPanel,
     amber: c.warnText,
@@ -227,13 +230,13 @@ export default function CalculatorScreen() {
           {age && guideline ? (
             <View className="mt-5 rounded-xl flex-row flex-wrap items-center gap-4" style={{ backgroundColor: colors.greenLight, padding: 18 }}>
               <View style={{ flex: 1, minWidth: 240 }}>
-                <Text className="text-[11px] font-body-semibold uppercase tracking-wider" style={{ color: colors.green }}>
+                <Text className="text-[11px] font-body-semibold uppercase tracking-wider" style={{ color: colors.greenText }}>
                   Your baby is
                 </Text>
-                <Text className="font-display-bold mt-1" style={{ fontSize: 30, color: colors.green }} selectable>
+                <Text className="font-display-bold mt-1" style={{ fontSize: 30, color: colors.greenText }} selectable>
                   {age.months} month{age.months === 1 ? '' : 's'}, {age.days} day{age.days === 1 ? '' : 's'}
                 </Text>
-                <Text className="text-xs font-body mt-1" style={{ color: colors.greenMid }} selectable>
+                <Text className="text-xs font-body mt-1" style={{ color: colors.greenText }} selectable>
                   Born {dob!.toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })} · Stage 1 formula {age.months < 12 ? 'still applicable' : 'transitioning to Stage 2+'}
                 </Text>
               </View>
@@ -344,7 +347,7 @@ export default function CalculatorScreen() {
 
               <View className="rounded-lg flex-row flex-wrap items-center gap-2" style={{ backgroundColor: colors.surface2, padding: 12 }}>
                 <Text className="text-sm text-mw-text-muted font-body">Total milk today:</Text>
-                <Text className="text-lg font-mono-medium" style={{ color: colors.green, fontVariant: ['tabular-nums'] }} selectable>
+                <Text className="text-lg font-mono-medium" style={{ color: colors.greenText, fontVariant: ['tabular-nums'] }} selectable>
                   {estimate.dailyMl}ml
                 </Text>
                 <Text className="text-sm text-mw-text-muted font-body" selectable>
@@ -508,7 +511,7 @@ const SectionTitle = ({ title, icon }: { title: string; icon: string }) => {
   return (
   <View className="flex-row items-center gap-2 mb-1">
     <View className="w-7 h-7 rounded-full items-center justify-center" style={{ backgroundColor: colors.greenLight }}>
-      <Text className="text-xs font-body-semibold" style={{ color: colors.green }}>{icon}</Text>
+      <Text className="text-xs font-body-semibold" style={{ color: colors.greenText }}>{icon}</Text>
     </View>
     <Text className="font-display-bold text-mw-text" style={{ fontSize: 22 }} selectable>{title}</Text>
   </View>
@@ -571,7 +574,7 @@ const SegmentedControl = ({
           accessibilityRole="button"
           accessibilityState={{ selected: active }}
         >
-          <Text className="text-xs font-body-semibold text-center" style={{ color: active ? colors.green : colors.muted }}>
+          <Text className="text-xs font-body-semibold text-center" style={{ color: active ? colors.greenText : colors.muted }}>
             {option.label}
           </Text>
         </Pressable>
@@ -585,7 +588,7 @@ const MiniStat = ({ value, label }: { value: string; label: string }) => {
   const colors = useV2Colors();
   return (
   <View className="rounded-lg bg-mw-bg-panel items-center" style={{ minWidth: 88, padding: 12 }}>
-    <Text className="font-mono-medium" style={{ fontSize: 18, color: colors.green, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
+    <Text className="font-mono-medium" style={{ fontSize: 18, color: colors.greenText, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
     <Text className="text-[11px] text-mw-text-muted font-body mt-1" selectable>{label}</Text>
   </View>
   );
@@ -595,7 +598,7 @@ const StatCard = ({ value, label }: { value: string; label: string }) => {
   const colors = useV2Colors();
   return (
   <View className="rounded-lg bg-mw-bg-panel items-center" style={{ flex: 1, minWidth: 128, paddingHorizontal: 12, paddingVertical: 14 }}>
-    <Text className="font-mono-medium text-center" style={{ fontSize: 21, color: colors.green, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
+    <Text className="font-mono-medium text-center" style={{ fontSize: 21, color: colors.greenText, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
     <Text className="text-[11px] text-mw-text-muted font-body mt-1 text-center" selectable>{label}</Text>
   </View>
   );
@@ -733,8 +736,8 @@ const SelectionChip = ({ label, active, onPress }: { label: string; active: bool
     onPress={onPress}
     className="rounded-full border px-3 py-2"
     style={{
-      backgroundColor: active ? colors.green : colors.surface,
-      borderColor: active ? colors.green : colors.border,
+      backgroundColor: active ? colors.greenText : colors.surface,
+      borderColor: active ? colors.greenText : colors.border,
     }}
   >
     <Text className="text-xs font-body-semibold" style={{ color: active ? colors.textInverse : colors.text }} numberOfLines={1}>
@@ -784,8 +787,8 @@ const RatioControl = ({ value, onChange }: { value: number; onChange: (value: nu
           onPress={() => onChange(pct)}
           className="rounded-full border px-3 py-2"
           style={{
-            backgroundColor: value === pct ? colors.green : colors.surface,
-            borderColor: value === pct ? colors.green : colors.border,
+            backgroundColor: value === pct ? colors.greenText : colors.surface,
+            borderColor: value === pct ? colors.greenText : colors.border,
           }}
         >
           <Text className="text-xs font-mono-medium" style={{ color: value === pct ? colors.textInverse : colors.text, fontVariant: ['tabular-nums'] }}>
@@ -801,7 +804,7 @@ const RatioControl = ({ value, onChange }: { value: number; onChange: (value: nu
 const InfoBox = ({ tone, children }: { tone: 'green' | 'amber' | 'blue' | 'muted'; children: React.ReactNode }) => {
   const colors = useV2Colors();
   const palette = {
-    green: { bg: colors.greenLight, border: colors.green, fg: colors.green },
+    green: { bg: colors.greenLight, border: colors.green, fg: colors.greenText },
     amber: { bg: colors.amberLight, border: colors.amber, fg: colors.amber },
     blue: { bg: colors.infoSoft, border: colors.info, fg: colors.info },
     muted: { bg: colors.surface2, border: colors.border, fg: colors.muted },
@@ -827,8 +830,8 @@ const SpendSummary = ({
   const colors = useV2Colors();
   const styles = {
     amber: { bg: colors.amberLight, fg: colors.amber, border: colors.amber },
-    greenLight: { bg: colors.greenLight, fg: colors.green, border: colors.green },
-    green: { bg: colors.green, fg: colors.textInverse, border: colors.green },
+    greenLight: { bg: colors.greenLight, fg: colors.greenText, border: colors.green },
+    green: { bg: colors.greenText, fg: colors.textInverse, border: colors.green },
   }[tone];
   return (
     <View className="rounded-xl items-center border" style={{ flex: 1, minWidth: 180, padding: 18, backgroundColor: styles.bg, borderColor: styles.border }}>
@@ -913,7 +916,7 @@ const GuidelineCell = ({
       width,
       paddingHorizontal: 10,
       paddingVertical: 9,
-      color: current ? colors.green : muted ? colors.muted : colors.text,
+      color: current ? colors.greenText : muted ? colors.muted : colors.text,
       // Mono carries weight via the family; body keeps the current-row bold cue.
       ...(mono ? { fontVariant: ['tabular-nums'] as const } : { fontWeight: current ? '700' : '400' }),
       lineHeight: 17,

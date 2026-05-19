@@ -51,8 +51,10 @@ export const BrandPills = ({ value, onToggle }: BrandPillsProps) => {
               paddingVertical: 5,
               borderRadius: 999,
               borderWidth: 1.5,
-              backgroundColor: isActive ? tokens.colors.accent : tokens.colors.bgCard,
-              borderColor:     isActive ? tokens.colors.accent : tokens.colors.border,
+              // accentText fill: active pill label is textInverse 12px —
+              // cream-on-accent is 3:1 (AA fail).
+              backgroundColor: isActive ? tokens.colors.accentText : tokens.colors.bgCard,
+              borderColor:     isActive ? tokens.colors.accentText : tokens.colors.border,
             }}
           >
             <Text

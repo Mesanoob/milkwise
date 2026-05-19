@@ -121,6 +121,15 @@ export const palette = {
     accentHover: '#547A68', // also the "pressed" state on native
     accentSoft: '#D6E3DA', // best-value highlight
     accentTint: '#E8EFE9', // row hover -> row pressed/selected
+    // a11y role token (Phase 7). `accent` is brand-locked but only ~3:1
+    // on light surfaces → fails WCAG AA as SMALL text / as a small-text
+    // badge fill. `accentText` is a darker same-hue sage derived to clear
+    // 4.5:1 on every light surface (~5:1 on bgPanel/bgCard/bg). Use for
+    // small accent text/links + accent badge/chip/header fills carrying
+    // text. Large display accent / fills / borders / bars keep `accent`
+    // (they clear the 3:1 large-text/UI bar). Derivation in §9b; push
+    // upstream to design-reference per §7b when possible.
+    accentText: '#3F6B54',
 
     cream: '#E8D4BC',
     creamSoft: '#F2E4CE',
@@ -164,6 +173,10 @@ export const palette = {
     accentHover: '#B8D6C3',
     accentSoft: '#2F4A3B',
     accentTint: '#2A332E',
+    // a11y role token (Phase 7). Dark accent is light-sage on near-black
+    // and already clears AA as small text (~7:1) and as a badge fill with
+    // `textInverse`; reuse it so the role is theme-symmetric.
+    accentText: '#9CC4AB',
 
     cream: '#6B5A40',
     creamSoft: '#4A4030',

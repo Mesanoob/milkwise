@@ -262,8 +262,10 @@ export const ProductCard = ({
                   hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                   className="rounded-md px-2 py-0.5"
                   style={{
-                    backgroundColor: isActive ? tokens.colors.accent : tokens.colors.bgPanel,
-                    borderColor:     isActive ? tokens.colors.accent : tokens.colors.border,
+                    // accentText fill: active pill shows the weight in
+                    // textInverse at ~10px — cream-on-accent is 3:1 (fail).
+                    backgroundColor: isActive ? tokens.colors.accentText : tokens.colors.bgPanel,
+                    borderColor:     isActive ? tokens.colors.accentText : tokens.colors.border,
                     borderWidth: 1.5,
                   }}
                 >
@@ -295,7 +297,7 @@ export const ProductCard = ({
 
           {/* Best-for line */}
           {product.bestFor ? (
-            <Text className="text-[11px] text-mw-accent font-body-semibold" numberOfLines={1}>
+            <Text className="text-[11px] text-mw-accent-text font-body-semibold" numberOfLines={1}>
               ✓ {product.bestFor}
             </Text>
           ) : null}
@@ -326,10 +328,10 @@ export const ProductCard = ({
         className="px-3.5 py-2 flex-row items-center justify-between border-t border-mw-border"
         style={{ backgroundColor: tokens.colors.bgPanel }}
       >
-        <Text className="text-[11.5px] text-mw-accent font-body-semibold">
+        <Text className="text-[11.5px] text-mw-accent-text font-body-semibold">
           View full details
         </Text>
-        <Text className="text-sm text-mw-accent font-body-semibold">→</Text>
+        <Text className="text-sm text-mw-accent-text font-body-semibold">→</Text>
       </Pressable>
     </View>
   );
@@ -356,13 +358,13 @@ const MetricTile = ({
     >
       <Text
         className="text-[9.5px] font-body-semibold uppercase tracking-wider"
-        style={{ color: accent ? tokens.colors.accent : tokens.colors.textMuted }}
+        style={{ color: accent ? tokens.colors.accentText : tokens.colors.textMuted }}
       >
         {label}
       </Text>
       <Text
         className="text-[13px] font-mono-medium mt-0.5"
-        style={{ color: accent ? tokens.colors.accent : tokens.colors.text, fontVariant: ['tabular-nums'] }}
+        style={{ color: accent ? tokens.colors.accentText : tokens.colors.text, fontVariant: ['tabular-nums'] }}
       >
         {value}
       </Text>

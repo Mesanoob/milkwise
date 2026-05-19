@@ -129,7 +129,7 @@ export const Header = () => {
                       className={isActive ? 'font-body-semibold' : 'font-body-medium'}
                       style={{
                         fontSize: 13.5,
-                        color: isActive ? tokens.colors.accent : tokens.colors.textMuted,
+                        color: isActive ? tokens.colors.accentText : tokens.colors.textMuted,
                       }}
                     >
                       {link.label}

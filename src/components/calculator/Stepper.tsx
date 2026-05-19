@@ -60,7 +60,7 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
   return (
     <View className="flex-1">
       <Text className="text-[10px] font-body-semibold text-mw-text-muted uppercase tracking-wider mb-1">
-        {label} — <Text className="font-mono-medium" style={{ color: tokens.colors.accent, fontVariant: ['tabular-nums'] }}>{value}{unit}</Text>
+        {label} — <Text className="font-mono-medium" style={{ color: tokens.colors.accentText, fontVariant: ['tabular-nums'] }}>{value}{unit}</Text>
       </Text>
 
       <Slider
@@ -77,7 +77,7 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
 
       <View className="flex-row justify-between mb-2">
         <Text className="text-[10px] text-mw-text-muted font-mono" style={{ fontVariant: ['tabular-nums'] }}>{min}{unit}</Text>
-        <Text className="text-[10px] font-mono-medium" style={{ color: tokens.colors.accent, fontVariant: ['tabular-nums'] }}>{mid}{unit}</Text>
+        <Text className="text-[10px] font-mono-medium" style={{ color: tokens.colors.accentText, fontVariant: ['tabular-nums'] }}>{mid}{unit}</Text>
         <Text className="text-[10px] text-mw-text-muted font-mono" style={{ fontVariant: ['tabular-nums'] }}>{max}{unit}</Text>
       </View>
 

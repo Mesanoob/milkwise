@@ -37,7 +37,7 @@ export interface TagProps {
 // AA contrast); `green` → accent. specialty colours are NOT v2 — they
 // stay spec-exact via the inline-style path below (CLAUDE.md §7b).
 const VARIANT_STYLES: Record<TagVariant, string> = {
-  green:  'bg-mw-accent-tint text-mw-accent',
+  green:  'bg-mw-accent-tint text-mw-accent-text',
   amber:  'bg-mw-warn-bg text-mw-warn-text',
   muted:  'bg-mw-bg-panel text-mw-text-muted',
   danger: 'bg-mw-danger-soft text-mw-danger',

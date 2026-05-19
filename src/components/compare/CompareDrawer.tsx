@@ -166,7 +166,7 @@ export const CompareDrawer = ({
           >
             <Text
               className="font-body-semibold text-[13px]"
-              style={{ color: canCompare ? tokens.colors.accent : 'rgba(255,255,255,0.5)' }}
+              style={{ color: canCompare ? tokens.colors.accentText : 'rgba(255,255,255,0.5)' }}
             >
               Compare ({selected.length})
             </Text>

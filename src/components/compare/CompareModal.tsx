@@ -385,7 +385,7 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
                           <Text
                             className={row.numeric ? 'font-mono-medium' : 'font-body'}
                             style={{
-                              color: isBest ? tokens.colors.accent : tokens.colors.text,
+                              color: isBest ? tokens.colors.accentText : tokens.colors.text,
                               // Numeric → mono carries weight via the family
                               // + tabular figures align down the column;
                               // text rows keep the synthesized weight.
@@ -397,7 +397,7 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
                           >
                             {formatted}
                             {isBest && (
-                              <Text className="text-mw-accent" style={{ fontSize: 10, opacity: 0.8 }}>
+                              <Text className="text-mw-accent-text" style={{ fontSize: 10, opacity: 0.8 }}>
                                 {'  ✓'}
                               </Text>
                             )}

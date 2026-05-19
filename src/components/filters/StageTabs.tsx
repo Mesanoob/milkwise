@@ -53,7 +53,7 @@ export const StageTabs = ({ value, onToggle, onClearAll }: StageTabsProps) => {
         >
           <Text
             className="text-[13.5px] font-body-semibold"
-            style={{ color: noneSelected ? tokens.colors.accent : tokens.colors.textMuted }}
+            style={{ color: noneSelected ? tokens.colors.accentText : tokens.colors.textMuted }}
           >
             All Stages
           </Text>
@@ -78,7 +78,7 @@ export const StageTabs = ({ value, onToggle, onClearAll }: StageTabsProps) => {
             >
               <Text
                 className="text-[13.5px] font-body-semibold"
-                style={{ color: isActive ? tokens.colors.accent : tokens.colors.textMuted }}
+                style={{ color: isActive ? tokens.colors.accentText : tokens.colors.textMuted }}
               >
                 {stage}
               </Text>

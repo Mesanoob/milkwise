@@ -50,13 +50,13 @@ export const BottomNav = () => {
               accessibilityState={{ selected: isActive }}
               className="flex-1 items-center justify-center py-1.5"
             >
-              <Text className={isActive ? 'text-mw-accent text-lg' : 'text-mw-text-muted text-lg'}>
+              <Text className={isActive ? 'text-mw-accent-text text-lg' : 'text-mw-text-muted text-lg'}>
                 {tab.icon}
               </Text>
               <Text
                 className={
                   'text-[10px] font-body-semibold ' +
-                  (isActive ? 'text-mw-accent' : 'text-mw-text-muted')
+                  (isActive ? 'text-mw-accent-text' : 'text-mw-text-muted')
                 }
               >
                 {tab.label}

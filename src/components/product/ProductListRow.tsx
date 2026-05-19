@@ -219,7 +219,7 @@ export const ProductListRow = ({
             {product.name}
           </Text>
           {product.bestFor ? (
-            <Text className="text-[11px] text-mw-accent font-body-semibold mt-1" numberOfLines={1}>
+            <Text className="text-[11px] text-mw-accent-text font-body-semibold mt-1" numberOfLines={1}>
               ✓ {product.bestFor}
             </Text>
           ) : null}
@@ -243,7 +243,7 @@ export const ProductListRow = ({
               backgroundColor: tokens.colors.accentTint,
             }}
           >
-            <Text className="text-[11px] font-body-semibold" style={{ color: tokens.colors.accent }}>
+            <Text className="text-[11px] font-body-semibold" style={{ color: tokens.colors.accentText }}>
               Details →
             </Text>
           </Pressable>
@@ -278,8 +278,10 @@ export const ProductListRow = ({
                   hitSlop={{ top: 12, bottom: 12, left: 6, right: 6 }}
                   className="rounded-md px-2 py-0.5"
                   style={{
-                    backgroundColor: isActive ? tokens.colors.accent : tokens.colors.bgPanel,
-                    borderColor:     isActive ? tokens.colors.accent : tokens.colors.border,
+                    // accentText fill: active pill weight is textInverse
+                    // ~10px — cream-on-accent is 3:1 (AA fail).
+                    backgroundColor: isActive ? tokens.colors.accentText : tokens.colors.bgPanel,
+                    borderColor:     isActive ? tokens.colors.accentText : tokens.colors.border,
                     borderWidth: 1.5,
                   }}
                 >
@@ -362,7 +364,7 @@ export const ProductListRow = ({
           className="rounded-lg px-3.5 py-2 self-center"
           style={{ backgroundColor: tokens.colors.accentTint }}
         >
-          <Text className="text-xs font-body-semibold" style={{ color: tokens.colors.accent }}>
+          <Text className="text-xs font-body-semibold" style={{ color: tokens.colors.accentText }}>
             Details →
           </Text>
         </Pressable>
@@ -415,13 +417,13 @@ const MetricTile = ({
   >
     <Text
       className="text-[9px] font-body-semibold uppercase tracking-wider"
-      style={{ color: accent ? tokens.colors.accent : tokens.colors.textMuted }}
+      style={{ color: accent ? tokens.colors.accentText : tokens.colors.textMuted }}
     >
       {label}
     </Text>
     <Text
       className={`text-[12.5px] mt-0.5 ${mono ? 'font-mono-medium' : 'font-body-semibold'}`}
-      style={{ color: accent ? tokens.colors.accent : tokens.colors.text, ...(mono ? { fontVariant: ['tabular-nums'] as const } : {}) }}
+      style={{ color: accent ? tokens.colors.accentText : tokens.colors.text, ...(mono ? { fontVariant: ['tabular-nums'] as const } : {}) }}
     >
       {value}
     </Text>

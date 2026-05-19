@@ -139,7 +139,7 @@ export default function AboutScreen() {
               >
                 <Text
                   className="font-body-semibold"
-                  style={{ color: tokens.colors.accent, fontSize: 14 }}
+                  style={{ color: tokens.colors.accentText, fontSize: 14 }}
                 >
                   Start Comparing →
                 </Text>
@@ -401,7 +401,8 @@ export default function AboutScreen() {
                   style={{
                     paddingHorizontal: 24,
                     paddingVertical: 12,
-                    backgroundColor: tokens.colors.accent,
+                    // accentText: 14px CTA label needs AA-safe sage fill.
+                    backgroundColor: tokens.colors.accentText,
                     borderRadius: 999,
                   }}
                 >
@@ -583,7 +584,8 @@ const Step = ({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: tokens.colors.accent,
+        // accentText: the 17px step number needs the AA-safe sage fill.
+        backgroundColor: tokens.colors.accentText,
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,

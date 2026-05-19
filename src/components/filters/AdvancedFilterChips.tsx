@@ -74,8 +74,8 @@ export const AdvancedFilterChipsTrigger = ({
           paddingVertical: 7,
           borderRadius: 999,
           borderWidth: 1.5,
-          backgroundColor: expanded ? tokens.colors.accent : tokens.colors.bgCard,
-          borderColor: expanded ? tokens.colors.accent : tokens.colors.border,
+          backgroundColor: expanded ? tokens.colors.accentText : tokens.colors.bgCard,
+          borderColor: expanded ? tokens.colors.accentText : tokens.colors.border,
         }}
       >
         {/* Three-line "filters" glyph — `#` rotated. Cheap, no SVG. */}
@@ -99,9 +99,9 @@ export const AdvancedFilterChipsTrigger = ({
               borderRadius: 8.5,
               alignItems: 'center',
               justifyContent: 'center',
-              // v2 has no amber; the count badge is an emphasis/interactive
-              // indicator → accent (the brand's interactive colour).
-              backgroundColor: tokens.colors.accent,
+              // Count badge carries 9px text → accentText (AA-safe sage;
+              // cream-on-accent is only 3:1, fails at this size).
+              backgroundColor: tokens.colors.accentText,
               marginLeft: 2,
             }}
           >
@@ -127,7 +127,7 @@ export const AdvancedFilterChipsTrigger = ({
             backgroundColor: tokens.colors.bgCard,
           }}
         >
-          <Text className="text-[12px] font-body-semibold" style={{ color: tokens.colors.accent }}>
+          <Text className="text-[12px] font-body-semibold" style={{ color: tokens.colors.accentText }}>
             ✕ Clear
           </Text>
         </Pressable>
@@ -250,8 +250,8 @@ const Chip = ({
         paddingVertical: 6,
         borderRadius: 999,
         borderWidth: 1.5,
-        backgroundColor: active ? tokens.colors.accent : tokens.colors.bgCard,
-        borderColor: active ? tokens.colors.accent : tokens.colors.border,
+        backgroundColor: active ? tokens.colors.accentText : tokens.colors.bgCard,
+        borderColor: active ? tokens.colors.accentText : tokens.colors.border,
       }}
     >
       <Text

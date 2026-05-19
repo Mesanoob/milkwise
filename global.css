@@ -29,6 +29,7 @@
   --mw-accent-hover: 84 122 104;
   --mw-accent-soft: 214 227 218;
   --mw-accent-tint: 232 239 233;
+  --mw-accent-text: 63 107 84; /* #3F6B54 — WCAG-AA small-accent-text (Phase 7) */
   --mw-cream: 232 212 188;
   --mw-cream-soft: 242 228 206;
   --mw-cream-tint: 250 241 223;
@@ -62,6 +63,7 @@
   --mw-accent-hover: 184 214 195;
   --mw-accent-soft: 47 74 59;
   --mw-accent-tint: 42 51 46;
+  --mw-accent-text: 156 196 171; /* #9CC4AB — dark already AA as small text (Phase 7) */
   --mw-cream: 107 90 64;
   --mw-cream-soft: 74 64 48;
   --mw-cream-tint: 51 45 34;
