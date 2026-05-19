@@ -87,18 +87,12 @@ export const ProductCard = ({
     <View
       accessibilityLabel={`${product.brand} ${product.name}, ${product.stage}`}
       className="bg-mw-bg-card overflow-hidden flex-1 min-w-[200px]"
-      // 14px corner radius matches the design's `--radius` token. Tailwind's
-      // `rounded-lg` is only 8px, so we set it inline. `overflow-hidden`
-      // above clips the image at the rounded corner.
+      // Card surface radius + resting elevation come from the v2 tokens
+      // (`radius.card` = 12 canonical; `shadow.s1` theme-keyed).
+      // `overflow-hidden` above clips the image at the rounded corner.
       style={{
-        // Spec radius. Tailwind's `rounded-lg` is only 8px; the design
-        // ships every card at 14px.
-        borderRadius: 14,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
-        shadowRadius: 12,
-        elevation: 1,
+        borderRadius: tokens.radius.card,
+        ...tokens.shadow.s1,
         // Green outline when this card is in the compare selection.
         outlineStyle: 'solid' as never,
         outlineWidth: selected ? 2.5 : 0,

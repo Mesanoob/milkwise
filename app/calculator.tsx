@@ -485,21 +485,23 @@ export default function CalculatorScreen() {
   );
 }
 
-const Card = ({ children }: { children: React.ReactNode }) => (
+const Card = ({ children }: { children: React.ReactNode }) => {
+  const { tokens } = useTheme();
+  return (
   <View
-    className="bg-mw-bg-card rounded-xl"
+    className="bg-mw-bg-card"
     style={{
       padding: 24,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.07,
-      shadowRadius: 12,
-      elevation: 1,
+      borderRadius: tokens.radius.card,
+      // s1 = resting card. Theme-keyed: subtle on light, much heavier on
+      // dark (#000 @ 0.40) so the card reads off the near-black page.
+      ...tokens.shadow.s1,
     }}
   >
     {children}
   </View>
-);
+  );
+};
 
 const SectionTitle = ({ title, icon }: { title: string; icon: string }) => {
   const colors = useV2Colors();

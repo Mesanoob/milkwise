@@ -194,13 +194,9 @@ export default function MostSoldScreen() {
           <View
             style={{
               backgroundColor: tokens.colors.bgCard,
-              borderRadius: 14,
+              borderRadius: tokens.radius.card,
               padding: 24,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.07,
-              shadowRadius: 12,
-              elevation: 1,
+              ...tokens.shadow.s1,
             }}
           >
             <Text
@@ -278,17 +274,14 @@ const PodiumCard = ({
         maxWidth: big ? 320 : 260,
         minWidth: 240,
         backgroundColor: tokens.colors.bgCard,
-        borderRadius: 14,
+        borderRadius: tokens.radius.card,
         overflow: 'hidden',
         borderWidth: 2,
         // Medal border is a fixed gold/silver/bronze ranking palette
         // (spec-exact, theme-independent); border token is the fallback.
         borderColor: MEDAL_BORDER[product.rank] ?? tokens.colors.border,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.13,
-        shadowRadius: 32,
-        elevation: 4,
+        // s2 = lifted/float — the podium cards sit proud of the page.
+        ...tokens.shadow.s2,
       }}
     >
       {/* Medal header */}
@@ -446,17 +439,13 @@ const RankRow = ({
       accessibilityLabel={`Rank ${product.rank}: ${product.name}. Open details.`}
       style={{
         backgroundColor: tokens.colors.bgCard,
-        borderRadius: 14,
+        borderRadius: tokens.radius.card,
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
         paddingHorizontal: 18,
         paddingVertical: 14,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
-        shadowRadius: 12,
-        elevation: 1,
+        ...tokens.shadow.s1,
       }}
     >
       {/* Rank circle */}

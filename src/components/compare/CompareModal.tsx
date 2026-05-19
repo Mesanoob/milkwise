@@ -282,7 +282,9 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
             hitSlop={8}
             style={{
               width: 36, height: 36,
-              borderRadius: 18,
+              // Round icon button — circle token, NOT cardLg (the 18 here
+              // is r = ½·36, a coincidence with cardLg's value).
+              borderRadius: tokens.radius.circle,
               backgroundColor: tokens.colors.bgPanel,
               alignItems: 'center',
               justifyContent: 'center',

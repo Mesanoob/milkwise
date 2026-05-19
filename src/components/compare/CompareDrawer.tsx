@@ -59,10 +59,11 @@ export const CompareDrawer = ({
         paddingHorizontal: 16,
         paddingTop: 10,
         paddingBottom: 14,
-        shadowColor: '#000',
+        // s3 = modal-tier elevation (theme-keyed colour/opacity/blur).
+        // It's a bottom sheet, so override the offset to cast UP — the
+        // directional intent the s3 default (downward) doesn't carry.
+        ...tokens.shadow.s3,
         shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 24,
       }}
     >
       <View className="flex-row items-center gap-3 flex-wrap">

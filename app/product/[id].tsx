@@ -827,15 +827,11 @@ const Card = ({
     <View
       style={{
         backgroundColor: tokens.colors.bgCard,
-        borderRadius: 14,
+        borderRadius: tokens.radius.card,
         padding: 24,
-        // shadowColor stays #000 until Phase 6 reworks elevation onto the
-        // theme-keyed `tokens.shadow` 2-step scale.
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
-        shadowRadius: 12,
-        elevation: 1,
+        // s1 resting card — theme-keyed (Phase 6 resolved the Phase 4
+        // deferral). `...style` may still override per call site.
+        ...tokens.shadow.s1,
         ...style,
       }}
     >

@@ -10,6 +10,7 @@ import { Link } from 'expo-router';
 import type { Product } from '../../types/product';
 import { getProductImage } from '../../data/imageMap';
 import { formatCurrency } from '../../utils/format';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export interface ProductPictureProps {
   product: Product;
@@ -17,15 +18,15 @@ export interface ProductPictureProps {
 
 export const ProductPicture = ({ product }: ProductPictureProps) => {
   const defaultVariant = product.variants[0];
+  const { tokens } = useTheme();
 
   return (
     <Link href={`/product/${product.id}`} asChild>
       <Pressable
         accessibilityLabel={`Open details for ${product.name}`}
         className="bg-mw-bg-card border border-mw-border overflow-hidden flex-1 min-w-[120px] max-w-[200px]"
-        // 14px corner radius matches the design's `--radius` token —
-        // Tailwind's `rounded-lg` is only 8px so the value is set inline.
-        style={{ borderRadius: 14 }}
+        // Card surface radius from the canonical v2 token (card = 12).
+        style={{ borderRadius: tokens.radius.card }}
       >
         <View className="w-full aspect-square bg-mw-bg-panel items-center justify-center">
           {/* `mw-packshot` (global.css): dark-theme sticker halo + float.

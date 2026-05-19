@@ -73,18 +73,14 @@ export const ProductListRow = ({
     <View
       style={{
         backgroundColor: tokens.colors.bgCard,
-        borderRadius: 14,
+        borderRadius: tokens.radius.card,
         // Mobile: stack the header strip and the metrics column.
         // Desktop: dense single row across.
         flexDirection: isMobile ? 'column' : 'row',
         alignItems: isMobile ? 'stretch' : 'flex-start',
         gap: isMobile ? 10 : 16,
         padding: isMobile ? 12 : 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07,
-        shadowRadius: 12,
-        elevation: 1,
+        ...tokens.shadow.s1,
         outlineStyle: 'solid' as never,
         outlineWidth: selected ? 2 : 0,
         outlineColor: tokens.colors.accent,
