@@ -55,7 +55,7 @@ export function CumulativeSpendChart({
         return (
           <G key={pct}>
             <Line x1={PL} x2={W - PR} y1={y} y2={y} stroke={c.border} strokeWidth={1} strokeDasharray="3,3" />
-            <SvgText x={PL - 4} y={y + 3} textAnchor="end" fontSize={8} fill={c.textFaint}>
+            <SvgText x={PL - 4} y={y + 3} textAnchor="end" fontSize={8} fill={c.textFaint} fontFamily="JetBrainsMono_400Regular">
               ${Math.round(value)}
             </SvgText>
           </G>
@@ -64,11 +64,11 @@ export function CumulativeSpendChart({
       <Path d={line} fill="none" stroke={c.border} strokeWidth={2} strokeDasharray="5,3" />
       <Path d={line} fill="none" stroke={c.accent} strokeWidth={2.5} strokeLinecap="round" clipPath="url(#past-spend)" />
       {points.map((point) => (
-        <SvgText key={point.index} x={xP(point.index)} y={H - 4} textAnchor="middle" fontSize={8} fill={point.index <= babyMonths ? c.accent : c.textFaint}>
+        <SvgText key={point.index} x={xP(point.index)} y={H - 4} textAnchor="middle" fontSize={8} fill={point.index <= babyMonths ? c.accent : c.textFaint} fontFamily="JetBrainsMono_400Regular">
           {point.index}m
         </SvgText>
       ))}
-      <SvgText x={W - PR} y={Math.max(12, yP(maxValue) - 5)} textAnchor="end" fontSize={9} fill={c.accent} fontWeight="700">
+      <SvgText x={W - PR} y={Math.max(12, yP(maxValue) - 5)} textAnchor="end" fontSize={9} fill={c.accent} fontFamily="JetBrainsMono_500Medium">
         Total: {formatCurrency(maxValue)}
       </SvgText>
       <SvgText x={8} y={H / 2} fontSize={8} fill={c.textFaint} textAnchor="middle" transform={`rotate(-90, 8, ${H / 2})`}>

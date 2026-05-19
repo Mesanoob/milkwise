@@ -237,20 +237,20 @@ export default function ProductDetailScreen() {
                               />
                             </View>
                             <Text
-                              className="font-body-semibold text-[12px]"
-                              style={{ color: isActive ? tokens.colors.accent : tokens.colors.text }}
+                              className="font-mono-medium text-[12px]"
+                              style={{ color: isActive ? tokens.colors.accent : tokens.colors.text, fontVariant: ['tabular-nums'] }}
                             >
                               {formatWeight(vt.weightG)}
                             </Text>
                             <Text
-                              className="font-body-semibold text-[11px] mt-0.5"
-                              style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted }}
+                              className="font-mono-medium text-[11px] mt-0.5"
+                              style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
                             >
                               ${vt.price.toFixed(2)}
                             </Text>
                             <Text
-                              className="font-body text-[10px] mt-0.5"
-                              style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted }}
+                              className="font-mono text-[10px] mt-0.5"
+                              style={{ color: isActive ? tokens.colors.accentHover : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
                             >
                               ${(vt.pricePerGram ?? 0).toFixed(4)}/g
                             </Text>
@@ -396,8 +396,8 @@ export default function ProductDetailScreen() {
                       }}
                     >
                       <Text
-                        className="font-body-semibold text-[10px]"
-                        style={{ color: isThis ? tokens.colors.textInverse : tokens.colors.textMuted }}
+                        className="font-mono-medium text-[10px]"
+                        style={{ color: isThis ? tokens.colors.textInverse : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
                       >
                         {i + 1}
                       </Text>
@@ -442,8 +442,8 @@ export default function ProductDetailScreen() {
                       />
                     </View>
                     <Text
-                      className="font-body-semibold text-[13px]"
-                      style={{ color: isThis ? tokens.colors.accent : tokens.colors.text }}
+                      className="font-mono-medium text-[13px]"
+                      style={{ color: isThis ? tokens.colors.accent : tokens.colors.text, fontVariant: ['tabular-nums'] }}
                     >
                       ${ppg.toFixed(4)}/g
                     </Text>
@@ -776,7 +776,7 @@ export default function ProductDetailScreen() {
                       <Text className="text-[12.5px] font-body-semibold text-mw-text mt-0.5" numberOfLines={2}>
                         {q.name}
                       </Text>
-                      <Text className="text-[11.5px] font-body-semibold text-mw-accent mt-1">
+                      <Text className="text-[11.5px] font-mono-medium text-mw-accent mt-1" style={{ fontVariant: ['tabular-nums'] }}>
                         ${(q.pricePerGram ?? 0).toFixed(4)}/g
                       </Text>
                     </View>
@@ -923,8 +923,8 @@ const StatBox = ({
       }}
     >
       <Text
-        className="font-display-bold"
-        style={{ fontSize: 20, color: highlight ? tokens.colors.accent : tokens.colors.text, lineHeight: 22 }}
+        className="font-mono-medium"
+        style={{ fontSize: 20, color: highlight ? tokens.colors.accent : tokens.colors.text, lineHeight: 22, fontVariant: ['tabular-nums'] }}
       >
         {value}
       </Text>
@@ -939,7 +939,7 @@ const ScoopFact = ({ label, value }: { label: string; value: string }) => (
     <Text className="font-body-semibold text-[10px] uppercase tracking-wider text-mw-text-muted mb-0.5">
       {label}
     </Text>
-    <Text className="font-body-semibold text-mw-text" style={{ fontSize: 16 }}>
+    <Text className="font-mono-medium text-mw-text" style={{ fontSize: 16, fontVariant: ['tabular-nums'] }}>
       {value}
     </Text>
   </View>
@@ -1035,7 +1035,7 @@ const NutBlock = ({
       alignItems: 'center',
     }}
   >
-    <Text className="font-body-semibold" style={{ fontSize: 20, color: fg }}>
+    <Text className="font-mono-medium" style={{ fontSize: 20, color: fg, fontVariant: ['tabular-nums'] }}>
       {value}
     </Text>
     <Text
@@ -1073,11 +1073,11 @@ const Cell = ({
       }}
     >
       <Text
-        className="font-body"
+        className={bold ? 'font-mono-medium' : 'font-mono'}
         style={{
           fontSize: size ?? 13.5,
-          fontWeight: bold ? '700' : '400',
           color: color ?? tokens.colors.text,
+          fontVariant: ['tabular-nums'],
         }}
       >
         {children}
@@ -1174,8 +1174,8 @@ const NutritionTable = ({ rows }: { rows: readonly NutrientRow[] }) => {
               >
                 <TableCell text={r.nutrient}                               width={240} />
                 <TableCell text={r.unit}                                   width={80} muted size={12} />
-                <TableCell text={r.per100g != null ? String(r.per100g) : '—'}   width={110} align="right" bold />
-                <TableCell text={r.per100ml != null ? String(r.per100ml) : '—'} width={110} align="right" bold color={tokens.colors.accent} />
+                <TableCell text={r.per100g != null ? String(r.per100g) : '—'}   width={110} align="right" bold mono />
+                <TableCell text={r.per100ml != null ? String(r.per100ml) : '—'} width={110} align="right" bold mono color={tokens.colors.accent} />
               </View>
             ))}
           </View>
@@ -1215,6 +1215,7 @@ const TableCell = ({
   size,
   color,
   align,
+  mono,
 }: {
   text: string;
   width: number;
@@ -1223,15 +1224,20 @@ const TableCell = ({
   size?: number;
   color?: string;
   align?: 'right';
+  /** Numeric columns (per-100g / per-100mL) render tabular mono so the
+      figures align down the column. Nutrient name + unit stay body. */
+  mono?: boolean;
 }) => {
   const { tokens } = useTheme();
   return (
     <View style={{ width, paddingHorizontal: 14, paddingVertical: 9 }}>
       <Text
-        className="font-body"
+        className={mono ? 'font-mono-medium' : 'font-body'}
         style={{
           fontSize: size ?? 13,
-          fontWeight: bold ? '600' : '500',
+          // Custom mono carries its weight via the family (JetBrains 500);
+          // body path keeps the synthesized weight as before.
+          ...(mono ? { fontVariant: ['tabular-nums'] as const } : { fontWeight: bold ? '600' : '500' }),
           color: color ?? (muted ? tokens.colors.textMuted : tokens.colors.text),
           textAlign: align ?? 'left',
         }}

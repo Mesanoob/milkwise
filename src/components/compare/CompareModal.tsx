@@ -134,6 +134,10 @@ interface RowDef {
   // Bumps text size on the highlighted-numeric rows (price/per-unit) so
   // they read as the headline metric for each column.
   bold?: boolean;
+  // Numeric rows render the cell value in tabular mono so figures align
+  // down each product column (the whole point of a comparison table).
+  // Text rows (brand, origin, ✓ flags) stay body.
+  numeric?: boolean;
 }
 
 const fmtMoney = (digits: number) => (v: unknown) =>
@@ -143,13 +147,13 @@ const ROWS: RowDef[] = [
   { key: 'stage',         label: 'Stage' },
   { key: 'brand',         label: 'Brand' },
   { key: 'origin',        label: 'Origin' },
-  { key: 'weightG',       label: 'Tin Size',         format: (v) => typeof v === 'number' ? `${v}g` : '—' },
-  { key: 'price',         label: 'Price (SGD)',      format: fmtMoney(2), best: 'min', bold: true },
-  { key: 'pricePerGram',  label: '$ per gram',       format: fmtMoney(4), best: 'min', bold: true },
-  { key: 'pricePerScoop', label: '$ per scoop',     format: fmtMoney(3), best: 'min', bold: true },
-  { key: 'pricePerMl',    label: '$ per mL prepared', format: fmtMoney(4), best: 'min' },
-  { key: 'scoopG',        label: 'Scoop size',       format: (v) => typeof v === 'number' ? `${v}g` : '—' },
-  { key: 'waterMl',       label: 'Water per scoop',  format: (v) => typeof v === 'number' ? `${v}mL` : '—' },
+  { key: 'weightG',       label: 'Tin Size',         format: (v) => typeof v === 'number' ? `${v}g` : '—', numeric: true },
+  { key: 'price',         label: 'Price (SGD)',      format: fmtMoney(2), best: 'min', bold: true, numeric: true },
+  { key: 'pricePerGram',  label: '$ per gram',       format: fmtMoney(4), best: 'min', bold: true, numeric: true },
+  { key: 'pricePerScoop', label: '$ per scoop',     format: fmtMoney(3), best: 'min', bold: true, numeric: true },
+  { key: 'pricePerMl',    label: '$ per mL prepared', format: fmtMoney(4), best: 'min', numeric: true },
+  { key: 'scoopG',        label: 'Scoop size',       format: (v) => typeof v === 'number' ? `${v}g` : '—', numeric: true },
+  { key: 'waterMl',       label: 'Water per scoop',  format: (v) => typeof v === 'number' ? `${v}mL` : '—', numeric: true },
   { key: 'milkType',      label: 'Milk type',        format: (v) => typeof v === 'string' ? `${getMilkTypeIcon(v)} ${v}` : '—' },
   { key: 'halal',         label: 'Halal',            format: (v) => v ? '✓' : '—' },
   { key: 'organic',       label: 'Organic',          format: (v) => v ? '✓' : '—' },
@@ -377,10 +381,15 @@ export const CompareModal = ({ products, onClose }: CompareModalProps) => {
                           }}
                         >
                           <Text
-                            className="font-body"
+                            className={row.numeric ? 'font-mono-medium' : 'font-body'}
                             style={{
                               color: isBest ? tokens.colors.accent : tokens.colors.text,
-                              fontWeight: isBest ? '700' : row.bold ? '600' : '400',
+                              // Numeric → mono carries weight via the family
+                              // + tabular figures align down the column;
+                              // text rows keep the synthesized weight.
+                              ...(row.numeric
+                                ? { fontVariant: ['tabular-nums'] as const }
+                                : { fontWeight: isBest ? '700' : row.bold ? '600' : '400' }),
                               fontSize: row.bold ? 15 : 13.5,
                             }}
                           >

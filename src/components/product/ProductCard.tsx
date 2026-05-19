@@ -274,8 +274,8 @@ export const ProductCard = ({
                   }}
                 >
                   <Text
-                    className="text-[10.5px] font-body-semibold"
-                    style={{ color: isActive ? tokens.colors.textInverse : tokens.colors.textMuted }}
+                    className="text-[10.5px] font-mono-medium"
+                    style={{ color: isActive ? tokens.colors.textInverse : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
                   >
                     {formatWeight(v.weightG)}
                   </Text>
@@ -367,8 +367,8 @@ const MetricTile = ({
         {label}
       </Text>
       <Text
-        className="text-[13px] font-body-semibold mt-0.5"
-        style={{ color: accent ? tokens.colors.accent : tokens.colors.text }}
+        className="text-[13px] font-mono-medium mt-0.5"
+        style={{ color: accent ? tokens.colors.accent : tokens.colors.text, fontVariant: ['tabular-nums'] }}
       >
         {value}
       </Text>

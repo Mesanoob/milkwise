@@ -288,8 +288,8 @@ export const ProductListRow = ({
                   }}
                 >
                   <Text
-                    className="text-[10.5px] font-body-semibold"
-                    style={{ color: isActive ? tokens.colors.textInverse : tokens.colors.textMuted }}
+                    className="text-[10.5px] font-mono-medium"
+                    style={{ color: isActive ? tokens.colors.textInverse : tokens.colors.textMuted, fontVariant: ['tabular-nums'] }}
                   >
                     {formatWeight(v.weightG)}
                   </Text>
@@ -311,24 +311,27 @@ export const ProductListRow = ({
             label="$/gram"
             value={`$${pricePerGram.toFixed(4)}`}
             accent
+            mono
             grow={isMobile}
           />
           <MetricTile
             label="Tin"
             value={`$${price.toFixed(2)}`}
+            mono
             grow={isMobile}
           />
           {isMobile ? (
             <MetricTile
               label="Size"
               value={formatWeight(variant?.weightG ?? 0)}
+              mono
               grow
             />
           ) : (
             <>
-              <MetricTile label="$/scoop" value={`$${pricePerScoop.toFixed(3)}`} />
-              <MetricTile label="$/mL"    value={`$${pricePerMl.toFixed(4)}`} />
-              <MetricTile label="Size"    value={formatWeight(variant?.weightG ?? 0)} />
+              <MetricTile label="$/scoop" value={`$${pricePerScoop.toFixed(3)}`} mono />
+              <MetricTile label="$/mL"    value={`$${pricePerMl.toFixed(4)}`} mono />
+              <MetricTile label="Size"    value={formatWeight(variant?.weightG ?? 0)} mono />
               <MetricTile
                 label="Origin"
                 value={`${getOriginFlag(product.origin)} ${product.origin}`}
@@ -391,11 +394,15 @@ const MetricTile = ({
   value,
   accent,
   grow,
+  mono,
 }: {
   label: string;
   value: string;
   accent?: boolean;
   grow?: boolean;
+  /** Numeric tiles render the value in tabular mono so digits align
+      column-to-column. Off for text values (e.g. the Origin tile). */
+  mono?: boolean;
 }) => {
   const { tokens } = useTheme();
   return (
@@ -417,8 +424,8 @@ const MetricTile = ({
       {label}
     </Text>
     <Text
-      className="text-[12.5px] font-body-semibold mt-0.5"
-      style={{ color: accent ? tokens.colors.accent : tokens.colors.text }}
+      className={`text-[12.5px] mt-0.5 ${mono ? 'font-mono-medium' : 'font-body-semibold'}`}
+      style={{ color: accent ? tokens.colors.accent : tokens.colors.text, ...(mono ? { fontVariant: ['tabular-nums'] as const } : {}) }}
     >
       {value}
     </Text>

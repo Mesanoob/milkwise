@@ -474,8 +474,8 @@ const RankRow = ({
         }}
       >
         <Text
-          className="font-body-semibold text-mw-text-muted"
-          style={{ fontSize: 15 }}
+          className="font-mono-medium text-mw-text-muted"
+          style={{ fontSize: 15, fontVariant: ['tabular-nums'] }}
         >
           {product.rank}
         </Text>
@@ -543,7 +543,7 @@ const RankRow = ({
           <Text className="font-body" style={{ fontSize: 11, color: tokens.colors.textMuted }}>
             Est. market share
           </Text>
-          <Text className="font-body-semibold text-mw-text" style={{ fontSize: 11 }}>
+          <Text className="font-mono-medium text-mw-text" style={{ fontSize: 11, fontVariant: ['tabular-nums'] }}>
             {product.share}%
           </Text>
         </View>
@@ -608,8 +608,8 @@ const ShareBar = ({
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <Text
-        className="font-body-semibold text-mw-text-muted"
-        style={{ width: 26, fontSize: 12, textAlign: 'right' }}
+        className="font-mono-medium text-mw-text-muted"
+        style={{ width: 26, fontSize: 12, textAlign: 'right', fontVariant: ['tabular-nums'] }}
       >
         #{rank}
       </Text>
@@ -640,8 +640,8 @@ const ShareBar = ({
         />
       </View>
       <Text
-        className="font-body-semibold text-mw-accent"
-        style={{ width: 40, fontSize: 12, textAlign: 'right' }}
+        className="font-mono-medium text-mw-accent"
+        style={{ width: 40, fontSize: 12, textAlign: 'right', fontVariant: ['tabular-nums'] }}
       >
         {share}%
       </Text>
@@ -686,11 +686,12 @@ const MiniMetric = ({
         {label}
       </Text>
       <Text
-        className="font-body-semibold"
+        className="font-mono-medium"
         style={{
           fontSize: 12.5,
           color: accent ? tokens.colors.accent : tokens.colors.text,
           marginTop: 1,
+          fontVariant: ['tabular-nums'],
         }}
       >
         {value}

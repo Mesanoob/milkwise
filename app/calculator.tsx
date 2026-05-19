@@ -344,7 +344,7 @@ export default function CalculatorScreen() {
 
               <View className="rounded-lg flex-row flex-wrap items-center gap-2" style={{ backgroundColor: colors.surface2, padding: 12 }}>
                 <Text className="text-sm text-mw-text-muted font-body">Total milk today:</Text>
-                <Text className="text-lg font-body-semibold" style={{ color: colors.green }} selectable>
+                <Text className="text-lg font-mono-medium" style={{ color: colors.green, fontVariant: ['tabular-nums'] }} selectable>
                   {estimate.dailyMl}ml
                 </Text>
                 <Text className="text-sm text-mw-text-muted font-body" selectable>
@@ -540,8 +540,8 @@ const DobPart = ({
       keyboardType="numeric"
       maxLength={maxLength}
       placeholder={label}
-      className="rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text text-center font-body-semibold"
-      style={{ width, paddingVertical: 10, fontSize: 17 }}
+      className="rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text text-center font-mono-medium"
+      style={{ width, paddingVertical: 10, fontSize: 17, fontVariant: ['tabular-nums'] }}
     />
   </View>
 );
@@ -583,7 +583,7 @@ const MiniStat = ({ value, label }: { value: string; label: string }) => {
   const colors = useV2Colors();
   return (
   <View className="rounded-lg bg-mw-bg-panel items-center" style={{ minWidth: 88, padding: 12 }}>
-    <Text className="font-display-bold" style={{ fontSize: 18, color: colors.green }} selectable>{value}</Text>
+    <Text className="font-mono-medium" style={{ fontSize: 18, color: colors.green, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
     <Text className="text-[11px] text-mw-text-muted font-body mt-1" selectable>{label}</Text>
   </View>
   );
@@ -593,7 +593,7 @@ const StatCard = ({ value, label }: { value: string; label: string }) => {
   const colors = useV2Colors();
   return (
   <View className="rounded-lg bg-mw-bg-panel items-center" style={{ flex: 1, minWidth: 128, paddingHorizontal: 12, paddingVertical: 14 }}>
-    <Text className="font-display-bold text-center" style={{ fontSize: 21, color: colors.green }} selectable>{value}</Text>
+    <Text className="font-mono-medium text-center" style={{ fontSize: 21, color: colors.green, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
     <Text className="text-[11px] text-mw-text-muted font-body mt-1 text-center" selectable>{label}</Text>
   </View>
   );
@@ -786,7 +786,7 @@ const RatioControl = ({ value, onChange }: { value: number; onChange: (value: nu
             borderColor: value === pct ? colors.green : colors.border,
           }}
         >
-          <Text className="text-xs font-body-semibold" style={{ color: value === pct ? colors.textInverse : colors.text }}>
+          <Text className="text-xs font-mono-medium" style={{ color: value === pct ? colors.textInverse : colors.text, fontVariant: ['tabular-nums'] }}>
             {pct}/{100 - pct}
           </Text>
         </Pressable>
@@ -833,7 +833,7 @@ const SpendSummary = ({
       <Text className="text-[10px] font-body-semibold uppercase tracking-wider text-center" style={{ color: styles.fg, opacity: tone === 'green' ? 0.75 : 1 }} selectable>
         {label}
       </Text>
-      <Text className="font-display-bold mt-2 text-center" style={{ fontSize: 27, color: styles.fg }} selectable>{value}</Text>
+      <Text className="font-mono-medium mt-2 text-center" style={{ fontSize: 27, color: styles.fg, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
     </View>
   );
 };
@@ -879,9 +879,9 @@ const GuidelineRow = ({
   return (
   <View className="flex-row border-b border-mw-border" style={{ backgroundColor: current ? colors.greenLight : 'transparent' }}>
     <GuidelineCell text={guideline.label} width={90} current={current} />
-    <GuidelineCell text={`${guideline.mlMin}-${guideline.mlMax}ml`} width={90} current={current} />
-    <GuidelineCell text={`${guideline.fMin}-${guideline.fMax}x`} width={90} current={current} />
-    <GuidelineCell text={`${guideline.dMin}-${guideline.dMax}ml`} width={90} current={current} />
+    <GuidelineCell text={`${guideline.mlMin}-${guideline.mlMax}ml`} width={90} current={current} mono />
+    <GuidelineCell text={`${guideline.fMin}-${guideline.fMax}x`} width={90} current={current} mono />
+    <GuidelineCell text={`${guideline.dMin}-${guideline.dMax}ml`} width={90} current={current} mono />
     <GuidelineCell text={guideline.note} width={260} muted />
   </View>
   );
@@ -892,22 +892,28 @@ const GuidelineCell = ({
   width,
   current = false,
   muted = false,
+  mono = false,
 }: {
   text: string;
   width: number;
   current?: boolean;
   muted?: boolean;
+  /** Numeric range columns (ml/feed, feeds/day, daily total) render in
+      tabular mono so the ranges align down each column. Age + Notes
+      are prose and stay body. */
+  mono?: boolean;
 }) => {
   const colors = useV2Colors();
   return (
   <Text
-    className="text-xs font-body"
+    className={`text-xs ${mono ? (current ? 'font-mono-medium' : 'font-mono') : 'font-body'}`}
     style={{
       width,
       paddingHorizontal: 10,
       paddingVertical: 9,
       color: current ? colors.green : muted ? colors.muted : colors.text,
-      fontWeight: current ? '700' : '400',
+      // Mono carries weight via the family; body keeps the current-row bold cue.
+      ...(mono ? { fontVariant: ['tabular-nums'] as const } : { fontWeight: current ? '700' : '400' }),
       lineHeight: 17,
     }}
     selectable

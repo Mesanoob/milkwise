@@ -60,7 +60,7 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
   return (
     <View className="flex-1">
       <Text className="text-[10px] font-body-semibold text-mw-text-muted uppercase tracking-wider mb-1">
-        {label} — <Text style={{ color: tokens.colors.accent }}>{value}{unit}</Text>
+        {label} — <Text className="font-mono-medium" style={{ color: tokens.colors.accent, fontVariant: ['tabular-nums'] }}>{value}{unit}</Text>
       </Text>
 
       <Slider
@@ -76,9 +76,9 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
       />
 
       <View className="flex-row justify-between mb-2">
-        <Text className="text-[10px] text-mw-text-muted">{min}{unit}</Text>
-        <Text className="text-[10px] font-body-semibold" style={{ color: tokens.colors.accent }}>{mid}{unit}</Text>
-        <Text className="text-[10px] text-mw-text-muted">{max}{unit}</Text>
+        <Text className="text-[10px] text-mw-text-muted font-mono" style={{ fontVariant: ['tabular-nums'] }}>{min}{unit}</Text>
+        <Text className="text-[10px] font-mono-medium" style={{ color: tokens.colors.accent, fontVariant: ['tabular-nums'] }}>{mid}{unit}</Text>
+        <Text className="text-[10px] text-mw-text-muted font-mono" style={{ fontVariant: ['tabular-nums'] }}>{max}{unit}</Text>
       </View>
 
       {/* +/− stepper row */}
@@ -91,7 +91,8 @@ export function Stepper({ label, value, onChange, min, max, step, unit }: Steppe
         </Pressable>
 
         <TextInput
-          className="flex-1 text-center py-2 text-lg font-body-semibold rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text"
+          className="flex-1 text-center py-2 text-lg font-mono-medium rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text"
+          style={{ fontVariant: ['tabular-nums'] }}
           keyboardType="numeric"
           value={raw}
           onChangeText={setRaw}

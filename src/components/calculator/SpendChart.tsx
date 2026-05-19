@@ -32,7 +32,7 @@ export function SpendChart({
         return (
           <G key={pct}>
             <Line x1={PL} x2={W - PR} y1={y} y2={y} stroke={c.border} strokeWidth={1} strokeDasharray="4,3" />
-            <SvgText x={PL - 4} y={y + 3} textAnchor="end" fontSize={8} fill={c.textFaint}>
+            <SvgText x={PL - 4} y={y + 3} textAnchor="end" fontSize={8} fill={c.textFaint} fontFamily="JetBrainsMono_400Regular">
               ${Math.round(value)}
             </SvgText>
           </G>
@@ -52,11 +52,11 @@ export function SpendChart({
           <G key={item.month}>
             <Rect x={x} y={y} width={barW} height={height} rx={3} fill={fill} opacity={isCurrent ? 1 : isPast ? 0.85 : 0.5} />
             {item.cost > 0 && height > 16 ? (
-              <SvgText x={x + barW / 2} y={y + 12} textAnchor="middle" fontSize={8} fill={isCurrent ? c.textInverse : isPast ? c.text : c.textMuted} fontWeight="700">
+              <SvgText x={x + barW / 2} y={y + 12} textAnchor="middle" fontSize={8} fill={isCurrent ? c.textInverse : isPast ? c.text : c.textMuted} fontFamily="JetBrainsMono_500Medium">
                 ${Math.round(item.cost)}
               </SvgText>
             ) : null}
-            <SvgText x={x + barW / 2} y={H - 4} textAnchor="middle" fontSize={8} fill={isCurrent ? c.accent : c.textFaint} fontWeight={isCurrent ? '700' : '400'}>
+            <SvgText x={x + barW / 2} y={H - 4} textAnchor="middle" fontSize={8} fill={isCurrent ? c.accent : c.textFaint} fontFamily={isCurrent ? 'JetBrainsMono_500Medium' : 'JetBrainsMono_400Regular'}>
               {index}m
             </SvgText>
           </G>
