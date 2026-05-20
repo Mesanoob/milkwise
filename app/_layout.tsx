@@ -42,6 +42,7 @@ import {
   JetBrainsMono_500Medium,
 } from '@expo-google-fonts/jetbrains-mono';
 import { ProductsProvider } from '../src/contexts/ProductsContext';
+import { FormulaCompareProvider } from '../src/contexts/FormulaCompareContext';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 
 // Tell Expo to keep the native splash screen on screen until we hide it
@@ -113,8 +114,16 @@ export default function RootLayout() {
         {/* `ProductsProvider` lives ABOVE the Stack so filter state
             persists across every navigation (Compare → Product Detail →
             back). See ProductsContext.tsx for the rationale. */}
+        {/* ProductsProvider drives the legacy `Product[]` model (Most Sold,
+            Calculator). FormulaCompareProvider drives the rebuilt Compare
+            page's `Formula[]` state (stage/brand/sort/filters/tray) so it
+            survives /compare → /product/[id] → /compare round-trips. Both
+            sit above the Stack — same lifecycle contract: in-memory only,
+            resets on hard reload. */}
         <ProductsProvider>
-          <ThemedShell />
+          <FormulaCompareProvider>
+            <ThemedShell />
+          </FormulaCompareProvider>
         </ProductsProvider>
       </SafeAreaProvider>
     </ThemeProvider>

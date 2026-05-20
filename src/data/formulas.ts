@@ -181,6 +181,24 @@ export const getAllFormulas = (): Formula[] => [...formulas];
 export const getFormulaById = (id: string): Formula | undefined =>
   formulas.find((f) => f.id === id);
 
+/**
+ * Resolve a `/product/[id]` URL parameter that may carry the stripped
+ * base id of a multi-variant product (Compare drops the `--<packSize>`
+ * suffix when routing). Tries exact match first, then falls back to the
+ * first formula whose stripped id equals the parameter — that's the
+ * product's "default variant" (the v1 single-product page semantics).
+ */
+export const getFormulaByBaseId = (baseId: string): Formula | undefined => {
+  const exact = formulas.find((f) => f.id === baseId);
+  if (exact) return exact;
+  return formulas.find((f) => f.id.split('--')[0] === baseId);
+};
+
+/** Every variant a multi-pack product is sold in (same base id). Used by
+ *  ProductDetail to show all available tin sizes for the active product. */
+export const getFormulaVariants = (baseId: string): Formula[] =>
+  formulas.filter((f) => f.id.split('--')[0] === baseId);
+
 /** Look up by the design's natural key (product name + pack size) — used by
  *  the compare tray / head-to-head which carry `product`+`packSize`. */
 export const getFormulaByKey = (

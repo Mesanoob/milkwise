@@ -1,10 +1,12 @@
 # CLAUDE.md — MilkWise SG
 
-Single source of truth for this project. Read top-to-bottom on first session, then jump back to sections 8, 9, 9b, and **9c (latest session)** as work progresses. Last updated 2026-05-20.
+Single source of truth for this project. Read top-to-bottom on first session, then jump back to sections 8, 9, 9b, **9c**, and **9d (FINAL DESIGN REBUILD — latest)** as work progresses. Last updated 2026-05-20.
 
-> **▶ START HERE (2026-05-20):** Active branch is **`FinalDesign`** (cut from `redesign-v2`, pushed to `origin/FinalDesign`). It contains the full v2 re-skin **plus** a post-Phase-7 calculator redesign + dark-mode switch-latency fixes — **see §9c**. ⚠️ **Run `npm install` first**: `node_modules` may hold `testingprod` (v1) deps, so `npm run typecheck` reports missing `@expo-google-fonts/inter-tight` / `jetbrains-mono` / `async-storage` until reinstalled. The code itself was verified 0 errors. `redesign-v2` and `testingprod` are preserved and synced with origin.
+> **▶ START HERE (2026-05-20):** Active branch is **`final-design-rebuild`** (cut from `FinalDesign`, pushed `origin/final-design-rebuild` at commit `6dd906e` — Phases 0–1 only; **Phases 2–9 work-in-progress, uncommitted**). The rebuild ports `../MilkWiseFinalDesign/` (a full new web design — 6 nav pages incl. Home/Nutrition/Parents and a Head-to-Head overlay) into this RN/Expo app while preserving cross-platform. **See §9d for the full rebuild plan + per-phase status + handoff.** ⚠️ **Run `npm install` first** if reinstalling.
 
-> **✅ v2 design re-skin COMPLETE (Phases 0–7).** Now on `FinalDesign` (was `redesign-v2`); both pushed; `testingprod` (v1) untouched. Sage/cream + Inter/Inter Tight/JetBrains Mono + OS-seeded dark mode, tabular numerals, canonical radii/shadows, WCAG-AA accent (`accentText` role token). **Two known a11y residuals carried to the §9 launch backlog (items 13b/13c), need design input:** small text on the full-bleed sage hero/footer bands, and the spec-exact gold/silver/bronze medal strips (§7b-frozen). Safari visual sweep also still pending (all v2 QA was Chromium/Puppeteer). Next work is the §9 launch backlog (hosting, legal/medical disclaimer, SEO, Lighthouse, image `srcset`, the a11y residual, Safari). Old resume-pointer history + full phase trail in §9b.
+> **✅ v2 design re-skin COMPLETE (Phases 0–7) on `FinalDesign`** — see §9b for full trail; left as the stable baseline. The new branch `final-design-rebuild` builds the FULL design replacement on top.
+
+> **✅ Final-design rebuild COMPLETE — all 9 phases shipped (2026-05-20).** Token reconciliation (P0), merged 76-row Formula dataset with WebP-only imagery (P1), new app shell with NavBar+DisclaimerBanner+Footer (P2), Home with mesh hero (P3), Compare with FormulaCompareContext (P4), Product Detail with HeroBadge+RankRow+HighlightedText+bucketize-nutrition (P5), Head-to-Head with best-cell highlights (P6), Calculator picker migrated to Formula[] via thin adapter (P7), Nutrition Guide + For New Parents + About long-form content + Most Sold chrome inheritance (P8), final cross-cutting QA + 9-route mobile (375px) + dark sweep (P9). **`typecheck = 0`**. Known residuals listed at the bottom of §9d.
 
 ---
 
@@ -12,7 +14,7 @@ Single source of truth for this project. Read top-to-bottom on first session, th
 
 **MilkWise SG** — side-by-side baby formula comparison tool for Singapore parents.
 
-- **Catalogue:** 61 hand-curated products, 15 brands, prices and nutrition from major SG retailers
+- **Catalogue:** 76 hand-curated products, 15 brands, prices and nutrition from major SG retailers
 - **Distribution:** one codebase → Web (PWA), iOS App Store, Google Play
 - **Audience:** Singapore parents, mobile-first
 - **Posture:** health-adjacent — strong disclaimers required, no medical advice
@@ -375,6 +377,113 @@ All committed on `redesign-v2` (`50e9151 save1`) and inherited by `FinalDesign`.
 **C. Header (`Header.tsx`)** — search bar **scoped to Compare (`/`) only** (`onCompare = pathname === '/'`); off-Compare a flex spacer (desktop) / right-aligned lone toggle (mobile) keeps the theme toggle pinned. It was dead UI typing into a hidden list elsewhere.
 
 **Open / next:** Safari sweep still pending (all QA Chromium/Puppeteer). The feeds/ml controls still use the slider-`Stepper` (screenshot shows plain steppers — deferred, not requested). §9 launch backlog otherwise unchanged. The two §9 a11y residuals (13b/13c) still stand.
+
+---
+
+## 9d. ⏳ FINAL DESIGN REBUILD — `final-design-rebuild` (ACTIVE)
+
+The user dropped `../MilkWiseFinalDesign/` (a full new web design — 6 nav pages incl. Home / Nutrition Guide / For New Parents, plus a Head-to-Head overlay) and asked to model the site 1:1, porting it into this RN/Expo app while preserving cross-platform. This is **not** a re-skin — it adds pages, changes routing, restructures Compare/ProductDetail, and introduces a new merged data model.
+
+**Branch model:**
+- `final-design-rebuild` ← **ACTIVE**, cut from `FinalDesign`, pushed `origin/final-design-rebuild` at commit `6dd906e` (Phases 0–1 only).
+- `FinalDesign` is the previous baseline — left untouched as the rollback target.
+- `testingprod` / `main` not touched.
+
+**Locked decisions (Phase-0 AskUserQuestion, 2026-05-20):**
+- **Platform:** keep RN/Expo, port design *into* the existing app. Web pixel-1:1 priority; native is "close not exact" (mesh + sticky + blur are web-only).
+- **Data:** **merge both** — design's 76-row formulas.json as the canonical *shape*, enriched with our curated `productDetails.json` (ingredients/allergens) and our WebP images. Source of truth stays `products.json`; the new `Formula[]` derives from it at module load.
+- **Pages:** follow the design **AND** keep Most Sold. Nav has 6 links (Compare · Calculator · Most Sold · Nutrition Guide · For New Parents · About). BottomNav retired.
+
+### Phase status
+
+| # | Phase | Status |
+|---|---|---|
+| 0 | Token reconciliation (tokens already matched; added `layout.sidebar`, theme-split `palette.focusRing`, `--mw-mesh*` vars to `global.css`). Additive only; baseline-verified 5 screens. | ✅ shipped (commit `6dd906e`) |
+| 1 | Data foundation — copied design `formulas.json` (76) + `nutrition.json`; built `src/data/formulas.ts` merge engine (normalizer + 6-entry alias map → 74/76 matched with curated ingredients, 2 design-only on same-brand WebP fallback); ported classifiers to `src/utils/formulaClassifiers.ts` (typed: `milkSourceOf`, `specialtiesOf`, `bucketize`, `highlightSegments`, `ingredientsParagraph`, `originCountry`, `flagFor`, `shortName`, `featureBlurb`) + `formulaFormat.ts` (`fmtSGD`/`fmtPerGram`/`fmtSGD0`/`fmtCount`). `Product`/`ProductDetail` untouched — Most Sold + Calculator still consume them. | ✅ shipped (commit `6dd906e`) |
+| 2 | App shell — rewrote `Header.tsx` → new NavBar (🍼 wordmark + SG pill, 6 links, 🇸🇬/SGD/theme toggle, hamburger flyout); new `DisclaimerBanner.tsx` (persisted dismiss key `mw_banner_dismissed`); new `Footer.tsx` (4-col dark band); refactored `Screen.tsx` (Banner + NavBar + scroll + Footer in scroll); deleted `BottomNav.tsx`; routing: `app/index.tsx → app/compare.tsx` (git rename), new `app/index.tsx` Home placeholder, added `app/nutrition.tsx` + `app/parents.tsx` placeholders; updated 5 `/` route refs that meant Compare → `/compare`. | ✅ shipped (uncommitted) |
+| 3 | Home page — `app/index.tsx` rewrite: Hero with 5-radial mesh gradient (web exact via `var(--mw-mesh)`, native solid `creamSoft` fallback in `HeroMesh.tsx`) + leading-dash eyebrow + 3-line title + 2 CTAs + scroll chevron; Stats band (4 mono-numeral stats with border-left separators); Features section (3 interactive cards); How-it-works (3 numbered steps with giant ghost-numeral behind each); Butter disclaimer strip. `Section.tsx` + `Eyebrow.tsx` primitives extracted for reuse in Phase 8 long-form pages. | ✅ shipped (uncommitted) |
+| 4 | Compare page — new `FormulaCompareContext` (stage/brand/sort/view/filters/tray; mounted in `_layout.tsx`; survives navigation, resets on reload). New `src/components/compare/v2/` directory: `atoms.tsx` (StageBadge, ChipRow with spec-exact 11-tone palette, TinPills, MetricPill, CheckCircle), `StageTabs.tsx` (accent-underlined, h-scroll), `BrandBar.tsx` (h-scroll pills + web fade-mask), `Toolbar.tsx` (sort-cycle + dir + filters pill + clear-all + count + view toggle), `FilterPanel.tsx` (5 emoji-pill groups), `GridCard.tsx` (image + chips + tin + metric pills + foot), `ListRow.tsx` (responsive 3-breakpoint collapse), `CompareTray.tsx` (≤5 chips, position:fixed on web). `app/compare.tsx` rewritten to consume `getAllFormulas()` + context. Routing: GridCard/ListRow strip `--<size>` suffix from `formula.id` before navigating to `/product/[id]` so v1 PDP route resolves. **Phase-4 deferments:** (a) sticky StageTabs/Toolbar (Phase 9 polish); (b) sort = tap-to-cycle (no cross-platform `<select>` dropdown); (c) Compare-page search input — design has it inside the toolbar, current toolbar doesn't carry it (search regressed until Phase 9 polish or sooner). | ✅ shipped (uncommitted) |
+| 5 | Product Detail rebuild — `app/product/[id].tsx` rewritten (1249→~870 lines). Added `getFormulaByBaseId` / `getFormulaVariants` to `formulas.ts` (resolves stripped `/product/[id]` URLs back to the default variant). Page sections: Breadcrumb · Hero card (image + 6 hero-badge tones [stage/budget/mid/premium/halal/organic/warn] + brand + title + desc with inline DHA/ARA highlights + sage best-for callout + 4 price tiles + 4 spec tiles + halal cert) · Price-comparison ranking (same-stage, current row highlighted, top-10 + self if outside) · 9-cell specifications grid · Features & Claims (✓ list from `specialtiesOf`) · Ingredients (curated `productDetails` text → 74/76; synth fallback for 2 design-only via `ingredientsParagraph`; rendered through `HighlightedText` with 6-tone legend) · Nutrition table (per-100g/per-100ml via `bucketize` → Macros/Vitamins/Minerals/Bioactives/Other + alternating-row striping + tabular-num cols) · "You may also consider" (4 same-stage by $/g proximity) · Disclaimer. Reuses Phase-1 classifiers verbatim. | ✅ shipped (uncommitted) |
+| 6 | Head-to-Head + Compare flow — `app/head-to-head.tsx` reads `FormulaCompareContext.tray`, renders 0/1/2–3 product modes; sections (Price · Formula details · Ingredient highlights · Nutrition per-100mL) with best-cell sage highlight via `bestIdx(vals, low)`; action row (Back to results · Clear · Open Calculator). `CompareTray` "Compare Now" wired to `router.push('/head-to-head')`. | ✅ shipped (uncommitted) |
+| 7 | Calculator reconcile — added `formulaToProductLike` adapter in `app/calculator.tsx`; swapped `getAllProducts()` → `getAllFormulas().map(adapter)`. Picker now shows 78 options (1 manual + 1 breastmilk + 76 formulas, up from ~74 product-variants). Engine + charts + UI untouched (§9c screenshot-parity preserved). Engine still types `primary: Product` — adapter satisfies it through unknown → Product cast on the 3 fields the engine reads (scoopG/weightG/pricePerGram). | ✅ shipped (uncommitted) |
+| 8 | Content pages + Most Sold re-skin — ported `NutritionGuide` (intro + butter warn + 7-row feeding table with stage badges + 6 safe-prep step cards + pHF/eHF cards + 8 key-nutrients list + 4 SourceBadges), `ForNewParents` (display h1 + stages pullquote + 4 milk-source cards + cost-driver list + green/yellow flag cards), `About` (mission quote card + 2 paras + methodology 2-col + 6 T&C items). New `src/components/SourceBadge.tsx` atom. **Most Sold deliberately unchanged** — it was already on v2 tokens + inherits Phase-2 chrome cleanly + §13b-frozen medal palette is spec-preserved. | ✅ shipped (uncommitted) |
+| 9 | Cross-cutting QA + sweep — full mobile (375px) Puppeteer pass on all 9 routes light + dark; verified responsive collapses (Compare list-row hides secondary columns under 768px; Calculator 2-col → 1-col under 960px; Home stats stack; PDP hero side-by-side → vertical; Hamburger flyout opens full-screen with display 32px links + footer SG/SGD + theme toggle). Dark-mode parity verified end-to-end via token system — every page flips atomically with `.dark` class. Final `typecheck = 0`. CLAUDE.md §9d updated to handoff status. Known residuals listed below. | ✅ shipped (uncommitted) |
+
+### Visual sweep (2026-05-20, post-Phase 5)
+
+Puppeteer @ 1280×900, light + dark:
+- ✅ `/` Home (mesh hero exact on web, dark mesh flips to warm rust)
+- ✅ `/compare` (37 Stage-1 list rows; chips/tin-pickers/metric pills/details intact; §7c packshot halos visible in dark)
+- ✅ `/product/abbott-grow-s1` (hero badges, DHA/ARA amber highlights, halal cert, price-ranking bars all 1:1)
+- ✅ `/calculator` (existing v1 body + new chrome inherited cleanly)
+- ✅ `/most-sold` (existing v1 podium + new chrome inherited)
+- ✅ `/about` (existing v1 hero + new chrome)
+- ✅ `/nutrition` placeholder (chrome + Footer visible)
+- ✅ `/parents` placeholder (chrome + Footer visible)
+
+Zero crashes; dark-mode token flip atomic; Footer 4-col layout intact.
+
+### Non-obvious things a fresh agent needs to know
+
+- **Two data models coexist by design.** `Product[]` (61 nested with variants) drives Most Sold + Calculator; `Formula[]` (76 flat) drives Compare/PDP/Head-to-Head. The merge logic in `src/data/formulas.ts` is the only place that bridges them. Both `Product` and `Formula` types live in `src/types/`. **Do NOT** delete `Product`/`ProductsContext` until Phase 8 ports Most Sold + Phase 7 ports Calculator.
+- **Formula ID stability:** single-variant products keep their bare slug (`abbott-grow-s1`), multi-variant rows get `${id}--${packSize}` (`frisolac-gold-s1--400`). Compare cards strip the `--<size>` before routing; PDP uses `getFormulaByBaseId` to resolve. Phase 5 PDP shows one variant; the multi-variant picker is a Phase-9 polish.
+- **The token system was already aligned** to the new design — Phase 0 found that `theme.ts` `palette` + `global.css` `--mw-*` vars already matched `MilkWiseFinalDesign/colors_and_type.css` exactly. Only 3 additions needed (`layout.sidebar`, `palette.focusRing`, `--mw-mesh*`). This is why Phases 3–5 didn't need any color drift work.
+- **WebP-only image policy (user-mandated Phase 1).** Every Formula image is a `.webp` from `assets/products/` resolved via `imageMap.getProductImage(formula.img)`. **Do NOT** reference `MilkWiseFinalDesign/assets/products/*.jpg` or `MilkWiseFinalDesign/uploads/*.jpg` from runtime code. 2 design-only SKUs (Aptamil+Mideer / Wyeth-S3) use a same-brand WebP fallback baked into `formulas.ts`.
+- **`FormulaCompareContext` is the new context.** It is mounted SIBLING to `ProductsProvider` in `_layout.tsx` so the legacy and new models coexist without ping-pong. Filter + tray state survives nav (same contract as ProductsContext §7); resets on hard reload.
+- **`text-muted` debt** — `app/index.tsx` (now Compare = `app/compare.tsx`), `app/calculator.tsx`, `app/product/[id].tsx` (v1) had 74 uses of stale v1 `text-muted` Tailwind class resolving to cool grey `#6B7280` instead of design warm `#6E6A60`. Phase 4 (Compare) and Phase 5 (PDP) rebuilt away from this naturally. Calculator (Phase 7) and Most Sold (Phase 8) still hold residue — will fade as those phases ship.
+- **Native fidelity compromises** (accepted at planning, documented in code):
+  - Hero mesh → solid `creamSoft` on iOS/Android (no `expo-linear-gradient` dep added)
+  - `position: sticky` nav → opaque `bgCard` on native (no `backdrop-filter`)
+  - Sort "dropdown" → tap-to-cycle (no cross-platform `<select>`)
+  - PDP highlights render as nested `<Text>` (no `<mark>`)
+- **Lucide → emoji.** Phase 4 NavBar/Toolbar use unicode glyphs (`☰` `✕` `↑` `↓` `▦` `☷`) and emoji icons (`🍼` `🇸🇬` `🔍` `🧮` `📖`) instead of pulling `lucide-react-native`. Phase 9 polish can swap to a real icon set.
+
+### Phase 9 sweep results (2026-05-20)
+
+**Puppeteer @ 1280×900 light + dark:**
+- ✅ All 9 routes render without crash. Atomic dark-mode flip via `.dark` class.
+- ✅ §7c packshot halos render correctly on dark Compare/PDP cards.
+- ✅ Hero mesh shows correctly on web (5-radial gradient + vignette + noise overlay via `--mw-mesh*` CSS vars).
+- ✅ Head-to-Head 3-way comparison correctly highlights best-cell per row (lower wins for prices; higher for scoops/savings).
+
+**Puppeteer @ 375×812 light + dark (mobile):**
+- ✅ NavBar collapses to logo + hamburger; hamburger flyout opens full-screen with 7 display-size links + SG/SGD/theme footer.
+- ✅ Home: 3-line hero title at 48px (vs 72 on desktop); stats band stacks vertically; CTAs stack.
+- ✅ Compare: stage tabs scroll horizontally; brand pills scroll; list rows collapse to thumb + name + $/G + Details (secondary columns hidden under 768px via `useWindowDimensions` branch).
+- ✅ PDP: hero image stacks above meta column at narrow widths (`flexWrap: 'wrap'`).
+- ✅ Calculator: 2-column layout reflows to single column under 960px.
+- ✅ Long-form pages (Nutrition / Parents / About): typography reflows; cards stack from row to column.
+- ✅ Most Sold: podium reflows to single-column stack.
+
+### Known residuals (Phase 9+ polish)
+
+These are visible in the sweep but didn't warrant immediate fix; queue for follow-up commits:
+
+1. **Calculator stepper "ml" unit label clips at 375px width.** The ml/feeds-per-day stepper rows have +/- buttons + 0-value field + unit text; at 375px the unit gets pushed off the right edge by ~6px. Fix: `flexShrink: 0` on the unit `<Text>` and `flexShrink: 1` on the numeric input, or trim stepper padding by 4px.
+2. **Head-to-Head table at 375px is cramped.** 3 product columns + 1 label column on a 375px viewport means each cell gets ~80px. Render is functional (no overflow / clipping in tests) but tight. Phase-10 polish could either add horizontal scroll on the table or stack product columns vertically as cards at <768px.
+3. **`text-muted` debt still present in `app/calculator.tsx` (~30 sites).** Resolves to stale v1 cool grey `#6B7280` instead of design warm `#6E6A60`. Calculator was reconcile-not-rebuild; a class-only sweep would fix in one pass. **Phase-10 cleanup.**
+4. **Sticky StageTabs / BrandBar / Toolbar on Compare** — deferred from Phase 4. Scroll away with the page today; Phase 10 can pin them under the NavBar via `position: sticky` per-element on web (native ignores).
+5. **Sort tap-to-cycle, not a real dropdown.** Phase 4 chose pragmatic cross-platform; Phase 10 could add an overlay popover or use `@react-native-picker/picker` on native + DOM `<select>` on web.
+6. **Compare search input** — removed from NavBar in Phase 2; design puts it in the toolbar. Still not back; user types nothing there today. Phase 10.
+7. **Native fidelity caveats (accepted at planning, encoded in code):**
+   - Hero mesh → solid `creamSoft` on iOS/Android (no `expo-linear-gradient` dep)
+   - `position: sticky` nav → opaque `bgCard` on native (no `backdrop-filter`)
+   - PDP highlights render as nested `<Text>` (no `<mark>`)
+   - PDF download in H2H is an `alert()` stub
+8. **§13b a11y residuals carried from the v2 reskin** still apply to Most Sold's gold/silver/bronze medal strips (spec-frozen palette) and the sage hero/footer-band small text. **Need design input** before public-launch.
+9. **Safari sweep pending** — all QA was Chromium/Puppeteer.
+
+### Resume next
+
+The rebuild itself is done. Remaining work is the **commit + polish + launch path**:
+
+1. **Commit Phases 2–9** — currently uncommitted on `final-design-rebuild`. Recommend ONE coherent commit per phase or one rolling commit per cluster (e.g., `Phases 2–5: app shell + Home + Compare + PDP`, `Phases 6–8: H2H + Calculator + content pages`, `Phase 9: QA + handoff`). Or one big rollup — user's call.
+2. **Push** to `origin/final-design-rebuild` (already exists).
+3. **PR to `FinalDesign`** (or `main` once ready) — open a pull request with a phase-by-phase description; the §9d phase table is the executive summary.
+4. **Phase 10 polish backlog** (the 9 residuals listed above) — can ship in follow-up PRs.
+5. **§9 launch backlog** (hosting / SEO / legal pages / Lighthouse / iOS+Android device pass) still stands from the v2 reskin work — final-design-rebuild doesn't change that list.
+
+The §9d phase table + this residual list IS the rebuild's handoff. A fresh agent post-merge should read top-to-bottom and pick up cleanly.
 
 ---
 

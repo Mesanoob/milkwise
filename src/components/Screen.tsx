@@ -1,52 +1,68 @@
 /**
  * Screen — common wrapper for every page in the app.
  *
- * Responsibilities:
- *   • Safe-area padding (notch on iOS, status bar on Android).
- *   • Background colour from the brand palette.
- *   • Mounts the header and bottom nav so individual screens don't repeat
- *     themselves.
+ * Chrome stack (top → bottom):
+ *   DisclaimerBanner  · 36 px amber band, dismissible (persisted)
+ *   Header (NavBar)   · 64 px sticky glass bar (web) / opaque (native)
+ *   ScrollView        · page content
+ *     {children}
+ *     Footer          · 4-column dark band, scrolls into view at page end
  *
- * Pages that need to opt out (e.g. a full-bleed image) can pass
- * `withChrome={false}` to drop the header and bottom nav.
+ * Phase 2 changes from the v1 chrome:
+ *   • BottomNav removed entirely. The design has no bottom-tab bar; mobile
+ *     navigation lives in the hamburger flyout inside NavBar.
+ *   • Footer mounted inside the scroll so it sits naturally at the bottom
+ *     of the page (matches the design's layered site layout).
+ *   • `paddingBottom: 80` (the old BottomNav clearance) removed — there's
+ *     no fixed bar to clear anymore.
+ *
+ * Pages can still opt out of the full chrome via `withChrome={false}`
+ * (e.g. for a future full-bleed onboarding screen).
  */
 
 import { ReactNode } from 'react';
 import { View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Header }    from './Header';
-import { BottomNav } from './BottomNav';
+import { Header } from './Header';
+import { DisclaimerBanner } from './DisclaimerBanner';
+import { Footer } from './Footer';
 
 export interface ScreenProps {
-  children:    ReactNode;
+  children: ReactNode;
+  /** Drop the whole chrome (banner + nav + footer). Default: render it. */
   withChrome?: boolean;
-  // When `scroll` is false the screen must manage its own scrolling
-  // (e.g. if it contains a FlatList).
-  scroll?:     boolean;
+  /** When false the screen manages its own scrolling (e.g. it owns a
+   *  FlatList). The Footer then becomes the page's responsibility too — it
+   *  won't be auto-appended below the children. */
+  scroll?: boolean;
 }
 
-export const Screen = ({ children, withChrome = true, scroll = true }: ScreenProps) => {
+export const Screen = ({
+  children,
+  withChrome = true,
+  scroll = true,
+}: ScreenProps) => {
   return (
-    // `edges={['top']}` because the bottom inset is handled inside BottomNav.
+    // `edges={['top']}` — top notch only; no bottom bar to inset around
+    // anymore. The Footer's own padding provides bottom breathing room.
     <SafeAreaView edges={['top']} className="flex-1 bg-mw-bg">
+      {withChrome && <DisclaimerBanner />}
       {withChrome && <Header />}
 
       {scroll ? (
-        <ScrollView
-          // `contentInsetAdjustmentBehavior` makes iOS large-title navigation
-          // look natural. Safe to set even on Android / web (no-op).
-          contentInsetAdjustmentBehavior="automatic"
-          // Bottom padding equal to the bottom-nav height (56px) so the
-          // last row of content is never hidden under the tab bar on mobile.
-          contentContainerStyle={{ paddingBottom: 80 }}
-        >
+        <ScrollView contentInsetAdjustmentBehavior="automatic">
           {children}
+          {/* Footer rides inside the scroll so it appears at the end of
+              the page rather than floating fixed — same as the design
+              prototype's layered marketing-site flow. */}
+          {withChrome && <Footer />}
         </ScrollView>
       ) : (
+        // Non-scrolling pages (e.g. ones owning a FlatList) handle their
+        // own Footer placement. We deliberately do NOT auto-append it here
+        // because doing so under a FlatList would break the list's virt.
         <View className="flex-1">{children}</View>
       )}
-
-      {withChrome && <BottomNav />}
     </SafeAreaView>
   );
 };

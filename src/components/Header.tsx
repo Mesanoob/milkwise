@@ -1,294 +1,162 @@
 /**
- * Header — the sticky top bar shown on every screen.
+ * NavBar — the design's top chrome, ported from `Chrome.jsx` and the
+ * `.mw-nav*` / `.mw-mobile-*` rules in `styles.css`.
  *
- * Layout matches the design handoff `.nav` rule:
+ * Layout (desktop ≥768px):
+ *   🍼 MilkWise [SG]   Compare · Calculator · Most Sold · Nutrition Guide ·
+ *                      For New Parents · About                   🇸🇬 SGD ☾
  *
- *   [🍼 MilkWise SG]  [Compare | Most Sold | Calc | About]   [🔎 Search…]
+ * Layout (mobile <768px):
+ *   🍼 MilkWise [SG]                                                    ☰
+ *   (☰ opens a full-screen menu with the same 6 links + theme + SGD)
  *
- *   - Green 32×32 rounded-square holds the bottle emoji (echoes the splash
- *     icon and the favicon).
- *   - Wordmark is serif. "MilkWise" stays text-default; "SG" is brand-green
- *     so the locale reads as a visual anchor.
- *   - Nav links are hidden under 768px wide and replaced with a bottom tab
- *     bar (see `BottomNav`) — matches the original design's CSS.
- *   - Search input sits at the right of the nav row on desktop, pulled from
- *     the global ProductsContext so the filter state survives navigation.
- *     On non-Compare screens the input still works — typing routes the user
- *     back to "/" so the result is immediately visible.
+ * Deliberate choices documented in the Phase-2 plan:
+ *   • 6 desktop links (the design ships 5; we keep `Most Sold` per the
+ *     user's decision in Phase-0 AskUserQuestion).
+ *   • The search field that lived here previously is GONE — the design
+ *     puts search inside the Compare toolbar. The moved `compare.tsx`
+ *     mounts a `<SearchBar>` in its body so search functionality survives
+ *     the interim until Phase 4 puts it in its final position.
+ *   • Web gets `position: sticky` + `backdrop-filter: blur(14px)
+ *     saturate(140%)` for the design's signature translucent-glass nav;
+ *     native falls back to opaque `bgCard` (Phase-plan: "close not exact"
+ *     on native).
+ *   • The file is still named `Header.tsx` and still exports `Header` for
+ *     back-compat (Screen.tsx imports `{ Header }`); `NavBar` is also
+ *     exported under the design's terminology for new call sites.
  *
- * `usePathname()` highlights the currently active link without threading
- * the route name through props.
+ * Active-state and route map:
+ *   The brand wordmark routes to `/` (the new Home — Phase 3 fills the
+ *   page; Phase 2 only ships the route). Compare moves to `/compare` here
+ *   so the design's `Home` can sit at `/`.
  */
 
-import { Platform, View, Text, TextInput, Pressable, useWindowDimensions, type TextStyle } from 'react-native';
+import { useState } from 'react';
+import {
+  Platform,
+  View,
+  Text,
+  Pressable,
+  Modal,
+  useWindowDimensions,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { Link, usePathname, useRouter } from 'expo-router';
-import { useProductsContext } from '../contexts/ProductsContext';
 import { useTheme, type ThemePreference } from '../contexts/ThemeContext';
 
 const TABLET_BREAKPOINT = 768;
 
-const NAV_LINKS = [
-  { href: '/',           label: 'Compare'    },
-  { href: '/most-sold',  label: 'Most Sold'  },
+// 6 links — Compare lives at `/compare` now (Home took `/`).
+const NAV_LINKS: { href: string; label: string }[] = [
+  { href: '/compare', label: 'Compare' },
   { href: '/calculator', label: 'Calculator' },
-  { href: '/about',      label: 'About'      },
-] as const;
+  { href: '/most-sold', label: 'Most Sold' },
+  { href: '/nutrition', label: 'Nutrition Guide' },
+  { href: '/parents', label: 'For New Parents' },
+  { href: '/about', label: 'About' },
+];
 
-export const Header = () => {
-  const { width }   = useWindowDimensions();
-  const pathname    = usePathname();
-  const router      = useRouter();
-  const isCompact   = width < TABLET_BREAKPOINT;
-  // Search filters the Compare grid, so it only belongs on Compare ("/").
-  // On every other route it was dead UI typing into a hidden list.
-  const onCompare   = pathname === '/';
-  const { filters, setSearch } = useProductsContext();
+// ── Wordmark (logo + "MilkWise" + SG pill) ─────────────────────────────
+const Wordmark = () => {
   const { tokens } = useTheme();
-
-  // When the user types in the nav search while on a non-Compare screen,
-  // route them back to "/" so they immediately see the filtered results.
-  // We `router.replace` rather than `push` so the back button doesn't
-  // walk through every keystroke.
-  const handleSearchChange = (next: string) => {
-    setSearch(next);
-    if (next.length > 0 && pathname !== '/') {
-      router.replace('/');
-    }
-  };
-
   return (
-    <View
-      // `position: 'sticky'` is web-only — RN ignores it on native. The
-      // `as never` cast satisfies RN's type narrowing.
-      style={{ position: 'sticky' as never, top: 0, zIndex: 60 }}
-      className="bg-mw-bg-card border-b border-mw-border"
-    >
-      <View
-        className="flex-row items-center"
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <Text
+        accessibilityRole="image"
+        accessibilityLabel="MilkWise"
         style={{
-          maxWidth: 1280,
-          width: '100%',
-          marginHorizontal: 'auto',
-          paddingHorizontal: 16,
-          height: 58,
-          // 8px gap (was 12) tightens the rhythm between logo, nav links,
-          // and search so the items read as one cluster rather than a
-          // logo + a floating search island.
-          gap: 8,
+          fontSize: 28,
+          lineHeight: 28,
+          // Force OS colour-emoji font on web (Inter's text-emoji fallback
+          // is monochrome and visually wrong here — mirrors atoms.jsx).
+          fontFamily:
+            Platform.OS === 'web'
+              ? '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
+              : undefined,
+          // Slight optical lift (atoms.jsx `transform: translateY(-1px)`).
+          marginTop: -1,
         }}
       >
-        {/* Brand mark */}
-        <Link href="/" asChild>
-          <Pressable
-            accessibilityRole="link"
-            accessibilityLabel="MilkWise SG home"
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}
-          >
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                backgroundColor: tokens.colors.accent,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ fontSize: 17, lineHeight: 20 }}>🍼</Text>
-            </View>
-            <Text
-              className="font-display-bold text-mw-text"
-              style={{ fontSize: 20 }}
-            >
-              MilkWise <Text style={{ color: tokens.colors.accent }}>SG</Text>
-            </Text>
-          </Pressable>
-        </Link>
-
-        {/* Desktop nav links. Tighter `gap: 2` between individual links so
-            the four items group as one block. The outer `gap: 8` from the
-            nav-inner spaces this block from the logo and the search slot. */}
-        {!isCompact && (
-          <View className="flex-row" style={{ gap: 2 }}>
-            {NAV_LINKS.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link key={link.href} href={link.href} asChild>
-                  <Pressable
-                    accessibilityRole="link"
-                    accessibilityState={{ selected: isActive }}
-                    // Nav row is 58 px tall; the link's visible padding is
-                    // smaller for design density. hitSlop expands the touch
-                    // target vertically to fill that header height.
-                    hitSlop={{ top: 14, bottom: 14, left: 4, right: 4 }}
-                    style={{
-                      paddingHorizontal: 14,
-                      paddingVertical: 6,
-                      borderRadius: 8,
-                      backgroundColor: isActive ? tokens.colors.accentTint : 'transparent',
-                    }}
-                  >
-                    <Text
-                      className={isActive ? 'font-body-semibold' : 'font-body-medium'}
-                      style={{
-                        fontSize: 13.5,
-                        color: isActive ? tokens.colors.accentText : tokens.colors.textMuted,
-                      }}
-                    >
-                      {link.label}
-                    </Text>
-                  </Pressable>
-                </Link>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Search slot — desktop only.
-            We deliberately drop the design's `margin-left: auto` here. On
-            wide viewports the auto-margin pushed the search to the far
-            right of the 1280-wide nav-inner, leaving a big empty band
-            between the nav links and the search field. The user reads
-            that gap as "things floating apart". A compact `marginLeft: 16`
-            sits the search 16px after the last nav link with no float,
-            so logo + links + search read as one tight cluster.
-            `flex: 1, maxWidth: 280` still lets the field grow on roomy
-            viewports but caps it before it sprawls. */}
-        {!isCompact &&
-          (onCompare ? (
-            <SearchField
-              value={filters.search}
-              onChange={handleSearchChange}
-              onClear={() => setSearch('')}
-              style={{ marginLeft: 16, flex: 1, maxWidth: 280 }}
-            />
-          ) : (
-            // Off Compare there's no search — a flex spacer keeps the
-            // theme toggle pinned to the right edge of the bar.
-            <View style={{ flex: 1 }} />
-          ))}
-
-        {/* Theme toggle sits at the far right of the nav cluster on
-            desktop. The 8px container gap spaces it from the search. */}
-        {!isCompact && <ThemeToggle />}
-      </View>
-
-      {/* Mobile search — sits in a second row below the nav on phone
-          widths because horizontally there's no room next to the logo.
-          The theme toggle rides alongside it so dark mode is reachable
-          without a hamburger menu. */}
-      {isCompact && (
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 14,
-            paddingBottom: 10,
-            // No search off Compare → right-align the lone theme toggle.
-            justifyContent: onCompare ? 'flex-start' : 'flex-end',
-          }}
-        >
-          {onCompare && (
-            <View style={{ flex: 1 }}>
-              <SearchField
-                value={filters.search}
-                onChange={handleSearchChange}
-                onClear={() => setSearch('')}
-              />
-            </View>
-          )}
-          <ThemeToggle />
-        </View>
-      )}
+        🍼
+      </Text>
+      <Text
+        style={{
+          fontFamily: tokens.fonts.displaySemibold,
+          fontWeight: '600',
+          fontSize: 20,
+          letterSpacing: -0.4, // -0.02em × 20
+          color: tokens.colors.text,
+        }}
+      >
+        MilkWise
+      </Text>
+      {/* `.mw-sg-pill` */}
+      <Text
+        style={{
+          paddingVertical: 2,
+          paddingHorizontal: 8,
+          borderRadius: 24,
+          backgroundColor: tokens.colors.bgPanel,
+          borderWidth: 1,
+          borderColor: tokens.colors.border,
+          fontFamily: tokens.fonts.bodySemibold,
+          fontSize: 10,
+          fontWeight: '600',
+          letterSpacing: 1.2, // 0.12em × 10
+          color: tokens.colors.textMuted,
+          lineHeight: 15,
+        }}
+      >
+        SG
+      </Text>
     </View>
   );
 };
 
-/**
- * `SearchField` — the rounded pill input used in both desktop and mobile
- * positions. Kept inside this file because it has no consumers elsewhere
- * (the generic `SearchBar` component is preserved for in-screen use).
- */
-const SearchField = ({
-  value,
-  onChange,
-  onClear,
-  style,
-}: {
-  value: string;
-  onChange: (next: string) => void;
-  onClear: () => void;
-  style?: object;
-}) => {
+// ── Country pill (SG flag emoji + "SGD") ───────────────────────────────
+const RegionPill = () => {
   const { tokens } = useTheme();
   return (
-  <View
-    style={{
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      borderRadius: 8,
-      borderWidth: 1.5,
-      borderColor: tokens.colors.border,
-      backgroundColor: tokens.colors.bgPanel,
-      ...style,
-    }}
-  >
-    <Text style={{ color: tokens.colors.textMuted, fontSize: 14 }}>⌕</Text>
-    <TextInput
-      value={value}
-      onChangeText={onChange}
-      placeholder="Search brand or product…"
-      placeholderTextColor={tokens.colors.textMuted}
-      autoCorrect={false}
-      autoCapitalize="none"
-      accessibilityLabel="Search products"
-      accessibilityHint="Filters the comparison by brand, name, or specialty"
-      style={[
-        { flex: 1, color: tokens.colors.text, fontSize: 13 },
-        Platform.OS === 'web' ? ({ outlineWidth: 0 } as TextStyle) : null,
-      ]}
-    />
-    {value.length > 0 && (
-      <Pressable
-        onPress={onClear}
-        accessibilityRole="button"
-        accessibilityLabel="Clear search"
-        hitSlop={6}
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Text
+        style={{
+          fontSize: 14,
+          fontFamily:
+            Platform.OS === 'web'
+              ? '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
+              : undefined,
+        }}
+        accessibilityRole="image"
+        accessibilityLabel="Singapore"
       >
-        <Text style={{ color: tokens.colors.textMuted, fontSize: 14 }}>✕</Text>
-      </Pressable>
-    )}
-  </View>
+        🇸🇬
+      </Text>
+      <Text
+        style={{
+          fontFamily: tokens.fonts.mono,
+          fontSize: 11,
+          letterSpacing: 0.55, // 0.05em × 11
+          color: tokens.colors.textMuted,
+        }}
+      >
+        SGD
+      </Text>
+    </View>
   );
 };
 
-/**
- * `ThemeToggle` — the sun / moon / auto control. Cycles
- * system → light → dark → system (CLAUDE.md §7b decision).
- *
- * This is intentionally styled from the LIVE v2 token set
- * (`useTheme().tokens`) rather than the v1 hex the rest of this header
- * still uses. It is net-new code (not a migration), so it may consume v2
- * directly — and doing so makes it the one on-screen proof that the
- * dark-mode mechanism actually flips before Phase 4 migrates the rest.
- */
-// SYSTEM MODE DISABLED (latency investigation, 2026-05-19). The toggle is
-// binary light ↔ dark, so 'preference' is only ever 'light' | 'dark' at
-// runtime. The 'system' entries are kept ONLY to satisfy
-// Record<ThemePreference, …> and to make restoring the 3-way cycle a pure
-// revert. Original NEXT_LABEL was { system:'light', light:'dark',
-// dark:'system' } — adjusted so the a11y label matches the binary flip.
+// ── Theme toggle ────────────────────────────────────────────────────────
+// (System mode currently disabled per ThemeContext investigation —
+// preference is binary light↔dark at runtime; the unreachable 'system'
+// glyph is kept so the 3-way cycle can be restored as a pure revert.)
 const TOGGLE_GLYPH: Record<ThemePreference, string> = {
-  system: '◐', // half-filled = "auto / follow OS" (unreachable while disabled)
+  system: '◐',
   light: '☀',
   dark: '☾',
 };
 const NEXT_LABEL: Record<ThemePreference, string> = {
-  system: 'light', // unreachable while system mode is disabled
+  system: 'light',
   light: 'dark',
   dark: 'light',
 };
@@ -296,34 +164,343 @@ const NEXT_LABEL: Record<ThemePreference, string> = {
 const ThemeToggle = () => {
   const { preference, scheme, tokens, cyclePreference } = useTheme();
   const { colors } = tokens;
-
   return (
     <Pressable
       onPress={cyclePreference}
       accessibilityRole="button"
-      // Announce both the current mode and what a press will do — a
-      // screen-reader user can't see the glyph change.
       accessibilityLabel={`Theme: ${preference}${
         preference === 'system' ? ` (currently ${scheme})` : ''
       }. Activate to switch to ${NEXT_LABEL[preference]}.`}
-      // 36px visible box; hitSlop lifts the touch target to ≥44px (WCAG
-      // 2.5.5) to match the other header controls.
       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
       style={{
-        width: 36,
-        height: 36,
-        borderRadius: 8,
-        borderWidth: 1.5,
+        width: 32,
+        height: 32,
+        borderRadius: 999,
+        borderWidth: 1,
         borderColor: colors.border,
-        backgroundColor: colors.bgPanel,
+        backgroundColor: 'transparent',
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
       }}
     >
-      <Text style={{ color: colors.accent, fontSize: 16, lineHeight: 20 }}>
+      <Text style={{ color: colors.textMuted, fontSize: 14, lineHeight: 18 }}>
         {TOGGLE_GLYPH[preference]}
       </Text>
     </Pressable>
   );
 };
+
+// ── Desktop link ────────────────────────────────────────────────────────
+const NavLink = ({
+  href,
+  label,
+  active,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+}) => {
+  const { tokens } = useTheme();
+  return (
+    <Link href={href as never} asChild>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityState={{ selected: active }}
+        hitSlop={{ top: 12, bottom: 12, left: 4, right: 4 }}
+        style={{
+          paddingVertical: 4,
+          position: 'relative',
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: tokens.fonts.body,
+            fontSize: 14,
+            color: active ? tokens.colors.accentText : tokens.colors.text,
+            // Mirror `.mw-nav-links a` transition. RN ignores `transition`;
+            // colour swap is one-frame which matches the design's intent.
+          }}
+        >
+          {label}
+        </Text>
+        {/* Active underline — `.mw-nav-links a.active::after` */}
+        {active && (
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: -6,
+              height: 2,
+              borderRadius: 1,
+              backgroundColor: tokens.colors.accentText,
+            }}
+          />
+        )}
+      </Pressable>
+    </Link>
+  );
+};
+
+// ── Mobile fullscreen menu ─────────────────────────────────────────────
+const MobileMenu = ({
+  open,
+  onClose,
+  active,
+}: {
+  open: boolean;
+  onClose: () => void;
+  active: string;
+}) => {
+  const { tokens } = useTheme();
+  const router = useRouter();
+  if (!open) return null;
+
+  const go = (href: string) => {
+    onClose();
+    router.push(href as never);
+  };
+
+  // Mobile menu includes Home as the first item (per the design's prototype
+  // mobile menu) plus all 6 desktop links.
+  const mobileItems = [{ href: '/', label: 'Home' }, ...NAV_LINKS];
+
+  const content = (
+    <View
+      // `position: fixed inset: 0` — web only via `as never` cast (RN-Web
+      // passes the CSS through). Native renders inside a <Modal> instead
+      // (see the Platform branch below).
+      style={
+        Platform.OS === 'web'
+          ? ({
+              position: 'fixed' as never,
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+              zIndex: 70,
+              backgroundColor: tokens.colors.bg,
+              padding: 24,
+              paddingHorizontal: 28,
+              paddingBottom: 32,
+              display: 'flex',
+              flexDirection: 'column',
+            } as unknown as ViewStyle)
+          : {
+              flex: 1,
+              backgroundColor: tokens.colors.bg,
+              padding: 24,
+              paddingHorizontal: 28,
+              paddingBottom: 32,
+            }
+      }
+    >
+      {/* Close button — `.mw-mobile-close` */}
+      <View style={{ alignItems: 'flex-end' }}>
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close menu"
+          hitSlop={8}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: tokens.colors.border,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text style={{ color: tokens.colors.text, fontSize: 22 }}>✕</Text>
+        </Pressable>
+      </View>
+
+      {/* Links — `.mw-mobile-links` */}
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          gap: 4,
+        }}
+      >
+        {mobileItems.map((item) => {
+          const isActive = active === item.href;
+          return (
+            <Pressable
+              key={item.href}
+              accessibilityRole="link"
+              accessibilityState={{ selected: isActive }}
+              onPress={() => go(item.href)}
+              style={{
+                paddingVertical: 14,
+                borderBottomWidth: 1,
+                borderBottomColor: tokens.colors.divider,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: tokens.fonts.displaySemibold,
+                  fontSize: 32,
+                  fontWeight: '600',
+                  letterSpacing: -0.704, // -0.022em × 32
+                  color: isActive
+                    ? tokens.colors.accentText
+                    : tokens.colors.text,
+                }}
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Footer — `.mw-mobile-footer` */}
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingTop: 20,
+          borderTopWidth: 1,
+          borderTopColor: tokens.colors.border,
+        }}
+      >
+        <RegionPill />
+        <ThemeToggle />
+      </View>
+    </View>
+  );
+
+  // Native gets a real Modal (handles back-button + status bar correctly);
+  // web uses the fixed overlay above (rendered straight into the tree).
+  if (Platform.OS === 'web') return content;
+  return (
+    <Modal
+      visible={open}
+      transparent={false}
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      {content}
+    </Modal>
+  );
+};
+
+// ── NavBar ──────────────────────────────────────────────────────────────
+const NavBarImpl = () => {
+  const { width } = useWindowDimensions();
+  const pathname = usePathname();
+  const { tokens } = useTheme();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isCompact = width < TABLET_BREAKPOINT;
+  const isWeb = Platform.OS === 'web';
+
+  // Translucent-glass nav on web (`backdrop-filter: blur(14px) saturate
+  // (140%)` matches `.mw-nav`). RN-Web passes unknown CSS through, but TS
+  // narrows `style` strictly — hence the `as never` for `position` and the
+  // unknown→ViewStyle cast at the bottom.
+  const webStickyStyle: Record<string, unknown> = {
+    position: 'sticky',
+    top: 0,
+    zIndex: 50,
+    backdropFilter: 'blur(14px) saturate(140%)',
+    WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+  };
+
+  return (
+    <>
+      <View
+        style={[
+          {
+            height: tokens.layout.navH, // 64
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 32,
+            // Web uses `--mw-nav-bg` (translucent) so the blur shows through;
+            // native is solid bgCard since there's no backdrop-filter there.
+            backgroundColor: isWeb
+              ? (tokens.colors as { navBg?: string }).navBg ?? tokens.colors.bgCard
+              : tokens.colors.bgCard,
+            borderBottomWidth: 1,
+            borderBottomColor: tokens.colors.border,
+          },
+          (isWeb ? webStickyStyle : {}) as unknown as ViewStyle,
+        ]}
+      >
+        <View
+          style={{
+            width: '100%',
+            maxWidth: tokens.layout.maxContent,
+            marginHorizontal: 'auto',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 24,
+          }}
+        >
+          {/* Brand → Home */}
+          <Link href={'/' as never} asChild>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel="MilkWise SG home"
+              style={{ flexShrink: 0 }}
+            >
+              <Wordmark />
+            </Pressable>
+          </Link>
+
+          {/* Desktop link strip */}
+          {!isCompact && (
+            <View style={{ flexDirection: 'row', gap: 28 }}>
+              {NAV_LINKS.map((l) => (
+                <NavLink
+                  key={l.href}
+                  href={l.href}
+                  label={l.label}
+                  active={pathname === l.href}
+                />
+              ))}
+            </View>
+          )}
+
+          {/* Right cluster */}
+          {!isCompact ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <RegionPill />
+              <ThemeToggle />
+            </View>
+          ) : (
+            // Mobile: hamburger only — the menu carries SG/SGD + toggle.
+            <Pressable
+              onPress={() => setMobileOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Open menu"
+              hitSlop={8}
+              style={{ padding: 8 }}
+            >
+              <Text style={{ fontSize: 22, color: tokens.colors.text } as TextStyle}>
+                ☰
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
+      <MobileMenu
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        active={pathname}
+      />
+    </>
+  );
+};
+
+// Export under both names: `Header` for the existing Screen import path
+// (no rename churn), `NavBar` for new call sites that match the design's
+// vocabulary.
+export const NavBar = NavBarImpl;
+export const Header = NavBarImpl;

@@ -19,8 +19,10 @@ import {
   View,
 } from 'react-native';
 import type { Product } from '../src/types/product';
+import type { Formula } from '../src/types/formula';
 import { Screen } from '../src/components/Screen';
-import { getAllProducts } from '../src/data/products';
+import { getAllFormulas } from '../src/data/formulas';
+import { shortName } from '../src/utils/formulaClassifiers';
 import { getProductImage } from '../src/data/imageMap';
 import { SG_GUIDELINES } from '../src/data/feedingGuidelines';
 import { BenchmarkChart } from '../src/components/calculator/BenchmarkChart';
@@ -71,6 +73,78 @@ const useV2Colors = () => {
   };
 };
 
+/**
+ * Phase-7 adapter — bridges the Formula model (Phase-1 merged data, 76
+ * SKUs) to the picker + engine, both of which were built against the
+ * legacy Product type. Each Formula becomes a single-variant Product:
+ *
+ *   • Top-level mirror fields (weightG/price/scoopG/…) get the formula's
+ *     own values so `primaryProduct.weightG` etc. resolve correctly in
+ *     the calculator UI.
+ *   • `variants: [{...}]` carries the same data so the picker — which
+ *     iterates `product.variants.map(...)` to emit one option per pair —
+ *     still produces exactly one row per SKU (now 76 instead of ~74).
+ *   • String flags (`halal: "Yes"`) collapse to booleans for the engine.
+ *
+ * Why an adapter instead of refactoring the engine/picker: the engine
+ * only reads three numeric fields off `primary` (scoopG · weightG ·
+ * pricePerGram); the picker reads name/brand/img/variants for display.
+ * Both are satisfied without touching ~80 references across this file
+ * or `feedingCalculator.ts`. Phase 9 can collapse the legacy Product
+ * surface once Most Sold is also off it.
+ */
+const yes = (v: string | undefined | null): boolean =>
+  !!v && v.toLowerCase().startsWith('yes');
+
+const formulaToProductLike = (f: Formula): Product => {
+  const variant = {
+    weightG: f.packSize,
+    price: f.price,
+    scoopG: f.scoopSize,
+    waterMl: f.waterPerScoop,
+    img: `images/${f.img}`,
+    scoopsPerTin: f.scoopsPerTin,
+    pricePerGram: f.pricePerGram,
+    pricePerScoop: f.pricePerScoop,
+  };
+  return {
+    id: f.id,
+    name: shortName(f.product),
+    fullName: f.product,
+    brand: f.brand,
+    stage: f.stage as Product['stage'],
+    milkType: 'cow',
+    origin: f.origin,
+    milkOrigin: f.milkOrigin,
+    halal: yes(f.halal),
+    soyBased: yes(f.soyBased),
+    lactoseFree: yes(f.lactoseFree),
+    ar: yes(f.ar),
+    ha: yes(f.ha),
+    organic: yes(f.organic),
+    palmFree: !f.palmOil || f.palmOil.toLowerCase().startsWith('no'),
+    partialHydro: yes(f.partiallyHydrolyzed),
+    probiotic: f.probiotic,
+    hmo: f.hmo,
+    mainSugar: f.mainSugar,
+    specialty: null,
+    desc: '',
+    bestFor: '',
+    nutrition: { energy: null, protein: null, fat: null, carbs: null, dha: null },
+    variants: [variant],
+    // Top-level mirrors — the calc UI reads these directly off the
+    // resolved Product (e.g. `primaryProduct.weightG`, `.price`).
+    weightG: f.packSize,
+    price: f.price,
+    scoopG: f.scoopSize,
+    waterMl: f.waterPerScoop,
+    img: `images/${f.img}`,
+    scoopsPerTin: f.scoopsPerTin,
+    pricePerGram: f.pricePerGram,
+    pricePerScoop: f.pricePerScoop,
+  };
+};
+
 const makeProductSelectStyle = (c: ReturnType<typeof useV2Colors>) => ({
   width: '100%',
   padding: 11,
@@ -88,8 +162,16 @@ export default function CalculatorScreen() {
   // 960px is the design's `.mw-calc` breakpoint (single-col below).
   const { width } = useWindowDimensions();
   const twoCol = width >= 960;
+  // Phase 7: data source migrated from `getAllProducts()` (61 curated
+  // products) to `getAllFormulas()` (76 SKUs from the merged Phase-1
+  // dataset). Each Formula is adapted to a single-variant Product shape
+  // so the existing picker + engine code keeps working unchanged. See
+  // `formulaToProductLike` at the top of the file for the rationale.
   const products = useMemo(
-    () => getAllProducts().sort((a, b) => a.name.localeCompare(b.name)),
+    () =>
+      getAllFormulas()
+        .map(formulaToProductLike)
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [],
   );
 
