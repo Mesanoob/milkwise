@@ -1,1653 +1,1562 @@
 /**
- * Feeding calculator.
+ * app/calculator.tsx — Calculator (`/calculator`). Phase 10 rebuild.
  *
- * This screen ports the Claude Design `calculator.html` prototype into the
- * Expo app. The math lives in `feedingCalculator.ts` so the route stays focused
- * on form state and rendering, and so we can test the formulas separately later.
+ * Ported 1:1 from `MilkWiseFinalDesign/ui_kits/website/Calculator.jsx`
+ * ("What you'll actually spend." layout). Replaces the §9c "Baby Feeding
+ * Calculator" sage-hero version — the underlying design has moved on.
+ *
+ * Top section (2-col on ≥960px):
+ *   • LEFT — DOB (+ age card) · formula picker · feeding-mode toggle ·
+ *            paired feeds/ml steppers · paired scoop/tin · price · solids
+ *            card (≥6mo).
+ *   • RIGHT — INTAKE BENCHMARK card (status + ml/day count + bar) · 2×2
+ *            ResultCard grid (Daily · Monthly · Spent so far · Projected)
+ *            · Singapore Feeding Benchmark line chart.
+ *
+ * Below (full-width):
+ *   • Formula Usage & Cost — 5 metric tiles + Monthly Formula Cost bars.
+ *   • Estimated Lifetime Formula Spend — 3 colored cells + cumulative
+ *     curve + Causeway saving card + methodology.
+ *   • Singapore Infant Feeding Guidelines — 12-row HPB table, baby's age
+ *     row highlighted.
+ *
+ * Math is inline (matches the design's own calc — simpler than the v1
+ * feedingCalculator engine, which is now unreferenced and can be removed
+ * in a follow-up cleanup). Reads Formula directly — no Phase-7
+ * formulaToProductLike adapter needed; design code already reads
+ * scoopSize/packSize/price/pricePerGram which are Formula fields.
+ *
+ * Charts use `react-native-svg` (already in the dep tree from the old
+ * v1 charts; those files are now unused and can be deleted next pass).
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Image,
   Platform,
   Pressable,
   ScrollView,
-  Switch,
   Text,
   TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
-import type { Product } from '../src/types/product';
-import type { Formula } from '../src/types/formula';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { Screen } from '../src/components/Screen';
-import { getAllFormulas } from '../src/data/formulas';
-import { shortName } from '../src/utils/formulaClassifiers';
-import { getProductImage } from '../src/data/imageMap';
-import { SG_GUIDELINES } from '../src/data/feedingGuidelines';
-import { BenchmarkChart } from '../src/components/calculator/BenchmarkChart';
-import { CumulativeSpendChart } from '../src/components/calculator/CumulativeSpendChart';
-import { SpendChart } from '../src/components/calculator/SpendChart';
-import { Stepper } from '../src/components/calculator/Stepper';
 import { useTheme } from '../src/contexts/ThemeContext';
-import { formatCurrency, formatNumber, formatWeight } from '../src/utils/format';
-import {
-  calcAge,
-  calculateFeedingEstimate,
-  parseDobParts,
-} from '../src/utils/feedingCalculator';
+import { getAllFormulas } from '../src/data/formulas';
+import { fmtSGD, fmtPerGram } from '../src/utils/formulaFormat';
+import { shortName } from '../src/utils/formulaClassifiers';
+import type { Formula } from '../src/types/formula';
 
-type Gender = 'boy' | 'girl' | '';
-type SolidsLevel = 'starting' | 'established' | 'full';
+// Persisted DOB key. Versioned so the schema can evolve without
+// silently mis-reading an old value.
+const DOB_STORAGE_KEY = 'milkwise.calculator.dob.v1';
 
-/**
- * v1→v2 colour shim. This screen consistently uses a `colors.<v1key>`
- * namespace across ~15 sub-components; rather than rewrite every call
- * site, each component grabs `const colors = useV2Colors()` and the
- * existing references keep working — now theme-reactive v2 values.
- * `amber*` maps to the warn pair (its v2 semantic successor) since the
- * only amber use here is the optional-solids notice. Removed when the
- * v1 token block is deleted is N/A — this shim *is* the v2 binding.
- */
-const useV2Colors = () => {
+// ── WHO/HPB feeding guidelines (verbatim from design) ─────────────────
+type Guideline = {
+  maxMo: number;
+  feeds: [number, number];
+  mlPerFeed: [number, number];
+  dailyMl: [number, number];
+  stage: string;
+};
+const GUIDELINES: Guideline[] = [
+  { maxMo:  1, feeds: [ 8, 12], mlPerFeed: [ 45,  90], dailyMl: [400,  600], stage: 'Stage 1' },
+  { maxMo:  3, feeds: [ 6,  8], mlPerFeed: [ 90, 150], dailyMl: [600,  900], stage: 'Stage 1' },
+  { maxMo:  6, feeds: [ 5,  6], mlPerFeed: [150, 210], dailyMl: [800, 1000], stage: 'Stage 1' },
+  { maxMo:  9, feeds: [ 3,  5], mlPerFeed: [180, 240], dailyMl: [600,  900], stage: 'Stage 2' },
+  { maxMo: 12, feeds: [ 3,  4], mlPerFeed: [180, 240], dailyMl: [500,  700], stage: 'Stage 2' },
+  { maxMo: 24, feeds: [ 2,  3], mlPerFeed: [200, 240], dailyMl: [350,  500], stage: 'Stage 3' },
+  { maxMo: 36, feeds: [ 1,  2], mlPerFeed: [200, 250], dailyMl: [200,  400], stage: 'Stage 3/4' },
+  { maxMo: 999, feeds: [0,  1], mlPerFeed: [200, 250], dailyMl: [  0,  250], stage: 'Stage 4' },
+];
+const SOLIDS = [
+  { maxMo:  6, mealsPerDay: 0, calsFromSolids: 0 },
+  { maxMo:  8, mealsPerDay: 2, calsFromSolids: 200 },
+  { maxMo: 12, mealsPerDay: 3, calsFromSolids: 300 },
+  { maxMo: 24, mealsPerDay: 4, calsFromSolids: 550 },
+  { maxMo: 36, mealsPerDay: 4, calsFromSolids: 750 },
+  { maxMo: 999, mealsPerDay: 3, calsFromSolids: 950 },
+];
+const guidelineForAge = (months: number): Guideline =>
+  GUIDELINES.find((g) => months <= g.maxMo) ?? GUIDELINES[GUIDELINES.length - 1];
+const solidsForAge = (months: number) =>
+  SOLIDS.find((s) => months <= s.maxMo) ?? SOLIDS[SOLIDS.length - 1];
+
+const calcAge = (dobIso: string, asOf = new Date()) => {
+  if (!dobIso) return null;
+  const b = new Date(dobIso);
+  if (Number.isNaN(b.getTime())) return null;
+  let years = asOf.getFullYear() - b.getFullYear();
+  let months = asOf.getMonth() - b.getMonth();
+  let days = asOf.getDate() - b.getDate();
+  if (days < 0) {
+    months--;
+    days += new Date(asOf.getFullYear(), asOf.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  const totalMonths = years * 12 + months + days / 30;
+  return { years, months, days, totalMonths };
+};
+
+// ── HPB feeding guidelines table data (12 rows, full year) ────────────
+const HPB_ROWS: { age: string; ml: string; feeds: string; daily: string; note: string }[] = [
+  { age: 'Birth',     ml: '60–90ml',   feeds: '8–12×', daily: '480–1080ml', note: 'Very frequent feeds; stomach is tiny (~5–7ml at day 1, ~45ml by week 1)' },
+  { age: '1 month',   ml: '90–120ml',  feeds: '7–9×',  daily: '630–1080ml', note: 'Growth spurt often around 3 weeks' },
+  { age: '2 months',  ml: '120–150ml', feeds: '6–8×',  daily: '720–1200ml', note: 'Feeds becoming more predictable' },
+  { age: '3 months',  ml: '150–180ml', feeds: '5–7×',  daily: '750–1260ml', note: 'Many babies begin stretching feeds at night' },
+  { age: '4 months',  ml: '150–200ml', feeds: '5–6×',  daily: '750–1200ml', note: '4-month sleep regression is common' },
+  { age: '5 months',  ml: '180–210ml', feeds: '4–6×',  daily: '720–1260ml', note: 'Watch for signs of readiness for solids' },
+  { age: '6 months',  ml: '180–210ml', feeds: '4–5×',  daily: '720–1050ml', note: 'HPB recommends introducing solids at 6 months' },
+  { age: '7 months',  ml: '180–210ml', feeds: '3–5×',  daily: '540–1050ml', note: 'Milk remains primary nutrition; solids are complementary' },
+  { age: '8 months',  ml: '170–210ml', feeds: '3–4×',  daily: '510–840ml',  note: 'Texture progression in solids — lumpy/mashed' },
+  { age: '9 months',  ml: '170–200ml', feeds: '3–4×',  daily: '510–800ml',  note: 'Finger foods can be introduced' },
+  { age: '10 months', ml: '150–200ml', feeds: '3–4×',  daily: '450–800ml',  note: 'Milk intake naturally begins to decrease' },
+  { age: '11 months', ml: '150–180ml', feeds: '3–3×',  daily: '450–540ml',  note: 'Approaching transition to cow’s milk at 12 months' },
+];
+const ageRowKey = (ageMo: number): string => {
+  const m = Math.max(0, Math.min(11, Math.round(ageMo)));
+  return m === 0 ? 'Birth' : `${m} month${m > 1 ? 's' : ''}`;
+};
+
+// ── Stepper (used 5x in form; small enough to inline) ─────────────────
+// Flex layout: `flexShrink: 0` on buttons + `minWidth: 0` on the TextInput
+// stops a side-by-side stepper column from eating its sibling's "+" off
+// the right edge.
+//
+// 2026-05-21 bug fix — typing was clamped per-keystroke, so typing "180"
+// for ml/feed (min=30) hit "1" → clamped to 30 → user could never get
+// below 30 by typing. Fix: drop the clamp from `onChangeText` entirely;
+// the +/- buttons still enforce min/max, and the field commits whatever
+// the user types. Out-of-range typed values are clamped only on blur
+// (intermediate values during typing are allowed to pass through).
+const Stepper = ({
+  value, onChange, step = 1, min = 0, max = 99,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  step?: number; min?: number; max?: number;
+}) => {
   const { tokens } = useTheme();
-  const c = tokens.colors;
-  return {
-    green: c.accent,
-    greenMid: c.accentHover,
-    greenLight: c.accentTint,
-    // a11y: AA-safe darker sage for SMALL green text on light surfaces
-    // (`green`/`greenMid` are only ~3:1 — see §7b/§9b Phase 7).
-    greenText: c.accentText,
-    surface: c.bgCard,
-    surface2: c.bgPanel,
-    amber: c.warnText,
-    amberLight: c.warnBg,
-    text: c.text,
-    muted: c.textMuted,
-    border: c.border,
-    danger: c.danger,
-    info: c.info,
-    infoSoft: c.infoSoft,
-    textInverse: c.textInverse,
+  const btn = {
+    width: 36, height: 36, flexShrink: 0,
+    alignItems: 'center' as const, justifyContent: 'center' as const,
+    backgroundColor: tokens.colors.bgPanel,
+    borderWidth: 1, borderColor: tokens.colors.border,
+    borderRadius: 8,
   };
+  const txt = { color: tokens.colors.text, fontSize: 17, fontWeight: '600' as const };
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 }}>
+      <Pressable
+        accessibilityRole="button" accessibilityLabel="Decrement"
+        onPress={() => onChange(Math.max(min, +(value - step).toFixed(2)))}
+        style={btn}>
+        <Text style={txt}>−</Text>
+      </Pressable>
+      <TextInput
+        value={String(value)}
+        onChangeText={(s) => {
+          // Don't clamp during typing — let intermediate values pass
+          // through (typing "180" must briefly be "1" and "18"). The
+          // +/- buttons enforce min/max; blur clamps to range.
+          if (s === '') { onChange(0); return; }
+          const n = Number(s);
+          if (Number.isFinite(n) && n >= 0) onChange(n);
+        }}
+        onBlur={() => {
+          if (value < min) onChange(min);
+          else if (value > max) onChange(max);
+        }}
+        keyboardType="numeric"
+        style={{
+          flex: 1, minWidth: 0, height: 36, textAlign: 'center',
+          fontFamily: tokens.fonts.monoMedium,
+          fontVariant: ['tabular-nums'] as ['tabular-nums'],
+          fontSize: 15, color: tokens.colors.text,
+          backgroundColor: tokens.colors.bgPanel,
+          borderWidth: 1, borderColor: tokens.colors.border, borderRadius: 8,
+          paddingHorizontal: 8,
+        }}
+      />
+      <Pressable
+        accessibilityRole="button" accessibilityLabel="Increment"
+        onPress={() => onChange(Math.min(max, +(value + step).toFixed(2)))}
+        style={btn}>
+        <Text style={txt}>+</Text>
+      </Pressable>
+    </View>
+  );
 };
 
-/**
- * Phase-7 adapter — bridges the Formula model (Phase-1 merged data, 76
- * SKUs) to the picker + engine, both of which were built against the
- * legacy Product type. Each Formula becomes a single-variant Product:
- *
- *   • Top-level mirror fields (weightG/price/scoopG/…) get the formula's
- *     own values so `primaryProduct.weightG` etc. resolve correctly in
- *     the calculator UI.
- *   • `variants: [{...}]` carries the same data so the picker — which
- *     iterates `product.variants.map(...)` to emit one option per pair —
- *     still produces exactly one row per SKU (now 76 instead of ~74).
- *   • String flags (`halal: "Yes"`) collapse to booleans for the engine.
- *
- * Why an adapter instead of refactoring the engine/picker: the engine
- * only reads three numeric fields off `primary` (scoopG · weightG ·
- * pricePerGram); the picker reads name/brand/img/variants for display.
- * Both are satisfied without touching ~80 references across this file
- * or `feedingCalculator.ts`. Phase 9 can collapse the legacy Product
- * surface once Most Sold is also off it.
- */
-const yes = (v: string | undefined | null): boolean =>
-  !!v && v.toLowerCase().startsWith('yes');
-
-const formulaToProductLike = (f: Formula): Product => {
-  const variant = {
-    weightG: f.packSize,
-    price: f.price,
-    scoopG: f.scoopSize,
-    waterMl: f.waterPerScoop,
-    img: `images/${f.img}`,
-    scoopsPerTin: f.scoopsPerTin,
-    pricePerGram: f.pricePerGram,
-    pricePerScoop: f.pricePerScoop,
-  };
-  return {
-    id: f.id,
-    name: shortName(f.product),
-    fullName: f.product,
-    brand: f.brand,
-    stage: f.stage as Product['stage'],
-    milkType: 'cow',
-    origin: f.origin,
-    milkOrigin: f.milkOrigin,
-    halal: yes(f.halal),
-    soyBased: yes(f.soyBased),
-    lactoseFree: yes(f.lactoseFree),
-    ar: yes(f.ar),
-    ha: yes(f.ha),
-    organic: yes(f.organic),
-    palmFree: !f.palmOil || f.palmOil.toLowerCase().startsWith('no'),
-    partialHydro: yes(f.partiallyHydrolyzed),
-    probiotic: f.probiotic,
-    hmo: f.hmo,
-    mainSugar: f.mainSugar,
-    specialty: null,
-    desc: '',
-    bestFor: '',
-    nutrition: { energy: null, protein: null, fat: null, carbs: null, dha: null },
-    variants: [variant],
-    // Top-level mirrors — the calc UI reads these directly off the
-    // resolved Product (e.g. `primaryProduct.weightG`, `.price`).
-    weightG: f.packSize,
-    price: f.price,
-    scoopG: f.scoopSize,
-    waterMl: f.waterPerScoop,
-    img: `images/${f.img}`,
-    scoopsPerTin: f.scoopsPerTin,
-    pricePerGram: f.pricePerGram,
-    pricePerScoop: f.pricePerScoop,
-  };
+// Display-only spec value (used when scoop is locked by formula choice).
+const SpecDisplay = ({ value, unit }: { value: string; unit: string }) => {
+  const { tokens } = useTheme();
+  return (
+    <View style={{
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      height: 36, paddingHorizontal: 12, borderRadius: 8,
+      borderWidth: 1, borderColor: tokens.colors.border,
+      backgroundColor: tokens.colors.bgPanel,
+    }}>
+      <Text style={{
+        fontFamily: tokens.fonts.monoMedium,
+        fontVariant: ['tabular-nums'] as ['tabular-nums'],
+        fontSize: 15, color: tokens.colors.text,
+      }}>{value}</Text>
+      <Text style={{
+        fontSize: 12, color: tokens.colors.textMuted,
+        fontFamily: tokens.fonts.mono,
+      }}>{unit}</Text>
+    </View>
+  );
 };
 
-const makeProductSelectStyle = (c: ReturnType<typeof useV2Colors>) => ({
-  width: '100%',
-  padding: 11,
-  borderRadius: 10,
-  borderWidth: 1.5,
-  borderColor: c.border,
-  background: c.surface2,
-  color: c.text,
-  fontSize: 14,
-  fontFamily: 'inherit',
-});
+// ── Label + small-hint helper (matches `.mw-label small` pattern) ─────
+const Label = ({ children, hint }: { children: string; hint?: string }) => {
+  const { tokens } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+      <Text style={{
+        fontFamily: tokens.fonts.bodySemibold,
+        fontSize: 13, fontWeight: '600',
+        color: tokens.colors.text,
+      }}>{children}</Text>
+      {hint ? (
+        <Text style={{
+          fontSize: 11, color: tokens.colors.textMuted,
+          fontFamily: tokens.fonts.mono, fontVariant: ['tabular-nums'] as ['tabular-nums'],
+        }}>{hint}</Text>
+      ) : null}
+    </View>
+  );
+};
+
+// ── Card wrapper ──────────────────────────────────────────────────────
+const Card = ({
+  children, style,
+}: { children: React.ReactNode; style?: object }) => {
+  const { tokens } = useTheme();
+  return (
+    <View
+      style={[{
+        backgroundColor: tokens.colors.bgCard,
+        borderWidth: 1, borderColor: tokens.colors.border,
+        borderRadius: tokens.radius.card,
+        padding: 20,
+        ...tokens.shadow.s1,
+      }, style]}>
+      {children}
+    </View>
+  );
+};
+
+// ── BenchmarkBar — horizontal value-vs-range track ────────────────────
+const BenchmarkBar = ({ value, low, high }: { value: number; low: number; high: number }) => {
+  const { tokens } = useTheme();
+  const maxScale = Math.max(high * 1.5, value * 1.1, 1500);
+  const valPct = Math.min(100, (value / maxScale) * 100);
+  const loPct = (low / maxScale) * 100;
+  const hiPct = (high / maxScale) * 100;
+  return (
+    <View style={{ height: 14, borderRadius: 7, backgroundColor: tokens.colors.bgPanel, position: 'relative', marginTop: 12 }}>
+      <View style={{
+        position: 'absolute',
+        left: `${loPct}%`, width: `${Math.max(0, hiPct - loPct)}%`,
+        top: 0, bottom: 0,
+        backgroundColor: tokens.colors.accentSoft,
+        borderRadius: 7,
+      }} />
+      <View style={{
+        position: 'absolute',
+        left: `${valPct}%`, marginLeft: -7,
+        top: -3, width: 14, height: 20,
+        backgroundColor: tokens.colors.text,
+        borderRadius: 4,
+      }} />
+    </View>
+  );
+};
+
+// ── BenchmarkLine — 12mo HPB midpoint + shaded band + current dot ─────
+const BenchmarkLine = ({
+  current, currentMl, inRange, monthMidpoints,
+}: {
+  current: number; currentMl: number; inRange: boolean;
+  monthMidpoints: { mo: number; lo: number; mid: number; hi: number }[];
+}) => {
+  const { tokens } = useTheme();
+  const W = 760, H = 280, PAD_L = 56, PAD_R = 28, PAD_T = 20, PAD_B = 44;
+  const innerW = W - PAD_L - PAD_R, innerH = H - PAD_T - PAD_B;
+  const maxY = 1300, minY = 200;
+  const xScale = (mo: number) => PAD_L + (mo / 11) * innerW;
+  const yScale = (v: number) => PAD_T + innerH - ((v - minY) / (maxY - minY)) * innerH;
+  const top = monthMidpoints.map((d) => `${xScale(d.mo).toFixed(1)},${yScale(d.hi).toFixed(1)}`);
+  const bot = monthMidpoints.slice().reverse().map((d) => `${xScale(d.mo).toFixed(1)},${yScale(d.lo).toFixed(1)}`);
+  const bandPath = 'M' + [...top, ...bot].join('L') + 'Z';
+  const linePath = 'M' + monthMidpoints.map((d) => `${xScale(d.mo).toFixed(1)},${yScale(d.mid).toFixed(1)}`).join('L');
+  const yTicks = [200, 400, 700, 900, 1000, 1200];
+  return (
+    <Svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ aspectRatio: W / H, maxHeight: 340 }}>
+      {yTicks.map((t) => (
+        <Line key={t} x1={PAD_L} y1={yScale(t)} x2={W - PAD_R} y2={yScale(t)} stroke={tokens.colors.divider} strokeWidth={1} />
+      ))}
+      {yTicks.map((t) => (
+        <SvgText key={`l${t}`} x={PAD_L - 10} y={yScale(t) + 4} fontSize={12} fill={tokens.colors.textMuted} textAnchor="end" fontFamily={tokens.fonts.mono}>{t}</SvgText>
+      ))}
+      <Path d={bandPath} fill={tokens.colors.accent} fillOpacity={0.16} />
+      <Path d={linePath} fill="none" stroke={tokens.colors.accentText} strokeWidth={3} />
+      <Line x1={xScale(current)} y1={PAD_T} x2={xScale(current)} y2={H - PAD_B}
+        stroke={tokens.colors.textFaint} strokeWidth={1.25} strokeDasharray="4 5" />
+      {monthMidpoints.map((d) => (
+        <SvgText key={`x${d.mo}`} x={xScale(d.mo)} y={H - PAD_B + 22} fontSize={12}
+          fill={d.mo === current ? tokens.colors.accentText : tokens.colors.textMuted}
+          fontWeight={d.mo === current ? '700' : '400'}
+          textAnchor="middle" fontFamily={tokens.fonts.mono}>{d.mo}m</SvgText>
+      ))}
+      <Circle cx={xScale(current)} cy={yScale(currentMl)} r={9}
+        fill={inRange ? '#2563EB' : '#DC2626'} stroke="white" strokeWidth={3} />
+    </Svg>
+  );
+};
+
+// ── MonthlyBars — 12 bars colored past/now/projected ──────────────────
+type ProjRow = {
+  month: number; isPast: boolean; isNow: boolean; stage: string;
+  expectedMl: number; adjustedMl: number; solidsCut: number;
+  cost: number; tinsThisMonth: number;
+};
+const MonthlyBars = ({ rows }: { rows: ProjRow[] }) => {
+  const { tokens } = useTheme();
+  if (!rows.length) return null;
+  const max = Math.max(...rows.map((r) => r.cost), 1);
+  const W = 760, H = 220, PAD_L = 44, PAD_R = 16, PAD_T = 18, PAD_B = 30;
+  const innerW = W - PAD_L - PAD_R, innerH = H - PAD_T - PAD_B;
+  const slotW = innerW / rows.length;
+  const yScale = (v: number) => PAD_T + innerH - (v / max) * innerH;
+  const yTicks = [0, max * 0.25, max * 0.5, max * 0.75, max];
+  return (
+    <Svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ aspectRatio: W / H, maxHeight: 240 }}>
+      {yTicks.map((t, i) => (
+        <Line key={i} x1={PAD_L} y1={yScale(t)} x2={W - PAD_R} y2={yScale(t)}
+          stroke={i === 0 ? tokens.colors.border : tokens.colors.divider} strokeWidth={1} />
+      ))}
+      {yTicks.map((t, i) => (
+        <SvgText key={`l${i}`} x={PAD_L - 6} y={yScale(t) + 4} fontSize={10}
+          fill={tokens.colors.textMuted} textAnchor="end" fontFamily={tokens.fonts.mono}>
+          ${Math.round(t)}
+        </SvgText>
+      ))}
+      {rows.map((r, i) => {
+        const x = PAD_L + slotW * i + slotW * 0.18;
+        const w = slotW * 0.64;
+        const h = (r.cost / max) * innerH;
+        const y = yScale(r.cost);
+        const fill = r.isNow ? tokens.colors.accentText : r.isPast ? tokens.colors.accentSoft : tokens.colors.border;
+        return (
+          <Fragment key={r.month}>
+            <Rect x={x} y={y} width={w} height={h} fill={fill} rx={2} />
+            <SvgText x={x + w / 2} y={y - 5} fontSize={9} fill={tokens.colors.textMuted}
+              textAnchor="middle" fontFamily={tokens.fonts.mono}>
+              ${Math.round(r.cost)}
+            </SvgText>
+            <SvgText x={x + w / 2} y={H - PAD_B + 14} fontSize={10}
+              fill={r.isNow ? tokens.colors.accentText : tokens.colors.textMuted}
+              fontWeight={r.isNow ? '700' : '400'}
+              textAnchor="middle" fontFamily={tokens.fonts.mono}>{r.month}m</SvgText>
+          </Fragment>
+        );
+      })}
+    </Svg>
+  );
+};
+
+// ── CumulativeCurve — past area + projected dashed ────────────────────
+const CumulativeCurve = ({ rows, total }: { rows: ProjRow[]; total: number }) => {
+  const { tokens } = useTheme();
+  if (!rows.length) return null;
+  const W = 760, H = 220, PAD_L = 50, PAD_R = 80, PAD_T = 18, PAD_B = 34;
+  const innerW = W - PAD_L - PAD_R, innerH = H - PAD_T - PAD_B;
+  let runningPast = 0, runningProj = 0, foundNow = false;
+  const cumPast: { mo: number; v: number }[] = [];
+  const cumProj: { mo: number; v: number }[] = [];
+  rows.forEach((r) => {
+    if (!foundNow) {
+      runningPast += r.cost;
+      cumPast.push({ mo: r.month, v: runningPast });
+      if (r.isNow) { foundNow = true; runningProj = runningPast; }
+    } else {
+      runningProj += r.cost;
+      cumProj.push({ mo: r.month, v: runningProj });
+    }
+  });
+  const allMo = rows.map((r) => r.month);
+  const minMo = Math.min(...allMo), maxMo = Math.max(...allMo);
+  const maxY = Math.max(total, runningProj, runningPast) * 1.05 || 100;
+  const xScale = (mo: number) => PAD_L + ((mo - minMo) / Math.max(1, maxMo - minMo)) * innerW;
+  const yScale = (v: number) => PAD_T + innerH - (v / maxY) * innerH;
+  const buildPath = (pts: { mo: number; v: number }[]) =>
+    'M' + pts.map((p) => `${xScale(p.mo).toFixed(1)},${yScale(p.v).toFixed(1)}`).join('L');
+  const areaPath = cumPast.length
+    ? `M${xScale(cumPast[0].mo).toFixed(1)},${yScale(0).toFixed(1)}L` +
+      cumPast.map((p) => `${xScale(p.mo).toFixed(1)},${yScale(p.v).toFixed(1)}`).join('L') +
+      `L${xScale(cumPast[cumPast.length - 1].mo).toFixed(1)},${yScale(0).toFixed(1)}Z`
+    : '';
+  const yTicks = [0, maxY * 0.25, maxY * 0.5, maxY * 0.75, maxY];
+  const projWithBridge = cumPast.length && cumProj.length
+    ? [cumPast[cumPast.length - 1], ...cumProj]
+    : cumProj;
+  return (
+    <Svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ aspectRatio: W / H, maxHeight: 240 }}>
+      {yTicks.map((t, i) => (
+        <Line key={i} x1={PAD_L} y1={yScale(t)} x2={W - PAD_R} y2={yScale(t)}
+          stroke={i === 0 ? tokens.colors.border : tokens.colors.divider} strokeWidth={1} />
+      ))}
+      {yTicks.map((t, i) => (
+        <SvgText key={`l${i}`} x={PAD_L - 6} y={yScale(t) + 4} fontSize={10}
+          fill={tokens.colors.textMuted} textAnchor="end" fontFamily={tokens.fonts.mono}>
+          ${Math.round(t)}
+        </SvgText>
+      ))}
+      {areaPath ? <Path d={areaPath} fill={tokens.colors.accent} fillOpacity={0.16} /> : null}
+      {cumPast.length > 1 ? <Path d={buildPath(cumPast)} fill="none" stroke={tokens.colors.accentText} strokeWidth={2.5} /> : null}
+      {projWithBridge.length > 1 ? <Path d={buildPath(projWithBridge)} fill="none" stroke={tokens.colors.accentText} strokeWidth={2.5} strokeDasharray="5 4" /> : null}
+      <SvgText x={W - PAD_R + 6} y={yScale(total) + 4} fontSize={11}
+        fill={tokens.colors.accentText} fontWeight="700" fontFamily={tokens.fonts.mono}>
+        total: ${total.toFixed(2)}
+      </SvgText>
+      {Array.from({ length: maxMo - minMo + 1 }, (_, i) => minMo + i).map((t) => (
+        <SvgText key={t} x={xScale(t)} y={H - PAD_B + 16} fontSize={9}
+          fill={tokens.colors.textMuted} textAnchor="middle" fontFamily={tokens.fonts.mono}>{t}m</SvgText>
+      ))}
+    </Svg>
+  );
+};
+
+// ── CountUp — animates from previous → next value (eased) ─────────────
+// Ported from `Calculator.jsx` CountUp. Ease-out cubic over `duration` ms.
+// Uses `Date.now()` rather than `performance.now()` for native parity.
+// `format` receives the interpolated float so callers can render the
+// in-flight value with their own precision (e.g. fmtSGD vs round vs 2dp).
+const CountUp = ({
+  value,
+  format = (n: number) => n.toFixed(2),
+  duration = 500,
+  style,
+}: {
+  value: number;
+  format?: (n: number) => string;
+  duration?: number;
+  style?: object;
+}) => {
+  const [v, setV] = useState(0);
+  const prev = useRef(0);
+  useEffect(() => {
+    const start = prev.current;
+    const end = Number.isFinite(value) ? value : 0;
+    const t0 = Date.now();
+    let raf: number;
+    const step = () => {
+      const k = Math.min(1, (Date.now() - t0) / duration);
+      const eased = 1 - Math.pow(1 - k, 3);
+      setV(start + (end - start) * eased);
+      if (k < 1) raf = requestAnimationFrame(step);
+      else prev.current = end;
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+  return <Text style={style}>{format(v)}</Text>;
+};
+
+// ── Page ──────────────────────────────────────────────────────────────
 
 export default function CalculatorScreen() {
-  const colors = useV2Colors();
-  // 960px is the design's `.mw-calc` breakpoint (single-col below).
+  const { tokens } = useTheme();
   const { width } = useWindowDimensions();
   const twoCol = width >= 960;
-  // Phase 7: data source migrated from `getAllProducts()` (61 curated
-  // products) to `getAllFormulas()` (76 SKUs from the merged Phase-1
-  // dataset). Each Formula is adapted to a single-variant Product shape
-  // so the existing picker + engine code keeps working unchanged. See
-  // `formulaToProductLike` at the top of the file for the rationale.
-  const products = useMemo(
+  const today = useRef(new Date());
+  const todayStr = today.current.toLocaleDateString('en-SG', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+
+  // Formula dataset (76 SKUs from Phase 1).
+  const formulas = useMemo<Formula[]>(() => getAllFormulas(), []);
+
+  // Unique product LINES (one entry per p.product name). Multi-variant
+  // products collapse to a single row in the picker; the user then picks
+  // a specific pack size from the constrained Tin Size dropdown.
+  const uniqueProducts = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Formula[] = [];
+    for (const f of formulas) {
+      if (seen.has(f.product)) continue;
+      seen.add(f.product);
+      out.push(f);
+    }
+    return out.sort(
+      (a, b) =>
+        a.brand.localeCompare(b.brand) || a.product.localeCompare(b.product),
+    );
+  }, [formulas]);
+
+  // ── State: ALL defaults are 0 / empty for first-visit "show zeros" UX.
+  // DOB hydrates from AsyncStorage if present. Picking a formula and/or
+  // entering a DOB triggers the age + variant auto-fills below.
+  const [dob, setDobState] = useState('');
+  const [productName, setProductName] = useState('');
+  const [feedsPerDay, setFeedsPerDay] = useState(0);
+  const [mlPerFeed, setMlPerFeed] = useState(0);
+  const [scoopSize, setScoopSize] = useState(0);
+  const [tinSize, setTinSize] = useState(0);
+  const [pricePerTin, setPricePerTin] = useState(0);
+  const [feedingMode, setFeedingMode] = useState<'formula' | 'mixed'>('formula');
+  const [breastFeedsShare, setBreastFeedsShare] = useState(0);
+  const [solidsMeals, setSolidsMeals] = useState(0);
+
+  // Hydrate persisted DOB on mount. Best-effort — storage failures (private
+  // mode, quota) fall through to the empty default.
+  useEffect(() => {
+    let alive = true;
+    AsyncStorage.getItem(DOB_STORAGE_KEY)
+      .then((saved) => {
+        if (alive && typeof saved === 'string' && saved.length === 10) {
+          setDobState(saved);
+        }
+      })
+      .catch(() => {
+        /* storage unreadable — keep empty default */
+      });
+    return () => { alive = false };
+  }, []);
+
+  // Persist on every change. `''` clears the cached value too.
+  const setDob = (next: string) => {
+    setDobState(next);
+    if (next) AsyncStorage.setItem(DOB_STORAGE_KEY, next).catch(() => {});
+    else AsyncStorage.removeItem(DOB_STORAGE_KEY).catch(() => {});
+  };
+
+  // Derived age / guideline.
+  const age = useMemo(() => calcAge(dob, today.current), [dob]);
+  const ageMo = age ? age.totalMonths : 0;
+  const guideline = guidelineForAge(ageMo);
+  const solidsRec = solidsForAge(ageMo);
+
+  // Derived product/variant state — drives the constrained Tin Size
+  // dropdown and the formula-driven auto-fills below.
+  const productVariants = useMemo(
     () =>
-      getAllFormulas()
-        .map(formulaToProductLike)
-        .sort((a, b) => a.name.localeCompare(b.name)),
+      productName
+        ? formulas
+            .filter((f) => f.product === productName)
+            .sort((a, b) => a.packSize - b.packSize)
+        : [],
+    [formulas, productName],
+  );
+  const availableSizes = useMemo(
+    () => productVariants.map((v) => v.packSize),
+    [productVariants],
+  );
+  const selectedVariant = useMemo(
+    () =>
+      productName ? productVariants.find((v) => v.packSize === tinSize) ?? null : null,
+    [productName, productVariants, tinSize],
+  );
+  // The currently active "product" reference for downstream UI labels
+  // (Formula Usage & Cost sub-heading, Causeway saving copy).
+  const product = selectedVariant;
+
+  // Age-driven auto-fill: when DOB is set (or changed), seed feeds + ml
+  // from the age-appropriate guideline midpoint. Skips when no DOB so the
+  // first-visit "all zeros" state holds.
+  useEffect(() => {
+    if (!age) return;
+    const g = guidelineForAge(age.totalMonths);
+    setFeedsPerDay(Math.round((g.feeds[0] + g.feeds[1]) / 2));
+    setMlPerFeed(Math.round((g.mlPerFeed[0] + g.mlPerFeed[1]) / 2));
+    setSolidsMeals(solidsForAge(age.totalMonths).mealsPerDay);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dob]);
+
+  // Product-change auto-fill: when the user picks a new formula, default
+  // to its smallest variant and pre-fill scoop + price. Clearing the
+  // picker (back to "Manual entry") zeros the spec fields so the manual
+  // entries start fresh.
+  useEffect(() => {
+    if (!productName) {
+      setTinSize(0);
+      setScoopSize(0);
+      setPricePerTin(0);
+      return;
+    }
+    const v = productVariants[0]; // smallest
+    if (!v) return;
+    setTinSize(v.packSize);
+    if (v.scoopSize) setScoopSize(v.scoopSize);
+    if (v.price) setPricePerTin(v.price);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productName]);
+
+  // Tin-size-change auto-fill (within a product): swapping to a different
+  // pack size for the same product re-fills scoop + price from that
+  // variant. No-op for manual entry (selectedVariant is null).
+  useEffect(() => {
+    if (!selectedVariant) return;
+    if (selectedVariant.scoopSize) setScoopSize(selectedVariant.scoopSize);
+    if (selectedVariant.price) setPricePerTin(selectedVariant.price);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariant?.id]);
+
+  // ── Calculations (inline; matches design's math exactly) ─────────
+  const calc = useMemo(() => {
+    const formulaFeeds = feedsPerDay;
+    const breastFeeds = feedingMode === 'mixed' ? breastFeedsShare : 0;
+    const totalFeeds = formulaFeeds + breastFeeds;
+    const dailyMlTotal = totalFeeds * mlPerFeed;
+    const dailyMlFormula = formulaFeeds * mlPerFeed;
+    const gramsPerMl = scoopSize / 30;
+    const dailyGrams = dailyMlFormula * gramsPerMl;
+    const monthlyGrams = dailyGrams * 30;
+    const dailyCost = (dailyGrams / Math.max(1, tinSize)) * pricePerTin;
+    const monthlyCost = dailyCost * 30;
+    const tinsPerMonth = (dailyGrams * 30) / Math.max(1, tinSize);
+    const yearlyCost = dailyCost * 365;
+    return { dailyMlTotal, dailyMlFormula, dailyGrams, monthlyGrams,
+      dailyCost, monthlyCost, yearlyCost, tinsPerMonth,
+      formulaFeeds, breastFeeds, totalFeeds };
+  }, [feedsPerDay, mlPerFeed, breastFeedsShare, scoopSize, tinSize, pricePerTin, feedingMode]);
+
+  const inRangeStatus = useMemo(() => {
+    // First-visit / no DOB: show a neutral CTA instead of "Below typical
+    // range" — there's no age guideline to compare to yet.
+    if (!age) {
+      return { label: 'Enter date of birth to compare', tone: 'muted' as const, delta: '' };
+    }
+    const intake = calc.dailyMlTotal;
+    const [lo, hi] = guideline.dailyMl;
+    if (lo === 0 && hi === 0) return { label: 'No specific guideline for this age', tone: 'muted' as const, delta: '' };
+    if (intake < lo * 0.85) return { label: 'Below typical range', tone: 'low' as const, delta: `${Math.round(lo - intake)} ml/day under` };
+    if (intake > hi * 1.15) return { label: 'Above typical range', tone: 'high' as const, delta: `${Math.round(intake - hi)} ml/day over` };
+    return { label: 'Within typical range', tone: 'in' as const, delta: `${lo}–${hi} ml/day` };
+  }, [age, calc.dailyMlTotal, guideline]);
+
+  // 12-month projection (months 0..11).
+  //
+  // Per-month rate sourcing:
+  //   • Past months (mo < current) — HPB median (user wasn't tracking
+  //     back then; we're estimating retrospectively).
+  //   • Current month (mo === current) — USER'S ACTUAL feeds × ml × spec,
+  //     so the highlighted dark-green "now" bar matches the headline
+  //     Monthly Cost (NOW) and the Formula Usage & Cost section. Bug
+  //     fix 2026-05-21: previously this used median, which produced a
+  //     bar that disagreed with the headline (e.g. $171 bar vs $270
+  //     headline) and confused users.
+  //   • Future months (mo > current) — HPB median with solids cut
+  //     (typical tapering pattern, not an extrapolation of the user's
+  //     current rate which would over-project once solids take over).
+  const projection: ProjRow[] = useMemo(() => {
+    const ageInt = Math.max(0, Math.min(11, Math.floor(ageMo)));
+    const userDailyMl = feedsPerDay * mlPerFeed;
+    return Array.from({ length: 12 }, (_, mo) => {
+      const g = guidelineForAge(mo);
+      const isNow = mo === ageInt;
+      const expectedMl = (g.dailyMl[0] + g.dailyMl[1]) / 2;
+      const solidsCut = mo >= 6 ? Math.min(0.5, (mo - 6) * 0.06) : 0;
+      const adjustedMl = isNow && userDailyMl > 0
+        ? userDailyMl
+        : expectedMl * (1 - solidsCut);
+      const grams = adjustedMl * (scoopSize / 30);
+      const tinsThisMonth = (grams * 30) / Math.max(1, tinSize);
+      const cost = tinsThisMonth * pricePerTin;
+      return { month: mo, isPast: mo < ageInt, isNow, stage: g.stage,
+        expectedMl, adjustedMl, solidsCut, cost, tinsThisMonth };
+    });
+  }, [ageMo, feedsPerDay, mlPerFeed, scoopSize, tinSize, pricePerTin]);
+  const pastSpend = projection.filter((r) => r.isPast).reduce((s, r) => s + r.cost, 0);
+  const futureSpend = projection.filter((r) => !r.isPast).reduce((s, r) => s + r.cost, 0);
+  const totalSpend = pastSpend + futureSpend;
+
+  const monthMidpoints = useMemo(
+    () => Array.from({ length: 12 }, (_, mo) => {
+      const g = guidelineForAge(mo);
+      return { mo, lo: g.dailyMl[0], mid: (g.dailyMl[0] + g.dailyMl[1]) / 2, hi: g.dailyMl[1] };
+    }),
     [],
   );
-
-  const [day, setDay] = useState('');
-  const [month, setMonth] = useState('');
-  const [year, setYear] = useState('');
-  // ─────────────────────────────────────────────────────────────────────
-  // GENDER SELECTION COMMENTED OUT (2026-05-19, design pass).
-  // It didn't feed the math (benchmarks here are gender-neutral) and only
-  // added vertical noise to the input panel. Kept (not deleted) so it can
-  // be restored verbatim if a gender-specific benchmark is added later:
-  //   const [gender, setGender] = useState<Gender>('');
-  // …and re-add the <Gender> SegmentedControl block in the input panel.
-  // ─────────────────────────────────────────────────────────────────────
-
-
-  // `primaryId` and `supplementId` use a composite key: `productId#variantIdx`.
-  // Example: `abbott-grow-s1#1` selects the 800g variant of Abbott Grow.
-  // Storing both pieces in one string keeps the `<select>` value primitive
-  // (web's <option value=...> must be a string) and avoids a second
-  // useState for the variant index.
-  //
-  // Edge cases:
-  //   - `''`           — nothing selected yet
-  //   - `'breastmilk'` — special sentinel for the breastmilk option
-  const [primaryId, setPrimaryId] = useState('');
-  const [useSupplement, setUseSupplement] = useState(false);
-  const [supplementId, setSupplementId] = useState('');
-  const [primarySharePct, setPrimarySharePct] = useState(70);
-  // Start from a clean slate (0). The age effect fills feeds/ml from the
-  // benchmark only once a DOB is entered; until then nothing is assumed.
-  const [mlPerFeed, setMlPerFeed] = useState(0);
-  const [feedsPerDay, setFeedsPerDay] = useState(0);
-  const [hasSolids, setHasSolids] = useState(false);
-  const [solidsLevel, setSolidsLevel] = useState<SolidsLevel>('starting');
-
-  // Manual formula-spec entry. Stored as strings so the inputs can hold a
-  // transient empty / partial value while typing; parsed to numbers only
-  // at the calculation boundary. Auto-filled from the selected product
-  // (see effect below) and freely overridable thereafter — picking a
-  // different product/variant re-seeds them, matching the design's
-  // "auto-fill, then tweak" model.
-  // Clean slate: every spec field starts at 0. Picking a formula
-  // auto-fills them (effect below); otherwise the parent types real
-  // values — nothing is pre-assumed on a fresh page load.
-  const [scoopStr, setScoopStr] = useState('0');
-  const [tinStr, setTinStr] = useState('0');
-  const [priceStr, setPriceStr] = useState('0');
-
-  const dob = useMemo(() => parseDobParts(day, month, year), [day, month, year]);
-  const age = useMemo(() => (dob ? calcAge(dob) : null), [dob]);
-  const ageMonths = age ? Math.min(age.months, 11) : null;
-  const guideline = ageMonths !== null ? SG_GUIDELINES[ageMonths] : null;
-  const dobError = year.length === 4 && !dob
-    ? 'Pick a date on or after 1 Jan 2023 that is not in the future.'
-    : '';
-
-  const primaryIsBreastmilk = primaryId === 'breastmilk';
-  // Resolve the composite key into a Product with the chosen variant's
-  // mirror fields (weightG, price, pricePerGram, scoopG, …) overriding
-  // the default. The feeding cost math reads these mirror fields directly
-  // so this is the only adapter step needed.
-  const primaryProduct = useMemo(
-    () => primaryIsBreastmilk ? null : resolveProductWithVariant(products, primaryId),
-    [primaryId, primaryIsBreastmilk, products],
-  );
-  const supplementalProduct = useMemo(
-    () => resolveProductWithVariant(products, supplementId),
-    [supplementId, products],
-  );
-
-  useEffect(() => {
-    if (ageMonths === null) return;
-    const nextGuideline = SG_GUIDELINES[ageMonths];
-    setFeedsPerDay(Math.round((nextGuideline.fMin + nextGuideline.fMax) / 2));
-    setMlPerFeed(Math.round((nextGuideline.mlMin + nextGuideline.mlMax) / 2));
-    if (ageMonths >= 6) setHasSolids(true);
-  }, [ageMonths]);
-
-  // Auto-populate scoop / tin / price from the chosen formula+variant.
-  // Re-runs whenever the resolved product changes (incl. variant switch
-  // via the composite key), so the spec always starts from real product
-  // data; the parent can then override any field by hand.
-  useEffect(() => {
-    if (!primaryProduct) return;
-    setScoopStr(primaryProduct.scoopG != null ? String(primaryProduct.scoopG) : '');
-    setTinStr(primaryProduct.weightG != null ? String(primaryProduct.weightG) : '');
-    setPriceStr(primaryProduct.price != null ? String(primaryProduct.price) : '');
-  }, [primaryProduct]);
-
-  // Parse a spec field to a positive number, or null (blank / invalid /
-  // non-positive → fall back to product-derived in the engine).
-  const specNum = (s: string): number | null => {
-    const n = Number(s);
-    return s.trim() !== '' && Number.isFinite(n) && n > 0 ? n : null;
-  };
-  const scoopGOverride = specNum(scoopStr);
-  const tinWeightGOverride = specNum(tinStr);
-  const pricePerTinNum = specNum(priceStr);
-  // Engine costs in $/g; convert the per-tin price once here (we know the
-  // tin weight at this point) so the calculator keeps a single unit.
-  const pricePerGramOverride =
-    pricePerTinNum !== null && tinWeightGOverride !== null
-      ? pricePerTinNum / tinWeightGOverride
-      : null;
-
-  const estimate = useMemo(
-    () =>
-      calculateFeedingEstimate({
-        primary: primaryProduct,
-        supplemental: supplementalProduct,
-        primaryIsBreastmilk,
-        useSupplement,
-        primarySharePct,
-        mlPerFeed,
-        feedsPerDay,
-        ageMonths,
-        scoopGOverride,
-        tinWeightGOverride,
-        pricePerGramOverride,
-      }),
-    [
-      primaryProduct,
-      supplementalProduct,
-      primaryIsBreastmilk,
-      useSupplement,
-      primarySharePct,
-      mlPerFeed,
-      feedsPerDay,
-      ageMonths,
-      scoopGOverride,
-      tinWeightGOverride,
-      pricePerGramOverride,
-    ],
-  );
-
-  // costPerMonth is non-null only when there's a price source — a picked
-  // product, a supplement, OR a manual price entry. Gating on it alone
-  // (instead of requiring a product) is what lets manual entry show cost.
-  const showCost = estimate.costPerMonth !== null;
-  // Yearly tin volume for the SG-vs-MY estimate. `tinsPerMonth` is
-  // null until a priced formula is chosen; keep the null so the section
-  // gate below stays type-safe (no `null * 12`).
-  const tinsPerYear =
-    estimate.tinsPerMonth != null ? estimate.tinsPerMonth * 12 : null;
-  // Representative SG tin price for the cross-border estimate: the chosen
-  // primary formula's variant price. `price` is optional on Product, so
-  // collapse to a non-null local the section gate can test cleanly.
-  const primaryTinPrice = primaryProduct?.price ?? null;
-  const intakeStatus = guideline
-    ? estimate.dailyMl < guideline.dMin
-      ? 'low'
-      : estimate.dailyMl > guideline.dMax
-        ? 'high'
-        : 'ok'
-    : null;
+  const currentMonthInt = Math.max(0, Math.min(11, Math.round(ageMo)));
+  const benchmarkInRange = calc.dailyMlTotal >= guideline.dailyMl[0] * 0.85
+                        && calc.dailyMlTotal <= guideline.dailyMl[1] * 1.15;
+  const ageMonthInt = age ? Math.floor(age.totalMonths) : 0;
+  const currentRowKey = ageRowKey(ageMo);
 
   return (
     <Screen>
-      <View style={{ backgroundColor: colors.green, paddingHorizontal: 24, paddingVertical: 36, alignItems: 'center' }}>
-        <Text className="font-display-bold text-mw-text-inverse text-center" style={{ fontSize: 38, lineHeight: 42 }} selectable>
-          Baby Feeding Calculator
-        </Text>
-        <Text className="text-mw-text-inverse text-center font-body mt-3 max-w-[560px]" style={{ lineHeight: 22 }} selectable>
-          Based on Singapore HPB and KKH-style feeding benchmarks. Estimate intake, formula use, and cost from birth to 12 months.
+      {/* ── Header ──────────────────────────────────────────── */}
+      <View style={{
+        maxWidth: tokens.layout.maxContent, width: '100%',
+        marginHorizontal: 'auto',
+        paddingHorizontal: 32, paddingTop: 32, paddingBottom: 16,
+      }}>
+        <Text style={{
+          fontFamily: tokens.fonts.bodySemibold,
+          fontSize: 11, fontWeight: '600',
+          letterSpacing: 1.32, textTransform: 'uppercase',
+          color: tokens.colors.textMuted, marginBottom: 8,
+        }}>Calculator</Text>
+        <Text style={{
+          fontFamily: tokens.fonts.displayBold,
+          fontSize: width < 768 ? 28 : 40, fontWeight: '700',
+          letterSpacing: -(width < 768 ? 0.62 : 0.88),
+          lineHeight: width < 768 ? 32 : 44,
+          color: tokens.colors.text, marginBottom: 8,
+        }}>What you&apos;ll actually spend.</Text>
+        <Text style={{
+          fontSize: 15, lineHeight: 23,
+          color: tokens.colors.textMuted, maxWidth: 720,
+        }}>
+          Enter your baby&apos;s date of birth — we use today&apos;s date (
+          <Text style={{ fontFamily: tokens.fonts.bodySemibold, color: tokens.colors.text }}>
+            {todayStr}
+          </Text>
+          ) to estimate spend so far and project forward, accounting for
+          the transition to solids.
         </Text>
       </View>
 
-      {/* Two-column calculator (design-reference `.mw-calc`): a fixed
-          420px feeding-inputs column on the left, fluid results on the
-          right. Collapses to a single stacked column below 960px. The
-          outer container is wider than the old 960 so the right column
-          (and its charts) get real room — the design's chart is large. */}
-      <View style={{ maxWidth: 1180, width: '100%', marginHorizontal: 'auto', paddingHorizontal: 20, paddingVertical: 28 }}>
-        <View
-          style={{
-            flexDirection: twoCol ? 'row' : 'column',
-            // align-start mirrors `.mw-calc-inputs { align-self: start }`
-            // so the left panel keeps its content height instead of
-            // stretching to the (taller) results column.
-            alignItems: twoCol ? 'flex-start' : 'stretch',
-            gap: twoCol ? 32 : 24,
-          }}
-        >
-          {/* ── LEFT: feeding inputs ───────────────────────────── */}
-          <View style={{ width: twoCol ? 420 : '100%', gap: 24 }}>
-        <Card>
-          <SectionTitle title="Your baby & feeding" icon="1" />
-          <Text className="text-sm text-mw-text-muted font-body mb-5" selectable>
-            Birth date and feeding details — everything updates live as you type.
-          </Text>
-
-          <View>
-            <Label>Baby&apos;s date of birth</Label>
-            <DobDateField
-              day={day}
-              month={month}
-              year={year}
-              setDay={setDay}
-              setMonth={setMonth}
-              setYear={setYear}
-            />
-            {dobError ? (
-              <Text className="text-xs mt-2 font-body" style={{ color: colors.danger }} selectable>
-                {dobError}
-              </Text>
-            ) : null}
-
-            {/* GENDER SELECTION COMMENTED OUT (see state note above):
-            <View style={{ flex: 1, minWidth: 260 }}>
-              <Label>Gender</Label>
-              <SegmentedControl
-                value={gender}
-                options={[
-                  { value: 'boy', label: 'Boy' },
-                  { value: 'girl', label: 'Girl' },
-                  { value: '', label: 'Prefer not to say' },
-                ]}
-                onChange={(next) => setGender(next as Gender)}
-              />
-            </View>
-            */}
-          </View>
-
-          {age && guideline ? (
-            <View className="mt-5 rounded-xl flex-row flex-wrap items-center gap-4" style={{ backgroundColor: colors.greenLight, padding: 18 }}>
-              <View style={{ flex: 1, minWidth: 240 }}>
-                <Text className="text-[11px] font-body-semibold uppercase tracking-wider" style={{ color: colors.greenText }}>
-                  Your baby is
-                </Text>
-                <Text className="font-display-bold mt-1" style={{ fontSize: 30, color: colors.greenText }} selectable>
-                  {age.months} month{age.months === 1 ? '' : 's'}, {age.days} day{age.days === 1 ? '' : 's'}
-                </Text>
-                <Text className="text-xs font-body mt-1" style={{ color: colors.greenText }} selectable>
-                  Born {dob!.toLocaleDateString('en-SG', { day: 'numeric', month: 'long', year: 'numeric' })} · Stage 1 formula {age.months < 12 ? 'still applicable' : 'transitioning to Stage 2+'}
-                </Text>
-              </View>
-              <View className="flex-row flex-wrap gap-2">
-                <MiniStat value={`${guideline.mlMin}-${guideline.mlMax}`} label="ml / feed" />
-                <MiniStat value={`${guideline.fMin}-${guideline.fMax}`} label="feeds / day" />
-                <MiniStat value={`${guideline.dMin}-${guideline.dMax}`} label="ml / day" />
-              </View>
-            </View>
-          ) : null}
-
-          {age && guideline ? (
-            <View className="mt-3 rounded-lg" style={{ backgroundColor: colors.surface2, padding: 12 }}>
-              <Text className="text-xs text-mw-text-muted font-body" style={{ lineHeight: 18 }} selectable>
-                At {age.months} months: {guideline.note}
-              </Text>
-            </View>
-          ) : null}
-            <View
-              style={{
-                gap: 20,
-                marginTop: 22,
-                paddingTop: 22,
-                borderTopWidth: 1,
-                borderTopColor: colors.border,
-              }}
-            >
-              <ProductSelect
-                label="Pick a formula"
-                value={primaryId}
-                products={products}
-                includeBreastmilk
-                placeholder="— Manual entry —"
-                onChange={(next) => {
-                  setPrimaryId(next);
-                  setUseSupplement(false);
-                  setSupplementId('');
-                }}
-              />
-
-              {primaryProduct ? <ProductInfoCard product={primaryProduct} /> : null}
-              {primaryIsBreastmilk ? (
-                <InfoBox tone="blue">
-                  Breastmilk selected. No formula cost is calculated unless you enable formula supplementation.
-                </InfoBox>
-              ) : null}
-
-              {primaryId ? (
-                <View className="flex-row items-center gap-3">
-                  <Switch
-                    value={useSupplement}
-                    onValueChange={setUseSupplement}
-                    trackColor={{ false: colors.border, true: colors.greenLight }}
-                    thumbColor={useSupplement ? colors.green : colors.surface}
+      {/* ── PART 1: Inputs + Results ────────────────────────── */}
+      <View style={{
+        maxWidth: tokens.layout.maxContent, width: '100%',
+        marginHorizontal: 'auto', paddingHorizontal: 32, paddingBottom: 16,
+      }}>
+        <View style={{
+          flexDirection: twoCol ? 'row' : 'column',
+          alignItems: twoCol ? 'flex-start' : 'stretch',
+          gap: twoCol ? 32 : 20,
+        }}>
+          {/* LEFT inputs panel */}
+          <View style={{ width: twoCol ? 420 : '100%' }}>
+            <Card>
+              <View style={{ gap: 18 }}>
+                {/* DOB */}
+                <View>
+                  <Label hint="cannot be in the future">Baby&apos;s date of birth</Label>
+                  <DateField
+                    value={dob}
+                    max={today.current.toISOString().slice(0, 10)}
+                    onChange={setDob}
                   />
-                  <Text className="text-sm font-body-semibold text-mw-text" selectable>
-                    {primaryIsBreastmilk ? 'Supplementing with formula' : 'Supplementing with a second formula'}
-                  </Text>
+                  {age ? <AgeCard age={age} guideline={guideline} /> : null}
                 </View>
-              ) : null}
 
-              {useSupplement ? (
-                <View className="rounded-xl border border-mw-border" style={{ backgroundColor: colors.surface2, padding: 16, gap: 14 }}>
-                  <ProductSelect
-                    label="Supplemental formula"
-                    value={supplementId}
-                    products={products}
-                    placeholder="Select supplemental formula"
-                    onChange={setSupplementId}
+                {/* Formula picker — one entry per product line; choosing
+                    a product unlocks the constrained Tin Size dropdown
+                    with only that product's available pack sizes. */}
+                <View>
+                  <Label hint="auto-fills scoop, tin size, price">Pick a formula</Label>
+                  <FormulaSelect
+                    products={uniqueProducts}
+                    value={productName}
+                    onChange={setProductName}
                   />
-                  {supplementalProduct ? <ProductInfoCard product={supplementalProduct} compact /> : null}
-                  {supplementId ? (
-                    <View>
-                      <Label>
-                        {primaryIsBreastmilk ? 'Breastmilk' : 'Primary formula'} share: {primarySharePct}% / {100 - primarySharePct}% {primaryIsBreastmilk ? 'formula' : 'secondary'}
-                      </Label>
-                      <RatioControl value={primarySharePct} onChange={setPrimarySharePct} />
-                    </View>
-                  ) : null}
                 </View>
-              ) : null}
 
-              <View className="flex-row flex-wrap gap-5">
-                <View style={{ flex: 1, minWidth: 240 }}>
-                  <Stepper label="ml per feed" value={mlPerFeed} onChange={setMlPerFeed} min={5} max={360} step={5} unit="ml" />
+                {/* Feeding mode segmented toggle */}
+                <View>
+                  <Label>Feeding mode</Label>
+                  <View style={{
+                    flexDirection: 'row', gap: 0,
+                    borderWidth: 1, borderColor: tokens.colors.border,
+                    borderRadius: 999, backgroundColor: tokens.colors.bgPanel,
+                    padding: 4,
+                  }}>
+                    {(['formula', 'mixed'] as const).map((k) => {
+                      const label = k === 'formula' ? 'Formula only' : 'Formula + breast milk';
+                      const on = feedingMode === k;
+                      return (
+                        <Pressable
+                          key={k}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: on }}
+                          onPress={() => setFeedingMode(k)}
+                          style={{
+                            flex: 1, paddingVertical: 8, paddingHorizontal: 14,
+                            borderRadius: 999,
+                            backgroundColor: on ? tokens.colors.bgCard : 'transparent',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Text style={{
+                            fontFamily: on ? tokens.fonts.bodySemibold : tokens.fonts.body,
+                            fontSize: 13, fontWeight: on ? '600' : '500',
+                            color: on ? tokens.colors.text : tokens.colors.textMuted,
+                          }}>{label}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 </View>
-                <View style={{ flex: 1, minWidth: 240 }}>
-                  <Stepper label="Feeds per day" value={feedsPerDay} onChange={setFeedsPerDay} min={1} max={16} step={1} unit=" feeds" />
-                </View>
-              </View>
 
-              {/* Always-visible spec — manual entry first; picking a
-                  formula above auto-fills these (effect in the screen). */}
-              <View className="flex-row flex-wrap" style={{ gap: 20 }}>
-                <View style={{ flex: 1, minWidth: 150 }}>
-                  <Label hint="grams">Scoop size</Label>
-                  <SpecStepper value={scoopStr} onChange={setScoopStr} step={0.1} min={1} max={15} decimals />
+                {/* Feeds + ml/feed paired */}
+                <View style={{ flexDirection: 'row', gap: 14 }}>
+                  <View style={{ flex: 1 }}>
+                    <Label hint={`${guideline.feeds[0]}–${guideline.feeds[1]} typical`}>
+                      {feedingMode === 'mixed' ? 'Formula feeds/day' : 'Total feeds/day'}
+                    </Label>
+                    <Stepper value={feedsPerDay} onChange={setFeedsPerDay} min={0} max={14} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Label hint={`${guideline.mlPerFeed[0]}–${guideline.mlPerFeed[1]} typical`}>
+                      ml/feed
+                    </Label>
+                    <Stepper value={mlPerFeed} onChange={setMlPerFeed} step={10} min={30} max={300} />
+                  </View>
                 </View>
-                <View style={{ flex: 1, minWidth: 150 }}>
-                  <Label hint="grams">Tin size</Label>
-                  <SpecSelect value={tinStr} onChange={setTinStr} />
-                </View>
-              </View>
-              <View>
-                <Label hint="SGD">Price per tin</Label>
-                <SpecField aria="Price per tin in SGD" value={priceStr} onChange={setPriceStr} prefix="$" decimals />
-              </View>
 
-              <View className="rounded-lg flex-row flex-wrap items-center gap-2" style={{ backgroundColor: colors.surface2, padding: 12 }}>
-                <Text className="text-sm text-mw-text-muted font-body">Total milk today:</Text>
-                <Text className="text-lg font-mono-medium" style={{ color: colors.greenText, fontVariant: ['tabular-nums'] }} selectable>
-                  {estimate.dailyMl}ml
-                </Text>
-                <Text className="text-sm text-mw-text-muted font-body" selectable>
-                  ({mlPerFeed}ml x {feedsPerDay} feeds)
-                </Text>
-                {estimate.formulaShare > 0 && estimate.formulaShare < 1 ? (
-                  <Text className="text-xs text-mw-text-muted font-body" selectable>
-                    Formula portion: {Math.round(estimate.formulaDailyMl)}ml
-                  </Text>
-                ) : null}
-              </View>
-
-              {ageMonths !== null && ageMonths >= 6 ? (
-                <View className="rounded-xl border" style={{ backgroundColor: colors.amberLight, borderColor: colors.amber, padding: 16 }}>
-                  <View className="flex-row items-center gap-3">
-                    <Switch
-                      value={hasSolids}
-                      onValueChange={setHasSolids}
-                      trackColor={{ false: colors.border, true: colors.amber }}
-                      thumbColor={hasSolids ? colors.amber : colors.surface}
-                    />
-                    <Text className="text-sm font-body-semibold" style={{ color: colors.amber }} selectable>
-                      My baby has started solids
+                {feedingMode === 'mixed' ? (
+                  <View>
+                    <Label hint="adds to total feeds">Breast feeds per day</Label>
+                    <Stepper value={breastFeedsShare} onChange={setBreastFeedsShare} min={0} max={14} />
+                    <Text style={{
+                      fontSize: 12, marginTop: 6,
+                      color: tokens.colors.textMuted, fontFamily: tokens.fonts.mono,
+                      fontVariant: ['tabular-nums'] as ['tabular-nums'],
+                    }}>
+                      {feedsPerDay} formula + {breastFeedsShare} breast = {feedsPerDay + breastFeedsShare} feeds/day · {(feedsPerDay + breastFeedsShare) * mlPerFeed}ml total
                     </Text>
                   </View>
-                  {hasSolids ? (
-                    <View className="mt-3" style={{ paddingLeft: 8 }}>
-                      <Label>Solids stage</Label>
-                      <SegmentedControl
-                        value={solidsLevel}
-                        options={[
-                          { value: 'starting', label: 'Just starting' },
-                          { value: 'established', label: 'Established' },
-                          { value: 'full', label: '3 full meals' },
-                        ]}
-                        onChange={(next) => setSolidsLevel(next as SolidsLevel)}
-                      />
-                      <Text className="text-xs font-body mt-3" style={{ color: colors.amber, lineHeight: 18 }} selectable>
-                        Milk remains the primary nutrition source until 12 months. Use this as a planning estimate, not medical advice.
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-              ) : null}
-
-            </View>
-        </Card>
-          </View>
-
-          {/* ── RIGHT: human-centric results ───────────────────────
-              The answer first: how old is my baby, is intake normal,
-              and what have I spent / will I spend. Detailed charts and
-              the reference table are pushed to the full-width bottom. */}
-          <View style={{ flex: twoCol ? 1 : undefined, width: twoCol ? undefined : '100%', gap: 16 }}>
-            {(
-              <>
-                {guideline ? (
-                  <BenchmarkStatusCard
-                    dailyMl={estimate.dailyMl}
-                    low={guideline.dMin}
-                    high={guideline.dMax}
-                    status={intakeStatus}
-                  />
                 ) : null}
 
-                {showCost ? (
-                  <>
-                    <View className="flex-row flex-wrap" style={{ gap: 14 }}>
-                      <ResultCard
-                        eyebrow="Daily formula cost"
-                        value={formatCurrency(estimate.costPerMonth != null ? estimate.costPerMonth / 30 : null)}
-                        caption={estimate.tinsPerMonth ? `~${estimate.tinsPerMonth.toFixed(1)} tins / month` : undefined}
-                      />
-                      <ResultCard
-                        eyebrow="Monthly cost (now)"
-                        value={formatCurrency(estimate.costPerMonth)}
-                        caption="at current feeding pattern"
-                      />
-                      <ResultCard
-                        eyebrow="Spent so far"
-                        value={formatCurrency(estimate.retroSpend)}
-                        caption={
-                          ageMonths !== null
-                            ? `retroactive · ${ageMonths} month${ageMonths === 1 ? '' : 's'}`
-                            : undefined
-                        }
-                        emphatic
-                      />
-                      <ResultCard
-                        eyebrow={`Projected (months ${ageMonths ?? 0}–11)`}
-                        value={formatCurrency(estimate.projectedSpend)}
-                        caption="factors in transition to solids"
-                        emphatic
-                      />
-                    </View>
+                {/* Scoop + Tin paired. Scoop is editable only in Manual
+                    Entry mode; when a formula is picked the scoop size is
+                    fixed by the product spec — show it read-only so users
+                    can't accidentally override the manufacturer's value. */}
+                <View style={{ flexDirection: 'row', gap: 14 }}>
+                  <View style={{ flex: 1 }}>
+                    <Label hint={productName ? 'from product spec' : 'grams'}>
+                      Scoop size
+                    </Label>
+                    {productName ? (
+                      <SpecDisplay value={String(scoopSize)} unit="g" />
+                    ) : (
+                      <Stepper value={scoopSize} onChange={setScoopSize} step={0.1} min={3} max={12} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Label hint="grams">Tin size</Label>
+                    <TinSelect
+                      value={tinSize}
+                      onChange={setTinSize}
+                      sizes={productName ? availableSizes : undefined}
+                    />
+                  </View>
+                </View>
 
-                    {primaryTinPrice !== null && tinsPerYear !== null ? (
-                      <Card>
-                        <Eyebrow>Singapore vs Malaysia (estimate)</Eyebrow>
-                        <Text className="text-sm text-mw-text-muted font-body mt-2 mb-4" selectable>
-                          The same tin is usually cheaper across the causeway — a planning figure, not a price guarantee.
-                        </Text>
-                        <MalaysiaCompare tinPriceSgd={primaryTinPrice} tinsPerYear={tinsPerYear} />
-                      </Card>
-                    ) : null}
-                  </>
-                ) : (
-                  <Card>
-                    <Eyebrow>Cost</Eyebrow>
-                    <Text className="font-display-bold text-mw-text" style={{ fontSize: 20, marginTop: 8 }} selectable>
-                      Pick a formula to see spend
-                    </Text>
-                    <Text className="text-sm text-mw-text-muted font-body mt-2" style={{ lineHeight: 20 }} selectable>
-                      Choose a formula (or breastmilk + a supplement) in the panel on the {twoCol ? 'left' : 'top'} — your spend so far and projected spend appear here.
-                    </Text>
-                  </Card>
-                )}
-              </>
-            )}
+                {/* Price */}
+                <View>
+                  <Label hint="SGD">Price per tin</Label>
+                  <PriceField value={pricePerTin} onChange={setPricePerTin} />
+                </View>
+
+                {/* Solids (≥6mo) */}
+                {ageMo >= 6 ? (
+                  <View style={{
+                    padding: 16, borderRadius: 8,
+                    backgroundColor: tokens.colors.creamTint,
+                    borderWidth: 1, borderColor: tokens.colors.creamSoft,
+                  }}>
+                    <Label hint={`${solidsRec.mealsPerDay} typical at this age`}>
+                      Solid food meals/day
+                    </Label>
+                    <Stepper value={solidsMeals} onChange={setSolidsMeals} min={0} max={6} />
+                  </View>
+                ) : null}
+              </View>
+            </Card>
           </View>
-        </View>
 
-        {/* ── BOTTOM: charts + reference table, full container width ── */}
-        {(
-          <View style={{ marginTop: 28, gap: 24 }}>
-            {showCost ? (
-              <Card>
-                <SectionTitle title="Monthly formula spend" icon="2" />
-                <Text className="text-xs text-mw-text-muted font-body mb-4" selectable>
-                  Light = past estimate · solid = current month · muted = projected. Past months retroactive, then projected to month 11.
-                </Text>
-                <SpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths ?? 0} />
-              </Card>
-            ) : null}
-
-            {showCost && ageMonths !== null && ageMonths > 0 ? (
-              <Card>
-                <SectionTitle title="Cumulative spend curve" icon="3" />
-                <Text className="text-xs text-mw-text-muted font-body mb-4" selectable>
-                  Solid line is estimated actual spend so far · dashed line is projected spend to 12 months.
-                </Text>
-                <CumulativeSpendChart monthlyData={estimate.monthlyData} babyMonths={ageMonths} />
-                <InfoBox tone="muted">
-                  Methodology: past spend uses benchmark ml × formula price/g. Projected spend uses your entered feeds and age-based solids reduction from 6 months. Breastmilk cost is treated as S$0.
-                </InfoBox>
-              </Card>
-            ) : null}
-
-            {ageMonths !== null ? (
-              <Card>
-                <SectionTitle title="Intake benchmark by month" icon="4" />
-                <Text className="text-xs text-mw-text-muted font-body mb-4" selectable>
-                  Recommended daily milk intake across the first year. Shaded band is the benchmark range; the dot is your baby.
-                </Text>
-                <BenchmarkChart babyMonths={ageMonths} currentDailyMl={estimate.dailyMl} />
-                <View className="flex-row flex-wrap gap-3 mt-3">
-                  <LegendSwatch color={colors.greenLight} label="Recommended range" boxed />
-                  <LegendSwatch color={colors.green} label="Benchmark midpoint" />
-                  <LegendSwatch color={colors.info} label="Your baby in range" />
-                  <LegendSwatch color={colors.danger} label="Below range" />
-                </View>
-              </Card>
-            ) : null}
-
-            {/* Static reference — shows regardless of DOB. The current
-                row is highlighted only once an age is known (null → none). */}
+          {/* RIGHT results column */}
+          <View style={{ flex: 1, gap: 16 }}>
+            {/* INTAKE BENCHMARK */}
             <Card>
-              <SectionTitle title="Singapore infant feeding guidelines" icon="5" />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ minWidth: 620 }}>
-                  <GuidelineHeader />
-                  {SG_GUIDELINES.map((item) => (
-                    <GuidelineRow key={item.m} current={item.m === ageMonths} guideline={item} />
-                  ))}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontFamily: tokens.fonts.bodySemibold,
+                    fontSize: 11, fontWeight: '600',
+                    letterSpacing: 1.32, textTransform: 'uppercase',
+                    color: tokens.colors.textMuted, marginBottom: 4,
+                  }}>Intake benchmark</Text>
+                  <Text style={{
+                    fontFamily: tokens.fonts.displaySemibold,
+                    fontSize: 22, fontWeight: '600',
+                    color: inRangeStatus.tone === 'low' ? tokens.colors.danger
+                          : inRangeStatus.tone === 'high' ? tokens.colors.danger
+                          : inRangeStatus.tone === 'in' ? tokens.colors.accentText
+                          : tokens.colors.textMuted,
+                  }}>{inRangeStatus.label}</Text>
+                  {inRangeStatus.delta ? (
+                    <Text style={{ fontSize: 13, color: tokens.colors.textMuted, marginTop: 2 }}>
+                      {inRangeStatus.delta}
+                    </Text>
+                  ) : null}
                 </View>
-              </ScrollView>
-              <Text className="text-[11.5px] text-mw-text-muted font-body mt-3" style={{ lineHeight: 18 }} selectable>
-                Planning benchmarks adapted from the MilkWise design handoff. Always follow your paediatrician&apos;s specific advice.
-              </Text>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <CountUp
+                    value={calc.dailyMlTotal}
+                    duration={400}
+                    format={(n) => Math.round(n).toLocaleString()}
+                    style={{
+                      fontFamily: tokens.fonts.monoMedium,
+                      fontVariant: ['tabular-nums'] as ['tabular-nums'],
+                      fontSize: 36, fontWeight: '500',
+                      color: tokens.colors.text, letterSpacing: -0.72,
+                    }}
+                  />
+                  <Text style={{ fontSize: 11, color: tokens.colors.textMuted, fontFamily: tokens.fonts.mono }}>
+                    ml/day
+                  </Text>
+                </View>
+              </View>
+              <BenchmarkBar value={calc.dailyMlTotal} low={guideline.dailyMl[0]} high={guideline.dailyMl[1]} />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                <Text style={{ fontSize: 11, color: tokens.colors.textMuted, fontFamily: tokens.fonts.mono }}>0</Text>
+                <Text style={{ fontSize: 11, color: tokens.colors.accentText, fontWeight: '600', fontFamily: tokens.fonts.mono }}>
+                  Typical {guideline.dailyMl[0]}–{guideline.dailyMl[1]} ml
+                </Text>
+                <Text style={{ fontSize: 11, color: tokens.colors.textMuted, fontFamily: tokens.fonts.mono }}>
+                  {Math.max(Math.round(guideline.dailyMl[1] * 1.5), 1500)}
+                </Text>
+              </View>
             </Card>
 
-            <Text className="text-[11.5px] text-mw-text-muted font-body text-center" style={{ lineHeight: 18 }} selectable>
-              All calculations are estimates based on typical usage. Actual consumption varies by baby, growth spurts, and feeding schedules. This is a planning tool, not a prescription.
-            </Text>
+            {/* 2×2 result grid — all four values animate via CountUp. */}
+            <View style={{ flexDirection: twoCol ? 'row' : 'column', gap: 12 }}>
+              <View style={{ flex: 1, gap: 12 }}>
+                <ResultCard
+                  label="Daily formula cost"
+                  value={calc.dailyCost}
+                  format={(n) => `$${n.toFixed(2)}`}
+                  sub={`~${calc.tinsPerMonth.toFixed(1)} tins / month`}
+                />
+                <ResultCard emphatic
+                  label="Spent so far"
+                  value={pastSpend}
+                  format={(n) => fmtSGD(n)}
+                  sub={`retroactive · ${projection.filter((r) => r.isPast).length} months`}
+                />
+              </View>
+              <View style={{ flex: 1, gap: 12 }}>
+                <ResultCard
+                  label="Monthly cost (now)"
+                  value={calc.monthlyCost}
+                  format={(n) => `$${Math.round(n)}`}
+                  sub="at current feeding pattern"
+                />
+                <ResultCard emphatic
+                  label="Projected (next 12 mo)"
+                  value={futureSpend}
+                  format={(n) => fmtSGD(n)}
+                  sub="factors in transition to solids"
+                />
+              </View>
+            </View>
+
+            {/* Singapore Feeding Benchmark */}
+            <Card>
+              <DeepHead emoji="📊" title="Singapore Feeding Benchmark"
+                sub="Recommended daily milk intake (ml) by month · HPB/KKH guidelines · Shaded band = normal range" />
+              <BenchmarkLine
+                current={currentMonthInt}
+                currentMl={calc.dailyMlTotal}
+                inRange={benchmarkInRange}
+                monthMidpoints={monthMidpoints}
+              />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 10 }}>
+                <Legend swatch={tokens.colors.accentSoft} label="Recommended range" />
+                <Legend bar swatch={tokens.colors.accentText} label="Benchmark midpoint" />
+                <Legend dot swatch={benchmarkInRange ? '#2563EB' : '#DC2626'}
+                  label={`Your baby ${benchmarkInRange ? '(in range)' : '(out of range)'}`} />
+              </View>
+            </Card>
           </View>
-        )}
+        </View>
+      </View>
+
+      {/* ── PART 2: Deeper-dive cards (full-width below) ─────── */}
+      <View style={{
+        maxWidth: tokens.layout.maxContent, width: '100%',
+        marginHorizontal: 'auto',
+        paddingHorizontal: 32, paddingTop: 8, paddingBottom: 80, gap: 16,
+      }}>
+        {/* Formula Usage & Cost */}
+        <Card>
+          <DeepHead emoji="📦" title="Formula Usage & Cost"
+            sub={product
+              ? `${shortName(product.product)} · ${product.brand} · ${product.packSize}g · ${fmtSGD(product.price)} · ${fmtPerGram(product.pricePerGram)}/g`
+              : `Manual entry · ${tinSize}g tin · ${fmtSGD(pricePerTin)} · ${fmtPerGram(pricePerTin / Math.max(1, tinSize))}/g`} />
+          <View style={{ flexDirection: twoCol ? 'row' : 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+            <Tile emoji="🥄" value={`${Math.round(calc.dailyGrams)}g`} label="Powder / day" />
+            <Tile emoji="📦" value={`${Math.round(calc.monthlyGrams)}g`} label="Powder / month" />
+            <Tile emoji="🥫" value={calc.tinsPerMonth.toFixed(1)} label="Tins / month" />
+            <Tile emoji="💰" value={fmtSGD(calc.monthlyCost)} label="Cost / month" />
+            <Tile emoji="📅" value={fmtSGD(calc.yearlyCost)} label="Est. / year" />
+          </View>
+          <Text style={{
+            fontFamily: tokens.fonts.displaySemibold, fontSize: 15, fontWeight: '600',
+            color: tokens.colors.text, marginTop: 18,
+          }}>Monthly Formula Cost — 0 to 12 months</Text>
+          <Text style={{ fontSize: 12, color: tokens.colors.textMuted, marginTop: 4, marginBottom: 6 }}>
+            Past (light green) · Current month (dark green) · Projected (grey) · Solids reduction applied from 6m
+          </Text>
+          <MonthlyBars rows={projection} />
+        </Card>
+
+        {/* Estimated Lifetime Formula Spend */}
+        <Card>
+          <DeepHead emoji="🧾" title="Estimated Lifetime Formula Spend"
+            sub={`You're entering data at ${ageMonthInt} months. Past spend estimated from HPB benchmark. Projected remaining covers months ${ageMonthInt}–11: your actual rate this month, HPB benchmark (tapered for solids) for months after.`} />
+          <View style={{ flexDirection: twoCol ? 'row' : 'column', gap: 10, marginTop: 8 }}>
+            <LifeCell tone="past"
+              label={`Est. already spent · months 0–${Math.max(0, ageMonthInt - 1)}`}
+              value={fmtSGD(pastSpend)} sub="HPB benchmark estimate" />
+            <LifeCell tone="future"
+              label={`Projected remaining · months ${ageMonthInt}–11 (${12 - ageMonthInt}mo)`}
+              value={fmtSGD(futureSpend)} sub="Your rate now · HPB benchmark after" />
+            <LifeCell tone="total"
+              label="Stage 1 total · birth → 12 months"
+              value={fmtSGD(totalSpend)} sub="Formula cost only" />
+          </View>
+          <Text style={{
+            fontFamily: tokens.fonts.displaySemibold, fontSize: 15, fontWeight: '600',
+            color: tokens.colors.text, marginTop: 18,
+          }}>Cumulative Spend Curve</Text>
+          <Text style={{ fontSize: 12, color: tokens.colors.textMuted, marginTop: 4, marginBottom: 6 }}>
+            Solid = estimated actual · Dashed = projected · Flattens as solids reduce formula from 6m
+          </Text>
+          <CumulativeCurve rows={projection} total={totalSpend} />
+
+          {/* Causeway saving */}
+          <View style={{
+            marginTop: 16, padding: 14, borderRadius: tokens.radius.card,
+            backgroundColor: tokens.colors.accentTint,
+            borderWidth: 1, borderColor: tokens.colors.accent,
+            flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+          }}>
+            <View style={{ flex: 1, minWidth: 240 }}>
+              <Text style={{
+                fontFamily: tokens.fonts.bodySemibold, fontSize: 14, fontWeight: '600',
+                color: tokens.colors.accentText, marginBottom: 4,
+              }}>🇲🇾 Potential Causeway Saving</Text>
+              <Text style={{ fontSize: 13, lineHeight: 20, color: tokens.colors.text }}>
+                {product ? shortName(product.product) : 'This formula'} is estimated ~28% cheaper in Malaysia.
+                Over Stage 1 you could save approx{' '}
+                <Text style={{ fontFamily: tokens.fonts.bodySemibold }}>{fmtSGD(totalSpend * 0.28)}</Text>{' '}
+                — equivalent to {Math.round((totalSpend * 0.28) / Math.max(1, pricePerTin))} free tins.
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button" accessibilityLabel="See Malaysia prices"
+              style={{
+                paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999,
+                backgroundColor: tokens.colors.accent,
+              }}
+            >
+              <Text style={{
+                color: tokens.colors.textInverse,
+                fontFamily: tokens.fonts.bodySemibold, fontSize: 13,
+              }}>See prices →</Text>
+            </Pressable>
+          </View>
+
+          <Text style={{
+            fontSize: 12, lineHeight: 19, color: tokens.colors.textMuted,
+            marginTop: 14,
+          }}>
+            <Text style={{ color: tokens.colors.text, fontFamily: tokens.fonts.bodySemibold }}>
+              Methodology:
+            </Text>{' '}
+            Past spend uses HPB mid-range benchmark ml × formula price/g. Projected remaining = your actual feeds for the current month + HPB benchmark (tapered for solids from 6m) for months after — so the total covers more than one month when you have time remaining in Stage 1. Breastmilk cost = $0. Malaysia savings are indicative estimates only.
+          </Text>
+        </Card>
+
+        {/* Singapore Infant Feeding Guidelines */}
+        <Card>
+          <DeepHead emoji="💡" title="Singapore Infant Feeding Guidelines"
+            sub="How your baby's daily intake should evolve in the first year — highlighted row matches their current age." />
+          <View style={{ marginTop: 8 }}>
+            {/* Header */}
+            <View style={{
+              flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 6,
+              borderBottomWidth: 1, borderBottomColor: tokens.colors.borderStrong,
+            }}>
+              <TblHead flex={1.1}>Age</TblHead>
+              <TblHead flex={1} align="right">ml / feed</TblHead>
+              <TblHead flex={0.9} align="right">Feeds / day</TblHead>
+              <TblHead flex={1.1} align="right">Daily total</TblHead>
+              <TblHead flex={2.6}>HPB notes</TblHead>
+            </View>
+            {HPB_ROWS.map((r) => {
+              const on = r.age === currentRowKey;
+              return (
+                <View key={r.age}
+                  style={{
+                    flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 6,
+                    borderBottomWidth: 1, borderBottomColor: tokens.colors.divider,
+                    backgroundColor: on ? tokens.colors.accentTint : 'transparent',
+                  }}>
+                  <TblCell flex={1.1} bold={on}>{r.age}</TblCell>
+                  <TblNum flex={1}>{r.ml}</TblNum>
+                  <TblNum flex={0.9}>{r.feeds}</TblNum>
+                  <TblNum flex={1.1}>{r.daily}</TblNum>
+                  <TblCell flex={2.6}>{r.note}</TblCell>
+                </View>
+              );
+            })}
+          </View>
+          <Text style={{
+            fontSize: 12, lineHeight: 19, color: tokens.colors.textMuted,
+            marginTop: 12,
+          }}>
+            Source: Health Promotion Board Singapore (HPB) &amp; KK Women&apos;s and Children&apos;s Hospital (KKH) infant feeding guidelines.
+            Highlighted row = your baby&apos;s current age. Always follow your paediatrician&apos;s specific advice.
+          </Text>
+        </Card>
+
+        <Text style={{
+          fontSize: 12, lineHeight: 19, color: tokens.colors.textMuted,
+        }}>
+          All calculations are estimates based on typical usage. Actual
+          consumption varies significantly by baby, growth spurts, and feeding
+          schedules. This calculator is a planning tool only, not a prescription.
+        </Text>
       </View>
     </Screen>
   );
 }
 
-const Card = ({ children }: { children: React.ReactNode }) => {
+// ── Small helpers ─────────────────────────────────────────────────────
+
+const DeepHead = ({ emoji, title, sub }: { emoji: string; title: string; sub: string }) => {
   const { tokens } = useTheme();
   return (
-  <View
-    className="bg-mw-bg-card"
-    style={{
-      padding: 24,
-      borderRadius: tokens.radius.card,
-      // s1 = resting card. Theme-keyed: subtle on light, much heavier on
-      // dark (#000 @ 0.40) so the card reads off the near-black page.
-      ...tokens.shadow.s1,
-    }}
-  >
-    {children}
-  </View>
-  );
-};
-
-/** Uppercase, letter-spaced micro-label — the design's `.mw-eyebrow`. */
-const Eyebrow = ({ children }: { children: React.ReactNode }) => (
-  <Text
-    className="font-body-semibold uppercase text-mw-text-muted"
-    style={{ fontSize: 11, letterSpacing: 1.3 }}
-    selectable
-  >
-    {children}
-  </Text>
-);
-
-/**
- * One big-number result tile (design `.mw-result-card`): tracked eyebrow,
- * oversized tabular-mono value, mono caption. This is the human-centric
- * payload — "what am I spending" — so the number is the loudest thing on
- * the card.
- */
-const ResultCard = ({
-  eyebrow,
-  value,
-  caption,
-  emphatic = false,
-}: {
-  eyebrow: string;
-  value: string;
-  caption?: string;
-  /** Sage-tinted treatment for the headline figure (spent / projected). */
-  emphatic?: boolean;
-}) => {
-  const colors = useV2Colors();
-  return (
-    <View
-      className="rounded-xl"
-      style={{
-        // 2-up grid to match the reference (Daily | Monthly / Spent |
-        // Projected). flexBasis ~46% + grow means exactly two per row on
-        // the results column, collapsing to one when it gets narrow.
-        flexGrow: 1,
-        flexBasis: '46%',
-        minWidth: 200,
-        padding: 22,
-        backgroundColor: emphatic ? colors.greenLight : colors.surface,
-        borderWidth: 1,
-        borderColor: emphatic ? colors.greenLight : colors.border,
-      }}
-    >
-      <Text
-        className="font-body-semibold uppercase"
-        style={{ fontSize: 11, letterSpacing: 1.3, color: emphatic ? colors.greenText : colors.muted, marginBottom: 12 }}
-        selectable
-      >
-        {eyebrow}
+    <View style={{ marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ fontSize: 22 }}>{emoji}</Text>
+        <Text style={{
+          fontFamily: tokens.fonts.displaySemibold,
+          fontSize: 18, fontWeight: '600',
+          color: tokens.colors.text, letterSpacing: -0.18,
+        }}>{title}</Text>
+      </View>
+      <Text style={{ fontSize: 13, lineHeight: 20, color: tokens.colors.textMuted, marginTop: 4 }}>
+        {sub}
       </Text>
-      <Text
-        className="font-mono"
-        style={{
-          fontSize: 36,
-          lineHeight: 38,
-          letterSpacing: -0.6,
-          color: emphatic ? colors.greenText : colors.text,
-          fontVariant: ['tabular-nums'],
-        }}
-        selectable
-      >
-        {value}
-      </Text>
-      {caption ? (
-        <Text
-          className="font-mono"
-          style={{ fontSize: 12, color: emphatic ? colors.greenText : colors.muted, marginTop: 8, opacity: emphatic ? 0.85 : 1 }}
-          selectable
-        >
-          {caption}
-        </Text>
-      ) : null}
     </View>
   );
 };
 
-/**
- * Intake-vs-benchmark status card (design `.mw-benchmark`): the at-a-glance
- * "is my baby's milk intake normal" answer. Status text + a horizontal
- * range bar with the recommended band shaded and a marker at today's
- * intake. Pure layout off existing tokens — no chart dependency.
- */
-const BenchmarkStatusCard = ({
-  dailyMl,
-  low,
-  high,
-  status,
+const AgeCard = ({
+  age, guideline,
 }: {
-  dailyMl: number;
-  low: number;
-  high: number;
-  status: 'low' | 'high' | 'ok' | null;
+  age: { years: number; months: number; days: number };
+  guideline: Guideline;
 }) => {
-  const colors = useV2Colors();
-  const noGuide = low === 0 && high === 0;
-  const tone = status === 'ok' ? colors.greenText : colors.danger;
-  const label = noGuide
-    ? 'No specific guideline'
-    : status === 'ok'
-      ? 'Within typical range'
-      : status === 'low'
-        ? 'Below typical range'
-        : 'Above typical range';
-  // Scale so the band sits comfortably mid-bar and a high reading still
-  // fits — mirrors the design's BenchmarkBar maths.
-  const maxScale = Math.max(high * 1.5, dailyMl * 1.1, 1500);
-  // Annotated as the RN percentage template type so it's assignable to
-  // style `left` (a bare `string` is not — DimensionValue is stricter).
-  const pct = (v: number): `${number}%` =>
-    `${Math.min(100, Math.max(0, (v / maxScale) * 100))}%`;
+  const { tokens } = useTheme();
   return (
-    <Card>
-      <View className="flex-row flex-wrap items-start justify-between" style={{ gap: 16, marginBottom: 18 }}>
-        <View style={{ flexShrink: 1 }}>
-          <Eyebrow>Intake benchmark</Eyebrow>
-          <Text
-            className="font-display-bold"
-            style={{ fontSize: 24, lineHeight: 28, color: tone, marginTop: 6 }}
-            selectable
-          >
-            {label}
-          </Text>
-          {!noGuide ? (
-            <Text className="font-mono" style={{ fontSize: 12, color: colors.muted, marginTop: 4 }} selectable>
-              {low}–{high} ml/day
-            </Text>
-          ) : null}
-        </View>
-        <View className="flex-row items-baseline" style={{ flexShrink: 0 }}>
-          <Text
-            className="font-mono"
-            style={{ fontSize: 40, lineHeight: 42, letterSpacing: -1, color: colors.text, fontVariant: ['tabular-nums'] }}
-            selectable
-          >
-            {Math.round(dailyMl).toLocaleString('en-SG')}
-          </Text>
-          <Text className="font-body" style={{ fontSize: 14, color: colors.muted, marginLeft: 5 }} selectable>
-            ml/day
-          </Text>
-        </View>
-      </View>
-
-      {/* Range bar: track → shaded recommended band → intake marker. */}
-      <View style={{ height: 10, borderRadius: 999, backgroundColor: colors.surface2, position: 'relative', overflow: 'hidden' }}>
-        {!noGuide ? (
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              bottom: 0,
-              left: pct(low),
-              width: `${Math.max(0, Math.min(100, (high / maxScale) * 100) - Math.min(100, (low / maxScale) * 100))}%`,
-              backgroundColor: colors.greenLight,
-            }}
-          />
-        ) : null}
-        <View
-          style={{
-            position: 'absolute',
-            top: -2,
-            width: 12,
-            height: 14,
-            borderRadius: 4,
-            left: pct(dailyMl),
-            marginLeft: -6,
-            backgroundColor: tone,
-            borderWidth: 2,
-            borderColor: colors.surface,
-          }}
-        />
-      </View>
-      <View className="flex-row justify-between" style={{ marginTop: 8 }}>
-        <Text className="font-mono" style={{ fontSize: 11, color: colors.muted }} selectable>0</Text>
-        {!noGuide ? (
-          <Text className="font-body-semibold" style={{ fontSize: 11, color: colors.greenText }} selectable>
-            Typical {low}–{high} ml
-          </Text>
-        ) : null}
-        <Text className="font-mono" style={{ fontSize: 11, color: colors.muted }} selectable>
-          {Math.round(maxScale).toLocaleString('en-SG')}
+    <View style={{
+      marginTop: 10, padding: 14, borderRadius: 8,
+      backgroundColor: tokens.colors.accentTint,
+      borderWidth: 1, borderColor: tokens.colors.accent,
+      flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between',
+    }}>
+      <View>
+        <Text style={{
+          fontFamily: tokens.fonts.monoMedium,
+          fontVariant: ['tabular-nums'] as ['tabular-nums'],
+          fontSize: 22, color: tokens.colors.text, fontWeight: '500',
+        }}>
+          {age.years > 0 ? `${age.years}y ` : ''}{age.months}mo{' '}
+          <Text style={{ fontSize: 14, color: tokens.colors.textMuted }}>{age.days}d</Text>
         </Text>
+        <Text style={{
+          fontSize: 12, color: tokens.colors.accentText,
+          fontFamily: tokens.fonts.bodySemibold, marginTop: 2,
+        }}>Suggested {guideline.stage}</Text>
       </View>
-    </Card>
-  );
-};
-
-const SectionTitle = ({ title, icon }: { title: string; icon: string }) => {
-  const colors = useV2Colors();
-  return (
-  <View className="flex-row items-center gap-2 mb-1">
-    <View className="w-7 h-7 rounded-full items-center justify-center" style={{ backgroundColor: colors.greenLight }}>
-      <Text className="text-xs font-body-semibold" style={{ color: colors.greenText }}>{icon}</Text>
+      <View style={{ alignItems: 'flex-end', gap: 2 }}>
+        <Text style={metaTxt(tokens)}><Text style={metaBold(tokens)}>{guideline.feeds[0]}–{guideline.feeds[1]}</Text> feeds/day</Text>
+        <Text style={metaTxt(tokens)}><Text style={metaBold(tokens)}>{guideline.mlPerFeed[0]}–{guideline.mlPerFeed[1]} ml</Text> per feed</Text>
+        <Text style={metaTxt(tokens)}><Text style={metaBold(tokens)}>{guideline.dailyMl[0]}–{guideline.dailyMl[1]} ml</Text> daily total</Text>
+      </View>
     </View>
-    <Text className="font-display-bold text-mw-text" style={{ fontSize: 22 }} selectable>{title}</Text>
-  </View>
   );
 };
+const metaTxt = (tokens: ReturnType<typeof useTheme>['tokens']) => ({
+  fontSize: 12, color: tokens.colors.text,
+  fontFamily: tokens.fonts.mono, fontVariant: ['tabular-nums'] as ['tabular-nums'],
+});
+const metaBold = (tokens: ReturnType<typeof useTheme>['tokens']) => ({
+  fontFamily: tokens.fonts.monoMedium, fontWeight: '600' as const,
+  color: tokens.colors.text,
+});
 
-/**
- * Field label. Optional right-aligned `hint` mirrors the design's
- * `.mw-label` (label left, small mono helper right — e.g. "grams",
- * "cannot be in the future", "auto-fills scoop, tin size, price").
- */
-const Label = ({ children, hint }: { children: React.ReactNode; hint?: string }) => {
-  if (hint) {
-    return (
-      <View className="flex-row items-baseline justify-between mb-2" style={{ gap: 8 }}>
-        <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted" selectable>
-          {children}
-        </Text>
-        <Text className="text-[11px] font-mono text-mw-text-muted" selectable>
-          {hint}
-        </Text>
-      </View>
-    );
-  }
-  return (
-    <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted mb-2" selectable>
-      {children}
-    </Text>
-  );
-};
-
-const DobPart = ({
-  label,
-  value,
-  onChange,
-  maxLength,
-  width,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  maxLength: number;
-  width: number;
-}) => (
-  <View>
-    <Text className="text-[10px] text-mw-text-muted font-body-semibold text-center mb-1">{label}</Text>
-    <TextInput
-      value={value}
-      onChangeText={(next) => onChange(next.replace(/\D/g, '').slice(0, maxLength))}
-      keyboardType="numeric"
-      maxLength={maxLength}
-      placeholder={label}
-      className="rounded-lg border border-mw-border bg-mw-bg-panel text-mw-text text-center font-mono-medium"
-      style={{ width, paddingVertical: 10, fontSize: 17, fontVariant: ['tabular-nums'] }}
-    />
-  </View>
-);
-
-/**
- * Single date-of-birth field. On web it's the real `<input type="date">`
- * — one tap, a calendar popover, locale formatting and keyboard a11y for
- * free (matches the design screenshot). It writes back into the existing
- * day/month/year string state (zero-padded) so `parseDobParts` and every
- * downstream calc stay byte-for-byte unchanged. Native keeps the original
- * three-box entry (no platform date control there).
- */
-const pad2 = (s: string) => s.padStart(2, '0');
-
-const DobDateField = ({
-  day,
-  month,
-  year,
-  setDay,
-  setMonth,
-  setYear,
-}: {
-  day: string;
-  month: string;
-  year: string;
-  setDay: (v: string) => void;
-  setMonth: (v: string) => void;
-  setYear: (v: string) => void;
-}) => {
-  const colors = useV2Colors();
-  const { scheme } = useTheme();
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const isoValue =
-    year.length === 4 && month !== '' && day !== ''
-      ? `${year}-${pad2(month)}-${pad2(day)}`
-      : '';
-
+const DateField = ({ value, max, onChange }: { value: string; max: string; onChange: (v: string) => void }) => {
+  const { tokens, scheme } = useTheme();
   if (Platform.OS === 'web') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const Input: any = 'input';
     return (
       <Input
-        type="date"
-        value={isoValue}
-        max={todayIso}
-        onChange={(e: { target: { value: string } }) => {
-          const v = e.target.value; // 'YYYY-MM-DD' or '' when cleared
-          if (!v) {
-            setYear('');
-            setMonth('');
-            setDay('');
-            return;
-          }
-          const [y, m, d] = v.split('-');
-          setYear(y);
-          setMonth(m);
-          setDay(d);
-        }}
+        type="date" value={value} max={max}
+        onChange={(e: { target: { value: string } }) => onChange(e.target.value)}
         aria-label="Baby's date of birth"
         style={{
-          width: '100%',
-          boxSizing: 'border-box',
-          padding: '13px 14px',
-          borderRadius: 10,
-          border: `1.5px solid ${colors.border}`,
-          background: colors.surface2,
-          color: colors.text,
-          fontSize: 15,
-          fontFamily: 'JetBrainsMono_400Regular',
-          // Themes the browser-drawn calendar glyph + popover.
-          colorScheme: scheme,
-          outline: 'none',
+          width: '100%', boxSizing: 'border-box',
+          padding: '12px 14px', borderRadius: 10,
+          border: `1.5px solid ${tokens.colors.border}`,
+          background: tokens.colors.bgPanel,
+          color: tokens.colors.text, fontSize: 15,
+          fontFamily: tokens.fonts.mono,
+          colorScheme: scheme, outline: 'none',
         }}
       />
     );
   }
-
   return (
-    <View className="flex-row items-end gap-2">
-      <DobPart label="DD" value={day} onChange={setDay} maxLength={2} width={60} />
-      <Text className="text-2xl text-mw-border pb-2">/</Text>
-      <DobPart label="MM" value={month} onChange={setMonth} maxLength={2} width={60} />
-      <Text className="text-2xl text-mw-border pb-2">/</Text>
-      <DobPart label="YYYY" value={year} onChange={setYear} maxLength={4} width={86} />
-    </View>
+    <TextInput
+      value={value} onChangeText={onChange}
+      placeholder="YYYY-MM-DD" placeholderTextColor={tokens.colors.textFaint}
+      style={{
+        padding: 12, borderRadius: 10,
+        borderWidth: 1.5, borderColor: tokens.colors.border,
+        backgroundColor: tokens.colors.bgPanel,
+        color: tokens.colors.text, fontSize: 15,
+        fontFamily: tokens.fonts.mono,
+      }}
+    />
   );
 };
 
-const SegmentedControl = ({
-  value,
-  options,
-  onChange,
+// Formula picker — one entry per PRODUCT LINE (not per variant). Value
+// is `p.product` (the name string). Pack-size is no longer in the label
+// because it's now chosen via the constrained Tin Size dropdown.
+const FormulaSelect = ({
+  products, value, onChange,
 }: {
-  value: string;
-  options: Array<{ value: string; label: string }>;
-  onChange: (value: string) => void;
+  products: Formula[]; value: string; onChange: (v: string) => void;
 }) => {
-  const colors = useV2Colors();
-  return (
-  <View className="flex-row rounded-lg border border-mw-border bg-mw-bg-panel p-1 gap-1">
-    {options.map((option) => {
-      const active = option.value === value;
-      return (
-        <Pressable
-          key={option.value}
-          onPress={() => onChange(option.value)}
-          className="flex-1 rounded-md px-2 py-2 items-center"
-          style={{ backgroundColor: active ? colors.surface : 'transparent' }}
-          accessibilityRole="button"
-          accessibilityState={{ selected: active }}
-        >
-          <Text className="text-xs font-body-semibold text-center" style={{ color: active ? colors.greenText : colors.muted }}>
-            {option.label}
-          </Text>
-        </Pressable>
-      );
-    })}
-  </View>
-  );
-};
-
-const MiniStat = ({ value, label }: { value: string; label: string }) => {
-  const colors = useV2Colors();
-  return (
-  <View className="rounded-lg bg-mw-bg-panel items-center" style={{ minWidth: 88, padding: 12 }}>
-    <Text className="font-mono-medium" style={{ fontSize: 18, color: colors.greenText, fontVariant: ['tabular-nums'] }} selectable>{value}</Text>
-    <Text className="text-[11px] text-mw-text-muted font-body mt-1" selectable>{label}</Text>
-  </View>
-  );
-};
-
-
-/**
- * Parse a composite selection key `productId#variantIdx` into its parts.
- * Returns `[null, 0]` for empty / breastmilk so callers can short-circuit.
- */
-const parseProductKey = (key: string): [string | null, number] => {
-  if (!key || key === 'breastmilk') return [null, 0];
-  const hashIndex = key.indexOf('#');
-  if (hashIndex < 0) return [key, 0]; // legacy: no variant suffix
-  const productId = key.slice(0, hashIndex);
-  const variantIdx = Number.parseInt(key.slice(hashIndex + 1), 10);
-  return [productId, Number.isFinite(variantIdx) ? variantIdx : 0];
-};
-
-/**
- * Resolve a composite key into a Product whose mirror fields (price,
- * weightG, pricePerGram, scoopG, …) come from the chosen variant rather
- * than the default `variants[0]`. The feeding calculator + ProductInfoCard
- * read these mirror fields directly, so this adapter is the only place
- * that needs to know about variants.
- */
-const resolveProductWithVariant = (
-  products: Product[],
-  key: string,
-): Product | null => {
-  const [productId, variantIdx] = parseProductKey(key);
-  if (!productId) return null;
-  const base = products.find((p) => p.id === productId);
-  if (!base) return null;
-  const variant = base.variants[variantIdx] ?? base.variants[0];
-  if (!variant) return base; // defensive — should never happen
-  return {
-    ...base,
-    weightG:        variant.weightG,
-    price:          variant.price,
-    scoopG:         variant.scoopG,
-    waterMl:        variant.waterMl,
-    img:            variant.img,
-    scoopsPerTin:   variant.scoopsPerTin,
-    pricePerGram:   variant.pricePerGram,
-    pricePerScoop:  variant.pricePerScoop,
-    pricePerMl:     variant.pricePerMl,
-  };
-};
-
-const ProductSelect = ({
-  label,
-  hint,
-  value,
-  products,
-  placeholder,
-  includeBreastmilk = false,
-  onChange,
-}: {
-  label: string;
-  hint?: string;
-  value: string;
-  products: Product[];
-  placeholder: string;
-  includeBreastmilk?: boolean;
-  onChange: (value: string) => void;
-}) => {
-  const colors = useV2Colors();
+  const { tokens } = useTheme();
   if (Platform.OS === 'web') {
-    // React Native does not provide a Picker; on web, the native HTML select
-    // gives keyboard and screen-reader behavior for free.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Select: any = 'select';
+    const S: any = 'select';
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Option: any = 'option';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const OptGroup: any = 'optgroup';
+    const O: any = 'option';
     return (
-      <View>
-        <Label hint={hint}>{label}</Label>
-        <Select
-          value={value}
-          onChange={(event: { target: { value: string } }) => onChange(event.target.value)}
-          style={makeProductSelectStyle(colors)}
-          aria-label={label}
-        >
-          <Option value="">{placeholder}</Option>
-          {includeBreastmilk ? <Option value="breastmilk">Breastmilk (exclusive or primary)</Option> : null}
-          <OptGroup label="Formula">
-            {/* Render one <option> per (product × variant) so a tin sold
-                in multiple pack sizes is shopper-comparable. Composite
-                key `${id}#${i}` survives a JSON round-trip and parses
-                back with `parseProductKey`. */}
-            {products.flatMap((product) =>
-              product.variants.map((variant, idx) => (
-                <Option key={`${product.id}#${idx}`} value={`${product.id}#${idx}`}>
-                  {product.name} ({product.brand}) - {formatCurrency(variant.price)}/{formatWeight(variant.weightG)}
-                </Option>
-              )),
-            )}
-          </OptGroup>
-        </Select>
+      <S value={value}
+        onChange={(e: { target: { value: string } }) => onChange(e.target.value)}
+        style={{
+          width: '100%', padding: '12px 14px', borderRadius: 10,
+          border: `1.5px solid ${tokens.colors.border}`,
+          background: tokens.colors.bgPanel, color: tokens.colors.text,
+          fontSize: 14, fontFamily: tokens.fonts.body, outline: 'none',
+        }}>
+        <O value="">— Manual entry —</O>
+        {products.map((p) => (
+          <O key={p.product} value={p.product}>
+            {p.brand} · {shortName(p.product)}
+          </O>
+        ))}
+      </S>
+    );
+  }
+  // Native fallback — horizontal scroll chip strip (first 30 to keep
+  // the row scannable on small screens).
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+      <Chip on={value === ''} label="— Manual —" onPress={() => onChange('')} />
+      {products.slice(0, 30).map((p) => (
+        <Chip
+          key={p.product}
+          on={value === p.product}
+          label={`${p.brand} ${shortName(p.product)}`}
+          onPress={() => onChange(p.product)}
+        />
+      ))}
+    </ScrollView>
+  );
+};
+
+// Tin Size — when `sizes` is passed (formula picked), shows ONLY that
+// product's available pack sizes. When `sizes` is undefined (manual
+// entry), shows a numeric input for free entry. This is the bug-fix
+// requested 2026-05-21: previously a single hardcoded size list let the
+// user pick "1650g" with a 400g product selected (which auto-fill then
+// silently overwrote back to 400g — the "stuck on smallest variant" bug).
+const TinSelect = ({
+  value, onChange, sizes,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  sizes?: number[];
+}) => {
+  const { tokens } = useTheme();
+  // Manual entry — numeric input.
+  if (!sizes || sizes.length === 0) {
+    return (
+      <View style={{
+        flexDirection: 'row', alignItems: 'center',
+        borderWidth: 1, borderColor: tokens.colors.border,
+        borderRadius: 8, backgroundColor: tokens.colors.bgPanel,
+        paddingHorizontal: 10,
+      }}>
+        <TextInput
+          value={value === 0 ? '' : String(value)}
+          placeholder="grams" placeholderTextColor={tokens.colors.textFaint}
+          keyboardType="numeric"
+          onChangeText={(s) => {
+            const n = Number(s);
+            if (Number.isFinite(n) && n >= 0) onChange(n);
+            else if (s === '') onChange(0);
+          }}
+          style={{
+            flex: 1, paddingVertical: 9, color: tokens.colors.text, fontSize: 15,
+            fontFamily: tokens.fonts.monoMedium,
+            fontVariant: ['tabular-nums'] as ['tabular-nums'],
+          }}
+        />
+        <Text style={{ color: tokens.colors.textMuted, fontFamily: tokens.fonts.mono, marginLeft: 6 }}>g</Text>
       </View>
     );
   }
-
-  // Native path — horizontal scroll of chips, one per variant. Same key
-  // scheme so the parsing helpers above work identically on native and web.
+  // Formula picked — constrained dropdown of that product's variants.
+  if (Platform.OS === 'web') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const S: any = 'select';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const O: any = 'option';
+    return (
+      <S value={String(value)}
+        onChange={(e: { target: { value: string } }) => onChange(+e.target.value)}
+        style={{
+          width: '100%', height: 38, padding: '0 12px', borderRadius: 8,
+          border: `1px solid ${tokens.colors.border}`,
+          background: tokens.colors.bgPanel, color: tokens.colors.text,
+          fontSize: 14, fontFamily: tokens.fonts.body, outline: 'none',
+        }}>
+        {sizes.map((s) => <O key={s} value={s}>{s}g</O>)}
+      </S>
+    );
+  }
   return (
-    <View>
-      <Label>{label}</Label>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-        {includeBreastmilk ? (
-          <SelectionChip label="Breastmilk" active={value === 'breastmilk'} onPress={() => onChange('breastmilk')} />
-        ) : null}
-        {products.flatMap((product) =>
-          product.variants.map((variant, idx) => {
-            const key = `${product.id}#${idx}`;
-            return (
-              <SelectionChip
-                key={key}
-                label={`${product.brand} ${product.name} · ${formatWeight(variant.weightG)}`}
-                active={value === key}
-                onPress={() => onChange(key)}
-              />
-            );
-          }),
-        )}
-      </ScrollView>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+      {sizes.map((s) => (
+        <Chip key={s} on={value === s} label={`${s}g`} onPress={() => onChange(s)} />
+      ))}
+    </ScrollView>
+  );
+};
+
+const PriceField = ({ value, onChange }: { value: number; onChange: (v: number) => void }) => {
+  const { tokens } = useTheme();
+  return (
+    <View style={{
+      flexDirection: 'row', alignItems: 'center',
+      borderWidth: 1, borderColor: tokens.colors.border,
+      borderRadius: 8, backgroundColor: tokens.colors.bgPanel,
+      paddingLeft: 12, paddingRight: 4,
+    }}>
+      <Text style={{ color: tokens.colors.textMuted, fontFamily: tokens.fonts.mono, marginRight: 4 }}>$</Text>
+      <TextInput
+        value={String(value)} keyboardType="numeric"
+        onChangeText={(s) => {
+          const n = Number(s);
+          if (Number.isFinite(n) && n >= 0) onChange(n);
+        }}
+        style={{
+          flex: 1, paddingVertical: 9, color: tokens.colors.text, fontSize: 15,
+          fontFamily: tokens.fonts.monoMedium,
+          fontVariant: ['tabular-nums'] as ['tabular-nums'],
+        }}
+      />
     </View>
   );
 };
 
-const SelectionChip = ({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) => {
-  const colors = useV2Colors();
+const Chip = ({ on, label, onPress }: { on: boolean; label: string; onPress: () => void }) => {
+  const { tokens } = useTheme();
   return (
-  <Pressable
-    onPress={onPress}
-    className="rounded-full border px-3 py-2"
-    style={{
-      backgroundColor: active ? colors.greenText : colors.surface,
-      borderColor: active ? colors.greenText : colors.border,
-    }}
-  >
-    <Text className="text-xs font-body-semibold" style={{ color: active ? colors.textInverse : colors.text }} numberOfLines={1}>
-      {label}
-    </Text>
-  </Pressable>
-  );
-};
-
-const ProductInfoCard = ({ product, compact = false }: { product: Product; compact?: boolean }) => {
-  const colors = useV2Colors();
-  return (
-  <View className="flex-row items-center gap-3 rounded-lg" style={{ backgroundColor: compact ? colors.surface : colors.surface2, padding: compact ? 10 : 12 }}>
-    <Image
-      source={getProductImage(product.img)}
-      resizeMode="contain"
-      style={{
-        width: compact ? 44 : 52,
-        height: compact ? 44 : 52,
-        backgroundColor: colors.surface,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: colors.border,
-      }}
-      accessibilityLabel=""
-      accessibilityElementsHidden
-    />
-    <View className="flex-1">
-      <Text className="text-[11px] text-mw-text-muted font-body-semibold uppercase" selectable>{product.brand}</Text>
-      <Text className="text-[13.5px] font-body-semibold text-mw-text" numberOfLines={2} selectable>{product.name}</Text>
-      <Text className="text-xs text-mw-text-muted font-body mt-0.5" selectable>
-        {formatWeight(product.weightG ?? 0)} · {formatCurrency(product.price)} · {formatCurrency(product.pricePerGram)}/g · {product.scoopG ?? '-'}g/scoop
-      </Text>
-    </View>
-  </View>
-  );
-};
-
-/**
- * Bordered numeric field (design: the "Price per tin" $-prefixed input).
- * `label` is optional — when the caller already renders a <Label hint>
- * above (the screenshot pattern), omit it and pass `aria` for a11y.
- */
-const SpecField = ({
-  label,
-  aria,
-  value,
-  onChange,
-  prefix,
-  suffix,
-  decimals = false,
-}: {
-  label?: string;
-  aria?: string;
-  value: string;
-  onChange: (v: string) => void;
-  prefix?: string;
-  suffix?: string;
-  decimals?: boolean;
-}) => {
-  const colors = useV2Colors();
-  // Keep input numeric. For decimal fields allow one dot; collapse any
-  // extra dots so "4.3.1" → "4.31" rather than NaN at the parse boundary.
-  const sanitize = (raw: string): string => {
-    const cleaned = raw.replace(decimals ? /[^\d.]/g : /[^\d]/g, '');
-    if (!decimals) return cleaned;
-    const [head, ...tail] = cleaned.split('.');
-    return tail.length ? `${head}.${tail.join('')}` : cleaned;
-  };
-  return (
-    <View style={{ flex: 1, minWidth: 96 }}>
-      {label ? (
-        <Text className="text-[10px] text-mw-text-muted font-body-semibold mb-1" selectable>{label}</Text>
-      ) : null}
-      <View
-        className="flex-row items-center rounded-lg border border-mw-border bg-mw-bg-card"
-        style={{ paddingHorizontal: 12 }}
-      >
-        {prefix ? <Text className="font-mono" style={{ color: colors.muted, fontSize: 14 }}>{prefix}</Text> : null}
-        <TextInput
-          value={value}
-          onChangeText={(t) => onChange(sanitize(t))}
-          keyboardType={decimals ? 'decimal-pad' : 'numeric'}
-          placeholder="—"
-          placeholderTextColor={colors.muted}
-          accessibilityLabel={aria ?? label ?? 'Numeric value'}
-          className="flex-1 font-mono-medium text-mw-text"
-          style={{ paddingVertical: 13, fontSize: 15, fontVariant: ['tabular-nums'] }}
-        />
-        {suffix ? <Text className="font-mono ml-1" style={{ color: colors.muted, fontSize: 12 }}>{suffix}</Text> : null}
-      </View>
-    </View>
-  );
-};
-
-/**
- * Compact −/＋ stepper for scoop size (design screenshot). Distinct from
- * the slider-backed `Stepper` used for ml/feed & feeds/day — the spec
- * fields read as a tight numeric trio, not sliders.
- */
-const SpecStepper = ({
-  value,
-  onChange,
-  step,
-  min,
-  max,
-  decimals = false,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  step: number;
-  min: number;
-  max: number;
-  decimals?: boolean;
-}) => {
-  const colors = useV2Colors();
-  const fmt = (n: number) => (decimals ? String(Math.round(n * 10) / 10) : String(Math.round(n)));
-  const bump = (dir: 1 | -1) => {
-    const n = Number(value);
-    const base = Number.isFinite(n) ? n : min;
-    onChange(fmt(Math.min(max, Math.max(min, base + dir * step))));
-  };
-  const Btn = ({ label, dir }: { label: string; dir: 1 | -1 }) => (
     <Pressable
-      onPress={() => bump(dir)}
-      accessibilityRole="button"
-      accessibilityLabel={dir === 1 ? 'Increase' : 'Decrease'}
-      hitSlop={8}
-      style={{ width: 42, paddingVertical: 12, alignItems: 'center' }}
+      accessibilityRole="button" accessibilityState={{ selected: on }}
+      onPress={onPress}
+      style={{
+        paddingVertical: 8, paddingHorizontal: 12, borderRadius: 999,
+        borderWidth: 1.5,
+        borderColor: on ? tokens.colors.accent : tokens.colors.border,
+        backgroundColor: on ? tokens.colors.accent : tokens.colors.bgCard,
+      }}
     >
-      <Text className="font-mono" style={{ fontSize: 18, color: colors.text }}>{label}</Text>
+      <Text style={{
+        fontSize: 12, fontFamily: tokens.fonts.bodyMedium, fontWeight: '500',
+        color: on ? tokens.colors.textInverse : tokens.colors.text,
+      }}>{label}</Text>
     </Pressable>
   );
+};
+
+// ResultCard — big mono number + label + sub. `value` always animates via
+// CountUp with the supplied `format` so the four cards "count up" together
+// when DOB or the picker changes. Matches the design's CountUp behaviour.
+const ResultCard = ({
+  label, value, format, sub, emphatic,
+}: {
+  label: string;
+  value: number;
+  format: (n: number) => string;
+  sub: string;
+  emphatic?: boolean;
+}) => {
+  const { tokens } = useTheme();
   return (
-    <View
-      className="flex-row items-center rounded-lg border border-mw-border bg-mw-bg-card"
-      style={{ alignSelf: 'flex-start' }}
-    >
-      <Btn label="−" dir={-1} />
-      <TextInput
+    <View style={{
+      padding: 18, borderRadius: tokens.radius.card,
+      backgroundColor: emphatic ? tokens.colors.accentTint : tokens.colors.bgCard,
+      borderWidth: 1,
+      borderColor: emphatic ? tokens.colors.accent : tokens.colors.border,
+      ...tokens.shadow.s1,
+    }}>
+      <Text style={{
+        fontFamily: tokens.fonts.bodySemibold, fontSize: 11, fontWeight: '600',
+        letterSpacing: 1.32, textTransform: 'uppercase',
+        color: emphatic ? tokens.colors.accentText : tokens.colors.textMuted,
+      }}>{label}</Text>
+      <CountUp
         value={value}
-        onChangeText={(t) => onChange(t.replace(decimals ? /[^\d.]/g : /[^\d]/g, ''))}
-        keyboardType={decimals ? 'decimal-pad' : 'numeric'}
-        accessibilityLabel="Scoop size in grams"
-        className="font-mono-medium text-mw-text text-center"
+        format={format}
         style={{
-          width: 64,
-          paddingVertical: 11,
-          fontSize: 15,
-          fontVariant: ['tabular-nums'],
-          borderLeftWidth: 1,
-          borderRightWidth: 1,
-          borderColor: colors.border,
+          fontFamily: tokens.fonts.monoMedium,
+          fontVariant: ['tabular-nums'] as ['tabular-nums'],
+          fontSize: 32, fontWeight: '500',
+          color: emphatic ? tokens.colors.accentText : tokens.colors.text,
+          letterSpacing: -0.64, marginTop: 4,
         }}
       />
-      <Btn label="＋" dir={1} />
+      <Text style={{ fontSize: 12, color: tokens.colors.textMuted, marginTop: 2, fontFamily: tokens.fonts.mono }}>
+        {sub}
+      </Text>
     </View>
   );
 };
 
-/**
- * Tin-size picker. Web → native <select> of common SG pack sizes; the
- * current value is always present (prepended if a product's weight isn't
- * a standard size). Native → numeric fallback.
- */
-const TIN_SIZES = [380, 400, 800, 820, 850, 900, 1650, 1700, 1800];
-
-const SpecSelect = ({
-  value,
-  onChange,
+const LifeCell = ({
+  tone, label, value, sub,
 }: {
-  value: string;
-  onChange: (v: string) => void;
+  tone: 'past' | 'future' | 'total';
+  label: string; value: string; sub: string;
 }) => {
-  const colors = useV2Colors();
-  const opts = value && !TIN_SIZES.includes(Number(value))
-    ? [Number(value), ...TIN_SIZES]
-    : TIN_SIZES;
-  if (Platform.OS === 'web') {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Select: any = 'select';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Option: any = 'option';
-    return (
-      <Select
-        value={value}
-        onChange={(e: { target: { value: string } }) => onChange(e.target.value)}
-        aria-label="Tin size in grams"
-        style={{
-          width: '100%',
-          boxSizing: 'border-box',
-          padding: '13px 12px',
-          borderRadius: 10,
-          border: `1px solid ${colors.border}`,
-          background: colors.surface,
-          color: colors.text,
-          fontSize: 15,
-          fontFamily: 'JetBrainsMono_400Regular',
-        }}
-      >
-        {opts.map((g) => (
-          <Option key={g} value={String(g)}>{g}g</Option>
-        ))}
-      </Select>
-    );
-  }
-  return <SpecField aria="Tin size in grams" value={value} onChange={onChange} suffix="g" />;
-};
-
-const RatioControl = ({ value, onChange }: { value: number; onChange: (value: number) => void }) => {
-  const colors = useV2Colors();
-  return (
-  <View>
-    <View className="flex-row flex-wrap gap-2">
-      {[10, 30, 50, 70, 90].map((pct) => (
-        <Pressable
-          key={pct}
-          onPress={() => onChange(pct)}
-          className="rounded-full border px-3 py-2"
-          style={{
-            backgroundColor: value === pct ? colors.greenText : colors.surface,
-            borderColor: value === pct ? colors.greenText : colors.border,
-          }}
-        >
-          <Text className="text-xs font-mono-medium" style={{ color: value === pct ? colors.textInverse : colors.text, fontVariant: ['tabular-nums'] }}>
-            {pct}/{100 - pct}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  </View>
-  );
-};
-
-const InfoBox = ({ tone, children }: { tone: 'green' | 'amber' | 'blue' | 'muted'; children: React.ReactNode }) => {
-  const colors = useV2Colors();
-  const palette = {
-    green: { bg: colors.greenLight, border: colors.green, fg: colors.greenText },
-    amber: { bg: colors.amberLight, border: colors.amber, fg: colors.amber },
-    blue: { bg: colors.infoSoft, border: colors.info, fg: colors.info },
-    muted: { bg: colors.surface2, border: colors.border, fg: colors.muted },
+  const { tokens } = useTheme();
+  // Tone-specific palette (spec-exact from styles-v2 .mw-life-cell).
+  const PAL = {
+    past:   { bg: tokens.colors.warnBg,    border: tokens.colors.border, fg: tokens.colors.warnText },
+    future: { bg: tokens.colors.accentTint, border: tokens.colors.accent, fg: tokens.colors.accentText },
+    total:  { bg: '#2A4A26', border: '#2A4A26', fg: '#FBFAF6' },
   }[tone];
   return (
-    <View className="rounded-lg mt-4" style={{ backgroundColor: palette.bg, borderLeftWidth: 3, borderLeftColor: palette.border, padding: 12 }}>
-      <Text className="text-sm font-body" style={{ color: palette.fg, lineHeight: 20 }} selectable>
-        {children}
+    <View style={{
+      flex: 1, padding: 16, borderRadius: tokens.radius.card,
+      backgroundColor: PAL.bg, borderWidth: 1, borderColor: PAL.border,
+    }}>
+      <Text style={{
+        fontFamily: tokens.fonts.bodySemibold, fontSize: 11, fontWeight: '600',
+        letterSpacing: 1.1, textTransform: 'uppercase',
+        color: PAL.fg, marginBottom: 4,
+      }}>{label}</Text>
+      <Text style={{
+        fontFamily: tokens.fonts.monoMedium,
+        fontVariant: ['tabular-nums'] as ['tabular-nums'],
+        fontSize: 28, fontWeight: '500',
+        color: PAL.fg, letterSpacing: -0.56,
+      }}>{value}</Text>
+      <Text style={{ fontSize: 12, color: PAL.fg, opacity: 0.85, marginTop: 4, fontFamily: tokens.fonts.mono }}>
+        {sub}
       </Text>
     </View>
   );
 };
 
-/**
- * Cross-border price estimate. Singapore parents routinely buy formula in
- * Johor Bahru because the same tin is materially cheaper in Malaysia. This
- * card turns the already-computed yearly tin volume into a concrete "what
- * you'd save" figure — the highest-intent number on the page for a
- * cost-driven user.
- *
- * Constants are deliberately rough and labelled "estimate" in the UI:
- *   - SGD_TO_MYR: nominal exchange rate. Directional, not a live quote;
- *     formula isn't a forex-sensitive purchase, so a fixed planning rate
- *     is honest enough and avoids a network dependency on this screen.
- *   - MY_DISCOUNT: typical SG→MY retail price gap for the same product
- *     (~28%, matching the design handoff's MalaysiaCompare reference).
- * Both are single-source named constants so a future correction is one
- * edit, not a hunt through arithmetic.
- */
-const SGD_TO_MYR = 3.05;
-const MY_DISCOUNT = 0.28;
-
-const MalaysiaCompare = ({
-  tinPriceSgd,
-  tinsPerYear,
-}: {
-  tinPriceSgd: number;
-  tinsPerYear: number;
-}) => {
-  const colors = useV2Colors();
-  // MY price in SGD-equivalent, then converted to ringgit for display.
-  const myPriceSgd = tinPriceSgd * (1 - MY_DISCOUNT);
-  const myPriceMyr = Math.round(tinPriceSgd * SGD_TO_MYR * (1 - MY_DISCOUNT));
-  const savePerTin = tinPriceSgd - myPriceSgd;
-  const annualSavings = savePerTin * tinsPerYear;
-  const pctLess = Math.round(MY_DISCOUNT * 100);
-
+const Tile = ({ emoji, value, label }: { emoji: string; value: string; label: string }) => {
+  const { tokens } = useTheme();
   return (
-    <View style={{ gap: 16 }}>
-      <View className="flex-row flex-wrap" style={{ gap: 16 }}>
-        <View className="rounded-lg bg-mw-bg-panel" style={{ flex: 1, minWidth: 150, padding: 16 }}>
-          <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted" selectable>
-            SG / tin
-          </Text>
-          <Text className="font-mono-medium mt-1" style={{ fontSize: 24, color: colors.text, fontVariant: ['tabular-nums'] }} selectable>
-            {formatCurrency(tinPriceSgd)}
-          </Text>
-        </View>
-        <View className="rounded-lg bg-mw-bg-panel" style={{ flex: 1, minWidth: 150, padding: 16 }}>
-          <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-mw-text-muted" selectable>
-            MY / tin (est.)
-          </Text>
-          <Text className="font-mono-medium mt-1" style={{ fontSize: 24, color: colors.text, fontVariant: ['tabular-nums'] }} selectable>
-            RM {myPriceMyr.toLocaleString('en-SG')}
-          </Text>
-        </View>
-      </View>
-
-      {/* Highlighted savings panel — the design's sage "what you'd save"
-          block. greenText (not green) for the label so small uppercase
-          text clears WCAG-AA on the tint (§9b Phase 7 a11y rule). */}
-      <View className="rounded-xl items-center" style={{ backgroundColor: colors.greenLight, padding: 20 }}>
-        <Text className="text-[11px] font-body-semibold uppercase tracking-wider text-center" style={{ color: colors.greenText }} selectable>
-          Estimated annual savings
-        </Text>
-        <Text className="font-mono-medium mt-2 text-center" style={{ fontSize: 34, color: colors.greenText, fontVariant: ['tabular-nums'] }} selectable>
-          {formatCurrency(annualSavings)}
-        </Text>
-        <Text className="text-xs font-body mt-2 text-center" style={{ color: colors.greenText, lineHeight: 18 }} selectable>
-          ~{pctLess}% less in MY · based on {formatNumber(tinsPerYear, { maximumFractionDigits: 1 })} tins/year at your current feeding rate. Cross-border purchases for personal use are generally permitted but subject to SG customs allowances.
-        </Text>
-      </View>
+    <View style={{
+      flexBasis: '18%', flexGrow: 1, minWidth: 110,
+      padding: 12, alignItems: 'center', justifyContent: 'center',
+      borderRadius: 8, backgroundColor: tokens.colors.bgPanel,
+      borderWidth: 1, borderColor: tokens.colors.border, gap: 2,
+    }}>
+      <Text style={{ fontSize: 20 }}>{emoji}</Text>
+      <Text style={{
+        fontFamily: tokens.fonts.monoMedium,
+        fontVariant: ['tabular-nums'] as ['tabular-nums'],
+        fontSize: 18, fontWeight: '500', color: tokens.colors.text,
+      }}>{value}</Text>
+      <Text style={{
+        fontFamily: tokens.fonts.bodySemibold, fontSize: 10, fontWeight: '600',
+        letterSpacing: 0.8, textTransform: 'uppercase',
+        color: tokens.colors.textMuted,
+      }}>{label}</Text>
     </View>
   );
 };
 
-const LegendSwatch = ({ color, label, boxed = false }: { color: string; label: string; boxed?: boolean }) => (
-  <View className="flex-row items-center gap-1.5">
-    <View
-      style={{
-        width: boxed ? 16 : 12,
-        height: boxed ? 8 : 12,
-        borderRadius: boxed ? 3 : 6,
-        backgroundColor: color,
-        borderWidth: boxed ? 1 : 0,
-        borderColor: 'rgba(27,94,59,.3)',
-      }}
-    />
-    <Text className="text-xs text-mw-text-muted font-body" selectable>{label}</Text>
-  </View>
-);
-
-const GuidelineHeader = () => (
-  <View className="flex-row bg-mw-bg-panel border-b border-mw-border">
-    {['Age', 'ml / feed', 'Feeds / day', 'Daily total', 'Notes'].map((label, index) => (
-      <Text
-        key={label}
-        className="text-[10.5px] font-body-semibold uppercase tracking-wider text-mw-text-muted"
-        style={{ width: index === 4 ? 260 : 90, paddingHorizontal: 10, paddingVertical: 9 }}
-      >
-        {label}
-      </Text>
-    ))}
-  </View>
-);
-
-const GuidelineRow = ({
-  guideline,
-  current,
-}: {
-  guideline: (typeof SG_GUIDELINES)[number];
-  current: boolean;
-}) => {
-  const colors = useV2Colors();
+const Legend = ({ swatch, label, bar, dot }: { swatch: string; label: string; bar?: boolean; dot?: boolean }) => {
+  const { tokens } = useTheme();
   return (
-  <View className="flex-row border-b border-mw-border" style={{ backgroundColor: current ? colors.greenLight : 'transparent' }}>
-    <GuidelineCell text={guideline.label} width={90} current={current} />
-    <GuidelineCell text={`${guideline.mlMin}-${guideline.mlMax}ml`} width={90} current={current} mono />
-    <GuidelineCell text={`${guideline.fMin}-${guideline.fMax}x`} width={90} current={current} mono />
-    <GuidelineCell text={`${guideline.dMin}-${guideline.dMax}ml`} width={90} current={current} mono />
-    <GuidelineCell text={guideline.note} width={260} muted />
-  </View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <View style={{
+        width: dot ? 10 : 14, height: dot ? 10 : bar ? 2 : 10,
+        borderRadius: dot ? 5 : 2,
+        backgroundColor: swatch,
+      }} />
+      <Text style={{ fontSize: 11, color: tokens.colors.textMuted, fontFamily: tokens.fonts.mono }}>{label}</Text>
+    </View>
   );
 };
 
-const GuidelineCell = ({
-  text,
-  width,
-  current = false,
-  muted = false,
-  mono = false,
-}: {
-  text: string;
-  width: number;
-  current?: boolean;
-  muted?: boolean;
-  /** Numeric range columns (ml/feed, feeds/day, daily total) render in
-      tabular mono so the ranges align down each column. Age + Notes
-      are prose and stay body. */
-  mono?: boolean;
-}) => {
-  const colors = useV2Colors();
+const TblHead = ({ children, flex, align = 'left' }: { children: string; flex: number; align?: 'left' | 'right' }) => {
+  const { tokens } = useTheme();
   return (
-  <Text
-    className={`text-xs ${mono ? (current ? 'font-mono-medium' : 'font-mono') : 'font-body'}`}
-    style={{
-      width,
-      paddingHorizontal: 10,
-      paddingVertical: 9,
-      color: current ? colors.greenText : muted ? colors.muted : colors.text,
-      // Mono carries weight via the family; body keeps the current-row bold cue.
-      ...(mono ? { fontVariant: ['tabular-nums'] as const } : { fontWeight: current ? '700' : '400' }),
-      lineHeight: 17,
-    }}
-    selectable
-  >
-    {text}
-  </Text>
+    <Text style={{
+      flex, paddingHorizontal: 6, fontSize: 10, fontWeight: '700',
+      letterSpacing: 0.6, textTransform: 'uppercase',
+      color: tokens.colors.textMuted, textAlign: align,
+      fontFamily: tokens.fonts.bodySemibold,
+    }}>{children}</Text>
+  );
+};
+const TblCell = ({ children, flex, bold }: { children: string; flex: number; bold?: boolean }) => {
+  const { tokens } = useTheme();
+  return (
+    <Text style={{
+      flex, paddingHorizontal: 6, fontSize: 12, lineHeight: 18,
+      color: tokens.colors.text,
+      fontFamily: bold ? tokens.fonts.bodySemibold : tokens.fonts.body,
+      fontWeight: bold ? '600' : '400',
+    }}>{children}</Text>
+  );
+};
+const TblNum = ({ children, flex }: { children: string; flex: number }) => {
+  const { tokens } = useTheme();
+  return (
+    <Text style={{
+      flex, paddingHorizontal: 6, fontSize: 12,
+      color: tokens.colors.text,
+      fontFamily: tokens.fonts.monoMedium,
+      fontVariant: ['tabular-nums'] as ['tabular-nums'],
+      textAlign: 'right',
+    }}>{children}</Text>
   );
 };
