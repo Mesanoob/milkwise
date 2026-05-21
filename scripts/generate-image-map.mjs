@@ -21,7 +21,7 @@ const ROOT      = join(__dirname, '..');
 const IMG_DIR   = join(ROOT, 'assets/products');
 const OUT_FILE  = join(ROOT, 'src/data/imageMap.ts');
 
-const ALLOWED_EXT = /\.(jpg|jpeg|png|webp)$/i;
+const ALLOWED_EXT = /\.webp$/i;
 
 const images = readdirSync(IMG_DIR)
   .filter((name) => ALLOWED_EXT.test(name))

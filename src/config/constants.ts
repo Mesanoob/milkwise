@@ -15,23 +15,10 @@ export const APP_NAME    = 'MilkWise SG';
 export const APP_TAGLINE = 'Compare baby formula in Singapore';
 export const APP_VERSION = '1.0.0';
 
-// ── Comparison rules ────────────────────────────────────────────────────────
-// Maximum products a user can pin for side-by-side comparison.
-// 5 was chosen because (a) most users compare 2–3, and (b) more than 5
-// produces an unreadable table on mobile widths.
-export const MAX_COMPARE_PRODUCTS = 5;
-
 // ── Pagination & list limits ────────────────────────────────────────────────
-// Used by ProductGrid to decide how many items to render eagerly.
-// Mobile devices struggle with React Native FlatList past ~50 visible items.
+// Used by Compare to avoid mounting every row/image on first render.
 export const INITIAL_RENDER_COUNT = 12;
 export const PAGE_SIZE            = 24;
-
-// ── Search ──────────────────────────────────────────────────────────────────
-// Debounce delay (ms) before search input triggers a filter pass.
-// Below 150ms feels jittery, above 400ms feels unresponsive.
-export const SEARCH_DEBOUNCE_MS = 200;
-export const MIN_SEARCH_LENGTH  = 1;
 
 // ── Feature flags ───────────────────────────────────────────────────────────
 // Flags let us ship code that is "off" by default until a feature is ready.
@@ -54,10 +41,3 @@ export const FEATURES = {
 export const CURRENCY_CODE  = 'SGD';
 export const CURRENCY_LABEL = 'S$';
 export const LOCALE         = 'en-SG';
-
-// ── Storage keys ────────────────────────────────────────────────────────────
-// Namespaced to avoid collisions if another app shares localStorage on web.
-export const STORAGE_KEYS = {
-  comparison: 'milkwise.comparison.v1',
-  lastViewed: 'milkwise.lastViewed.v1',
-} as const;

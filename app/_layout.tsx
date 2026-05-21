@@ -22,26 +22,19 @@ import { Stack } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
 // v2 design system fonts. RN does NOT synthesize weights for custom fonts,
 // so every weight we use is loaded as its own family (see theme.ts `fonts`).
 //   • Inter Tight  600/700 — display / headings
 //   • Inter        400/500/600 — body / UI
 //   • JetBrains Mono 400/500 — all numerals (tabular)
-import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-} from '@expo-google-fonts/inter';
-import {
-  InterTight_600SemiBold,
-  InterTight_700Bold,
-} from '@expo-google-fonts/inter-tight';
-import {
-  JetBrainsMono_400Regular,
-  JetBrainsMono_500Medium,
-} from '@expo-google-fonts/jetbrains-mono';
-import { ProductsProvider } from '../src/contexts/ProductsContext';
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { InterTight_600SemiBold } from '@expo-google-fonts/inter-tight/600SemiBold';
+import { InterTight_700Bold } from '@expo-google-fonts/inter-tight/700Bold';
+import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono/400Regular';
+import { JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono/500Medium';
 import { FormulaCompareProvider } from '../src/contexts/FormulaCompareContext';
 import { ThemeProvider, useTheme } from '../src/contexts/ThemeContext';
 
@@ -111,20 +104,15 @@ export default function RootLayout() {
     // active scheme. It must wrap everything that can render a colour.
     <ThemeProvider>
       <SafeAreaProvider>
-        {/* `ProductsProvider` lives ABOVE the Stack so filter state
-            persists across every navigation (Compare → Product Detail →
-            back). See ProductsContext.tsx for the rationale. */}
-        {/* ProductsProvider drives the legacy `Product[]` model (Most Sold,
-            Calculator). FormulaCompareProvider drives the rebuilt Compare
-            page's `Formula[]` state (stage/brand/sort/filters/tray) so it
-            survives /compare → /product/[id] → /compare round-trips. Both
-            sit above the Stack — same lifecycle contract: in-memory only,
-            resets on hard reload. */}
-        <ProductsProvider>
-          <FormulaCompareProvider>
-            <ThemedShell />
-          </FormulaCompareProvider>
-        </ProductsProvider>
+        {/* FormulaCompareProvider drives the rebuilt Compare page's
+            `Formula[]` state (stage/brand/sort/filters/tray) so it survives
+            /compare → /product/[id] → /compare round-trips. The old
+            ProductsProvider was removed because no active route consumes it;
+            keeping it mounted loaded and filtered the legacy `Product[]`
+            catalogue on every app start. */}
+        <FormulaCompareProvider>
+          <ThemedShell />
+        </FormulaCompareProvider>
       </SafeAreaProvider>
     </ThemeProvider>
   );

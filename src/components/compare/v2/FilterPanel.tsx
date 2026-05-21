@@ -22,6 +22,8 @@ import {
   originCountry,
 } from '../../../utils/formulaClassifiers';
 
+const ALL_FORMULAS = getAllFormulas();
+
 const SOURCE_OPTS: { k: string; em: string; l: string }[] = [
   { k: 'Cow',  em: '🐄', l: 'Cow' },
   { k: 'Goat', em: '🐐', l: 'Goat' },
@@ -144,7 +146,7 @@ export const FilterPanel = ({ onClose }: { onClose: () => void }) => {
   // Origin options derived from the formulas dataset.
   const origins = useMemo(() => {
     const set = new Set<string>();
-    for (const f of getAllFormulas()) {
+    for (const f of ALL_FORMULAS) {
       const c = originCountry(f.manufacturedIn || f.origin);
       if (c) set.add(c);
     }

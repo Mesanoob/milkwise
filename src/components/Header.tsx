@@ -14,9 +14,7 @@
  *   • 6 desktop links (the design ships 5; we keep `Most Sold` per the
  *     user's decision in Phase-0 AskUserQuestion).
  *   • The search field that lived here previously is GONE — the design
- *     puts search inside the Compare toolbar. The moved `compare.tsx`
- *     mounts a `<SearchBar>` in its body so search functionality survives
- *     the interim until Phase 4 puts it in its final position.
+ *     puts search inside the Compare toolbar.
  *   • Web gets `position: sticky` + `backdrop-filter: blur(14px)
  *     saturate(140%)` for the design's signature translucent-glass nav;
  *     native falls back to opaque `bgCard` (Phase-plan: "close not exact"

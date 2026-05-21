@@ -56,6 +56,8 @@ import {
 } from '../../src/utils/formulaClassifiers';
 import type { Formula } from '../../src/types/formula';
 
+const ALL_FORMULAS = getAllFormulas();
+
 // ── Hero badge tone palette (verbatim from styles-pdp.css 96–102) ──────
 type BadgeTone =
   | 'stage' | 'budget' | 'mid' | 'premium' | 'halal' | 'organic' | 'warn';
@@ -349,14 +351,13 @@ export default function ProductDetailScreen() {
   }
 
   // ── Derived per-page data ─────────────────────────────────────────
-  const allFormulas = getAllFormulas();
   const sameStage = useMemo(
     () =>
-      allFormulas
+      ALL_FORMULAS
         .filter((x) => x.stage === p.stage)
         .slice()
         .sort((a, b) => a.pricePerGram - b.pricePerGram),
-    [allFormulas, p.stage],
+    [p.stage],
   );
   const myRank = sameStage.findIndex((x) => x.id === p.id) + 1;
   const maxPpg = sameStage[sameStage.length - 1]?.pricePerGram ?? 0.1;
@@ -402,7 +403,7 @@ export default function ProductDetailScreen() {
   // Similar — different product, same stage, sorted by $/g proximity.
   const similar = useMemo(
     () =>
-      allFormulas
+      ALL_FORMULAS
         .filter((x) => x.product !== p.product && x.stage === p.stage)
         .sort(
           (a, b) =>
@@ -410,7 +411,7 @@ export default function ProductDetailScreen() {
             Math.abs(b.pricePerGram - p.pricePerGram),
         )
         .slice(0, 4),
-    [allFormulas, p],
+    [p],
   );
 
   const ingredientsText = p.ingredients ?? ingredientsParagraph(p);

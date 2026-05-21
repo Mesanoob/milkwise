@@ -24,8 +24,8 @@
  *     formula.id before navigating so the v1 route resolves cleanly.
  */
 
-import { useMemo, useState } from 'react';
-import { Platform, View, Text, type ViewStyle } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Platform, Pressable, View, Text, type ViewStyle } from 'react-native';
 import { Screen } from '../src/components/Screen';
 import { StageTabs } from '../src/components/compare/v2/StageTabs';
 import { BrandBar } from '../src/components/compare/v2/BrandBar';
@@ -43,6 +43,7 @@ import {
   originCountry,
 } from '../src/utils/formulaClassifiers';
 import type { Formula } from '../src/types/formula';
+import { INITIAL_RENDER_COUNT, PAGE_SIZE } from '../src/config/constants';
 
 // All 76 are static — compute once at module level.
 const ALL_FORMULAS = getAllFormulas();
@@ -52,6 +53,11 @@ export default function CompareScreen() {
   const { stage, brand, sortKey, sortDir, view, filters, tray } =
     useFormulaCompare();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_RENDER_COUNT);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_RENDER_COUNT);
+  }, [stage, brand, sortKey, sortDir, view, filters]);
 
   // ── Filter + sort composition (ported from Compare.jsx) ─────────────
   const filtered: Formula[] = useMemo(() => {
@@ -95,6 +101,12 @@ export default function CompareScreen() {
     return f;
   }, [stage, brand, sortKey, sortDir, filters]);
 
+  const visibleFormulas = useMemo(
+    () => filtered.slice(0, visibleCount),
+    [filtered, visibleCount],
+  );
+  const hasMore = visibleCount < filtered.length;
+
   // CSS grid on web only — `display: grid` isn't in RN's ViewStyle but
   // RN-Web passes it through. Native: flex column (single column stack).
   const isWeb = Platform.OS === 'web';
@@ -133,15 +145,48 @@ export default function CompareScreen() {
       >
         {view === 'grid' ? (
           <View style={gridStyle}>
-            {filtered.map((p) => (
+            {visibleFormulas.map((p) => (
               <GridCardV2 key={p.id} p={p} />
             ))}
           </View>
         ) : (
           <View style={{ flexDirection: 'column', gap: 8 }}>
-            {filtered.map((p) => (
+            {visibleFormulas.map((p) => (
               <ListRowV2 key={p.id} p={p} />
             ))}
+          </View>
+        )}
+
+        {hasMore && (
+          <View style={{ alignItems: 'center', marginTop: 22 }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Show ${Math.min(PAGE_SIZE, filtered.length - visibleCount)} more formulas`}
+              onPress={() =>
+                setVisibleCount((count) =>
+                  Math.min(filtered.length, count + PAGE_SIZE),
+                )
+              }
+              style={{
+                borderWidth: 1,
+                borderColor: tokens.colors.border,
+                backgroundColor: tokens.colors.bgCard,
+                borderRadius: tokens.radius.pill,
+                paddingVertical: 10,
+                paddingHorizontal: 18,
+              }}
+            >
+              <Text
+                style={{
+                  color: tokens.colors.accentText,
+                  fontFamily: tokens.fonts.bodySemibold,
+                  fontSize: 13,
+                  fontWeight: '600',
+                }}
+              >
+                Show more ({visibleFormulas.length} of {filtered.length})
+              </Text>
+            </Pressable>
           </View>
         )}
 

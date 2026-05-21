@@ -677,9 +677,47 @@ export default function CalculatorScreen() {
         expectedMl, adjustedMl, solidsCut, cost, tinsThisMonth };
     });
   }, [ageMo, feedsPerDay, mlPerFeed, scoopSize, tinSize, pricePerTin]);
-  const pastSpend = projection.filter((r) => r.isPast).reduce((s, r) => s + r.cost, 0);
-  const futureSpend = projection.filter((r) => !r.isPast).reduce((s, r) => s + r.cost, 0);
+  const ageMonthInt = age ? Math.max(0, Math.min(11, Math.floor(age.totalMonths))) : 0;
+  const currentMonthProgress = age
+    ? Math.max(0, Math.min(1, age.days / 30))
+    : 0;
+  const currentMonthRemainingDays = age && age.totalMonths < 12
+    ? Math.max(0, 30 - Math.min(30, age.days))
+    : 0;
+  const currentProjection = projection.find((r) => r.month === ageMonthInt);
+  const fullPastSpend = projection
+    .filter((r) => r.month < ageMonthInt)
+    .reduce((s, r) => s + r.cost, 0);
+  const futureFullMonthsSpend = projection
+    .filter((r) => r.month > ageMonthInt)
+    .reduce((s, r) => s + r.cost, 0);
+  const currentElapsedSpend = (currentProjection?.cost ?? 0) * currentMonthProgress;
+  const currentRemainingSpend = (currentProjection?.cost ?? 0) * (1 - currentMonthProgress);
+  const pastSpend = fullPastSpend + currentElapsedSpend;
+  const futureSpend = currentRemainingSpend + futureFullMonthsSpend;
   const totalSpend = pastSpend + futureSpend;
+  const futureStartMonth = ageMonthInt + 1;
+  const futureFullMonthCount = Math.max(0, 12 - futureStartMonth);
+  const futureMonthLabel =
+    futureFullMonthCount === 0
+      ? ''
+      : futureFullMonthCount === 1
+        ? `month ${futureStartMonth}`
+        : `months ${futureStartMonth}–11`;
+  const remainingLabel = age
+    ? currentMonthRemainingDays > 0 && futureMonthLabel
+      ? `Projected remaining · ${currentMonthRemainingDays}d + ${futureMonthLabel}`
+      : currentMonthRemainingDays > 0
+        ? `Projected remaining · next ${currentMonthRemainingDays}d`
+        : futureMonthLabel
+          ? `Projected remaining · ${futureMonthLabel}`
+          : 'Projected remaining · complete'
+    : 'Projected remaining · months 0–11';
+  const remainingSub = age
+    ? currentMonthRemainingDays > 0
+      ? 'Rest of this month at your rate · HPB benchmark after'
+      : 'HPB benchmark after'
+    : 'Enter DOB for age-specific projection';
 
   const monthMidpoints = useMemo(
     () => Array.from({ length: 12 }, (_, mo) => {
@@ -691,7 +729,6 @@ export default function CalculatorScreen() {
   const currentMonthInt = Math.max(0, Math.min(11, Math.round(ageMo)));
   const benchmarkInRange = calc.dailyMlTotal >= guideline.dailyMl[0] * 0.85
                         && calc.dailyMlTotal <= guideline.dailyMl[1] * 1.15;
-  const ageMonthInt = age ? Math.floor(age.totalMonths) : 0;
   const currentRowKey = ageRowKey(ageMo);
 
   return (
@@ -958,10 +995,10 @@ export default function CalculatorScreen() {
                   sub="at current feeding pattern"
                 />
                 <ResultCard emphatic
-                  label="Projected (next 12 mo)"
+                  label="Projected remaining"
                   value={futureSpend}
                   format={(n) => fmtSGD(n)}
-                  sub="factors in transition to solids"
+                  sub={remainingSub}
                 />
               </View>
             </View>
@@ -1019,14 +1056,14 @@ export default function CalculatorScreen() {
         {/* Estimated Lifetime Formula Spend */}
         <Card>
           <DeepHead emoji="🧾" title="Estimated Lifetime Formula Spend"
-            sub={`You're entering data at ${ageMonthInt} months. Past spend estimated from HPB benchmark. Projected remaining covers months ${ageMonthInt}–11: your actual rate this month, HPB benchmark (tapered for solids) for months after.`} />
+            sub={`You're entering data at ${age ? `${ageMonthInt} months ${age.days} days` : `${ageMonthInt} months`}. Past spend estimates previous months from HPB benchmark, then adds the elapsed part of this month at your current rate. Projected remaining covers the rest of this month plus HPB benchmark (tapered for solids) for later months.`} />
           <View style={{ flexDirection: twoCol ? 'row' : 'column', gap: 10, marginTop: 8 }}>
             <LifeCell tone="past"
-              label={`Est. already spent · months 0–${Math.max(0, ageMonthInt - 1)}`}
-              value={fmtSGD(pastSpend)} sub="HPB benchmark estimate" />
+              label="Est. already spent · birth → now"
+              value={fmtSGD(pastSpend)} sub="HPB benchmark + current month to date" />
             <LifeCell tone="future"
-              label={`Projected remaining · months ${ageMonthInt}–11 (${12 - ageMonthInt}mo)`}
-              value={fmtSGD(futureSpend)} sub="Your rate now · HPB benchmark after" />
+              label={remainingLabel}
+              value={fmtSGD(futureSpend)} sub={remainingSub} />
             <LifeCell tone="total"
               label="Stage 1 total · birth → 12 months"
               value={fmtSGD(totalSpend)} sub="Formula cost only" />
@@ -1080,7 +1117,7 @@ export default function CalculatorScreen() {
             <Text style={{ color: tokens.colors.text, fontFamily: tokens.fonts.bodySemibold }}>
               Methodology:
             </Text>{' '}
-            Past spend uses HPB mid-range benchmark ml × formula price/g. Projected remaining = your actual feeds for the current month + HPB benchmark (tapered for solids from 6m) for months after — so the total covers more than one month when you have time remaining in Stage 1. Breastmilk cost = $0. Malaysia savings are indicative estimates only.
+            Past spend uses HPB mid-range benchmark ml × formula price/g for completed months, plus the elapsed days of the current month at your actual feeds. Projected remaining = remaining days this month at your actual feeds + HPB benchmark (tapered for solids from 6m) for months after. Breastmilk cost = $0. Malaysia savings are indicative estimates only.
           </Text>
         </Card>
 
