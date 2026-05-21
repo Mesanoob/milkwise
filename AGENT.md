@@ -114,8 +114,34 @@ Use the MilkWise design system already ported into the app:
 - `ThemeContext` controls light/dark mode and persists the preference in AsyncStorage.
 - `Screen` renders the shared disclaimer banner, header/nav, scroll content, and footer.
 - `FormulaCompareContext` stores Compare stage, brand, filters, sort, view, and tray state in memory across route navigation.
-- `ProductsContext` stores the legacy product filtering and comparison state.
 - Calculator persists DOB in AsyncStorage and calculates feeding/cost projections from `Formula` rows.
+
+## Recent Work: `Optimse` Branch
+
+The `Optimse` branch was created and pushed for web performance cleanup.
+
+Completed changes:
+
+- Imported only the used Inter, Inter Tight, and JetBrains Mono font weights in `app/_layout.tsx`.
+- Removed unused `ProductsProvider` startup work from the root layout.
+- Deleted unreferenced legacy compare, product, filter, product context, hook, and filter type files after import checks and typecheck confirmed they were unused.
+- Stabilized repeated `getAllFormulas()` use in Product Detail and Compare filter helpers.
+- Added progressive rendering to `/compare` with a "Show more" control.
+- Removed tracked stray `assets/products/image.png`.
+- Made `scripts/generate-image-map.mjs` WebP-only.
+
+Verification performed:
+
+- `npm run typecheck` passed.
+- `npx expo export --platform web` passed.
+- Browser smoke tests passed for `/`, `/compare`, `/product/dumex-s1`, `/head-to-head`, `/calculator`, and `/most-sold`.
+- Export evidence improved from 52 font files / 13M fonts / 23M `dist` to 7 font files / 1.8M fonts / 12M `dist`.
+
+Preserved constraints:
+
+- `CLAUDE.md` was not overwritten.
+- `MilkWiseFinalDesign/` was not edited.
+- Existing calculator work was preserved.
 
 ## Workflow Rules
 
@@ -138,7 +164,11 @@ These are known follow-up areas, not bugs to fix unless the user asks:
 - Tighter mobile Head-to-Head layout.
 - Real PDF download instead of the current stub behavior.
 - Safari and real-device QA.
+- Android emulator QA.
 - PWA add-to-home-screen prompt.
 - Lighthouse audit.
 - Production hosting, domain, legal pages, SEO metadata, analytics, and Sentry.
 - Supabase backend and admin CRUD.
+- Route-level bundle splitting and deferred loading for heavy native/web-only modules where Expo Router supports it cleanly.
+- Image review for oversized WebP assets and responsive image sizing on web.
+- Persisted compare state only if there is a clear UX need; current state is intentionally in-memory.
