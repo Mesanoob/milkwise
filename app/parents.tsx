@@ -19,6 +19,7 @@ import { Screen } from '../src/components/Screen';
 import { Eyebrow } from '../src/components/Section';
 import { SourceBadge } from '../src/components/SourceBadge';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { PageMeta } from '../src/components/PageMeta';
 
 const TABLET = 768;
 
@@ -62,6 +63,7 @@ export default function ForNewParentsScreen() {
 
   return (
     <Screen>
+      <PageMeta title="For New Parents" description="What actually matters when choosing formula: stages, milk sources, and cost drivers." />
       <View
         style={{
           maxWidth: 720,

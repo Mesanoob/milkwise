@@ -12,6 +12,7 @@
  *     the build.
  */
 
+import { assertEnv } from '../config/env';
 import type { Product, ProductDetail } from '../types/product';
 import type { ProductRepository } from './productRepository';
 
@@ -23,6 +24,13 @@ const notReady = (method: string): never => {
 };
 
 export class SupabaseProductRepository implements ProductRepository {
+  constructor() {
+    // Fail-fast: a build that enables remote data without its env vars
+    // should die at construction with an actionable message, not return
+    // empty arrays that look like "no products in your country".
+    assertEnv(['supabaseUrl', 'supabaseAnonKey'], 'FEATURES.useRemoteData');
+  }
+
   async listProducts(): Promise<Product[]>                          { return notReady('listProducts'); }
   async getProductById(_id: string): Promise<Product | undefined>   { return notReady('getProductById'); }
   async getProductDetail(_id: string): Promise<ProductDetail | undefined> { return notReady('getProductDetail'); }

@@ -54,10 +54,18 @@ let cachedRepository: ProductRepository | null = null;
 export const getProductRepository = async (): Promise<ProductRepository> => {
   if (cachedRepository) return cachedRepository;
 
-  // Dynamic import keeps tree-shakers happy and lets us swap implementations
-  // without touching this file's import header.
-  const { StaticProductRepository } = await import('./staticProductRepository');
-  cachedRepository = new StaticProductRepository();
+  // Dynamic imports keep tree-shakers happy and let us swap implementations
+  // without touching this file's import header. The Supabase constructor
+  // fail-fasts if its env vars are missing, so a misconfigured remote-data
+  // build dies loudly at startup instead of rendering an empty catalogue.
+  const { FEATURES } = await import('../config/constants');
+  if (FEATURES.useRemoteData) {
+    const { SupabaseProductRepository } = await import('./supabaseProductRepository');
+    cachedRepository = new SupabaseProductRepository();
+  } else {
+    const { StaticProductRepository } = await import('./staticProductRepository');
+    cachedRepository = new StaticProductRepository();
+  }
   return cachedRepository;
 };
 

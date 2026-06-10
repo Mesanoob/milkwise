@@ -17,6 +17,7 @@ import { View, Text, useWindowDimensions } from 'react-native';
 import { Screen } from '../src/components/Screen';
 import { Eyebrow } from '../src/components/Section';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { PageMeta } from '../src/components/PageMeta';
 
 const TABLET = 768;
 
@@ -55,6 +56,7 @@ export default function AboutScreen() {
 
   return (
     <Screen>
+      <PageMeta title="About" description="Why MilkWise SG exists, where the data comes from, and our terms of use." />
       <View
         style={{
           maxWidth: 720,

@@ -44,6 +44,7 @@ import {
 } from '../src/utils/formulaClassifiers';
 import type { Formula } from '../src/types/formula';
 import { INITIAL_RENDER_COUNT, PAGE_SIZE } from '../src/config/constants';
+import { PageMeta } from '../src/components/PageMeta';
 
 // All 76 are static — compute once at module level.
 const ALL_FORMULAS = getAllFormulas();
@@ -120,6 +121,7 @@ export default function CompareScreen() {
 
   return (
     <Screen>
+      <PageMeta title="Compare Formulas" description="Browse and filter 76 baby formulas sold in Singapore by stage, brand, and price per gram." />
       <StageTabs />
       <BrandBar />
       <Toolbar

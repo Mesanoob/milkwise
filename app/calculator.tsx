@@ -48,6 +48,7 @@ import { getAllFormulas } from '../src/data/formulas';
 import { fmtSGD, fmtPerGram } from '../src/utils/formulaFormat';
 import { shortName } from '../src/utils/formulaClassifiers';
 import type { Formula } from '../src/types/formula';
+import { PageMeta } from '../src/components/PageMeta';
 
 // Persisted DOB key. Versioned so the schema can evolve without
 // silently mis-reading an old value.
@@ -733,6 +734,7 @@ export default function CalculatorScreen() {
 
   return (
     <Screen>
+      <PageMeta title="Cost Calculator" description="Estimate your monthly and lifetime formula spend based on your baby's age and feeding routine." />
       {/* ── Header ──────────────────────────────────────────── */}
       <View style={{
         maxWidth: tokens.layout.maxContent, width: '100%',

@@ -1,0 +1,4 @@
+# Cloudflare Pages / Netlify routing for the static Expo export.
+# Dynamic product pages all serve the exported [id].html shell; the client
+# router reads the real id from the URL. 200 = rewrite, not redirect.
+/product/* /product/[id].html 200

@@ -3,9 +3,9 @@
  *
  * Renders above the NavBar; dismiss persists in AsyncStorage so it does
  * not reappear on reload (mirrors the prototype's
- * `localStorage.getItem('mw_banner_dismissed') === '1'`). The storage key
- * is intentionally identical to the design so users moving between the
- * prototype and the app don't re-see the banner.
+ * `localStorage.getItem('mw_banner_dismissed') === '1'`). The key carries a
+ * version suffix so a future change to the banner's message can bump it and
+ * re-surface the banner to users who dismissed the old wording.
  *
  * Behaviour notes:
  *   • Default-visible while storage is hydrating. A returning user who
@@ -23,9 +23,9 @@ import { View, Text, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 
-// Versioned key — bump suffix if we ever change the banner's meaning so a
-// previously-dismissed flag can't silently suppress a different message.
-const STORAGE_KEY = 'mw_banner_dismissed';
+// Versioned key — bump the `_v` suffix if the banner's meaning ever changes
+// so a previously-dismissed flag can't silently suppress a different message.
+const STORAGE_KEY = 'mw_banner_dismissed_v1';
 
 export const DisclaimerBanner = () => {
   const { tokens } = useTheme();

@@ -55,6 +55,7 @@ import {
   type HighlightTone,
 } from '../../src/utils/formulaClassifiers';
 import type { Formula } from '../../src/types/formula';
+import { PageMeta } from '../../src/components/PageMeta';
 
 const ALL_FORMULAS = getAllFormulas();
 
@@ -302,6 +303,7 @@ export default function ProductDetailScreen() {
   if (!p) {
     return (
       <Screen>
+        <PageMeta title="Formula not found" />
         <View style={{ padding: 64, alignItems: 'center' }}>
           <Text
             style={{
@@ -418,6 +420,7 @@ export default function ProductDetailScreen() {
 
   return (
     <Screen>
+      <PageMeta title={p.product} description={`Prices, ingredients, and full nutrition for ${p.product} in Singapore.`} />
       <View
         style={{
           maxWidth: 1100,

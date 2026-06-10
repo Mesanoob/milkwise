@@ -1,0 +1,5 @@
+# MilkWise SG — allow all crawlers.
+# Add the sitemap line once the production domain is live:
+# Sitemap: https://milkwise.sg/sitemap.xml
+User-agent: *
+Allow: /

@@ -26,6 +26,7 @@ import type { Product } from '../src/types/product';
 import { getAllProducts } from '../src/data/products';
 import { getProductImage } from '../src/data/imageMap';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { PageMeta } from '../src/components/PageMeta';
 
 /* -------------------------------------------------------------------------- */
 /* Curated ranking data                                                       */
@@ -108,6 +109,7 @@ export default function MostSoldScreen() {
 
   return (
     <Screen>
+      <PageMeta title="Most Sold Formulas" description="Singapore's most purchased baby formulas, ranked with editorial market-share estimates." />
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
         {/* ── Hero ───────────────────────────────────────────────────── */}
         <View
@@ -236,10 +238,12 @@ export default function MostSoldScreen() {
           >
             <Text className="text-[11.5px] text-mw-text-muted font-body" style={{ lineHeight: 18 }}>
               <Text className="font-body-semibold text-mw-text">Disclaimer: </Text>
-              Market share estimates are indicative and based on publicly
-              available retail data, paediatrician survey reports, and parent
-              community forums as of April 2026. Actual market share figures
-              may vary. This is not investment advice.
+              This ranking is curated editorial content, not audited sales
+              data. Market-share estimates are indicative and based on
+              publicly available retail data, paediatrician survey reports,
+              and parent community forums as of April 2026. Actual figures
+              may vary. Nothing here is medical or purchasing advice — always
+              consult your paediatrician before changing formula.
             </Text>
           </View>
         </View>

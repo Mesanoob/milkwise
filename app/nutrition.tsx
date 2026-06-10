@@ -22,6 +22,7 @@ import { Eyebrow } from '../src/components/Section';
 import { SourceBadge } from '../src/components/SourceBadge';
 import { StageBadge } from '../src/components/compare/v2/atoms';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { PageMeta } from '../src/components/PageMeta';
 
 const TABLET = 768;
 
@@ -62,6 +63,7 @@ export default function NutritionGuideScreen() {
 
   return (
     <Screen>
+      <PageMeta title="Nutrition Guide" description="Plain-English guide to formula stages, key nutrients, and safe preparation." />
       <View
         style={{
           maxWidth: tokens.layout.maxContent,

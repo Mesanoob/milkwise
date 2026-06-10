@@ -27,6 +27,7 @@ import { Screen } from '../src/components/Screen';
 import { Section } from '../src/components/Section';
 import { HeroMesh } from '../src/components/HeroMesh';
 import { useTheme } from '../src/contexts/ThemeContext';
+import { PageMeta } from '../src/components/PageMeta';
 
 const TABLET = 768;
 
@@ -554,6 +555,7 @@ const DisclaimerStrip = () => {
 export default function HomeScreen() {
   return (
     <Screen>
+      <PageMeta title="Compare baby formula in Singapore" />
       <Hero />
       <StatsBand />
       <Features />

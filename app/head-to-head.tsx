@@ -50,6 +50,7 @@ import {
   milkSourceOf,
 } from '../src/utils/formulaClassifiers';
 import type { Formula, NutrientValue } from '../src/types/formula';
+import { PageMeta } from '../src/components/PageMeta';
 
 // ── Best-cell index resolver ──────────────────────────────────────────
 // `vals` may be numbers or strings; only numeric rows can pick a best.
@@ -123,6 +124,7 @@ export default function HeadToHeadScreen() {
   if (tray.length === 0) {
     return (
       <Screen>
+        <PageMeta title="Head-to-Head" description="Compare up to three formulas side-by-side across price, specs, and nutrition." />
         <View style={{ padding: 64, alignItems: 'center' }}>
           <Text
             style={{
@@ -174,6 +176,7 @@ export default function HeadToHeadScreen() {
 
   return (
     <Screen>
+      <PageMeta title="Head-to-Head" description="Compare up to three formulas side-by-side across price, specs, and nutrition." />
       <H2HBody products={tray} clearTray={clearTray} />
     </Screen>
   );
